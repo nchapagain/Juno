@@ -1,0 +1,50 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <RunCodeAnalysis></RunCodeAnalysis>
+    <EnableBaseIntermediateOutputPathMismatchWarning>false</EnableBaseIntermediateOutputPathMismatchWarning>
+    <NoWarn>CA1801,CA1812,CA2000,SA1117,SA1118,SA1508</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!--
+        Version information for an assembly consists of the following four values:
+
+        Major Version
+        Minor Version
+        Build Number
+        Revision
+        -->
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <AssemblyName>Juno.Providers</AssemblyName>
+    <RootNamespace>Juno.Providers</RootNamespace>
+    <PackageId>Juno.Providers</PackageId>
+    <Authors>crcteam@microsoft.com</Authors>
+    <AssemblyVersion>1.4.0</AssemblyVersion>
+    <Description>CRC AIR (Juno) core environment and workflow provider components.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.2.5" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="5.0.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="Polly" Version="7.2.1" />
+    <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Contracts\Microsoft.Azure.CRC.Contracts.csproj" />
+    <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Telemetry\Microsoft.Azure.CRC.Telemetry.csproj" />
+    <ProjectReference Include="..\Juno.Api.Client\Juno.Api.Client.csproj" />
+    <ProjectReference Include="..\Juno.Contracts\Juno.Contracts.csproj" />
+    <ProjectReference Include="..\Juno.Extensions.Telemetry\Juno.Extensions.Telemetry.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+<Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Module.props" />
+
+</Project>

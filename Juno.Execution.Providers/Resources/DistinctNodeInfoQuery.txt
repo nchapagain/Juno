@@ -1,0 +1,27 @@
+﻿let nodes = $nodesList$;
+let vmSkus = $vmSkus$;
+let beginTime = ago($searchPeriod$h);
+// Step 1: get node's clusterId
+let supportedSkus = cluster('cirrus.kusto.windows.net').database('cirrus').VMSKU
+| distinct FabricVMSkuName, VMSKUName
+| project VmSku = tolower(FabricVMSkuName), ExternalVMSKU = VMSKUName
+| where (isempty(vmSkus) or ExternalVMSKU in~ (vmSkus)) 
+| distinct VmSku, ExternalVMSKU
+| join kind = inner
+    (cluster('azurecm.kusto.windows.net').database('AzureCM').AllocableVmCount
+    | where PreciseTimeStamp > beginTime and vmType != "IOwnMachine" and deploymentType == "NewDeployment" and partitionType == "Cluster"
+    | summarize arg_max(PreciseTimeStamp, *) by partitionName, vmType
+    | project ClusterId = tolower(partitionName), vmType=tolower(vmType)) on $left.VmSku == $right.vmType;
+cluster('azurecm.kusto.windows.net').database('AzureCM').LogNodeSnapshot
+| where TIMESTAMP > beginTime and tipNodeSessionId == "00000000-0000-0000-0000-000000000000" and nodeState == "Ready" and containerCount ==0 
+| where nodes has nodeId
+| distinct nodeId, Region
+// Step 2: get the rack location and machine pool name
+| join kind = inner cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryGenerationMappingV3 on $left.nodeId == $right.NodeId
+| project nodeId, MachinePool, RackLocation, ClusterId = tolower(ClusterId), Region
+// Step 3: get external region names
+| join kind=leftouter cluster('cirrus.kusto.windows.net').database('cirrus').Region on $left.Region == $right.FabricRegionName
+| join kind = inner supportedSkus on ClusterId
+| distinct ExternalVMSKU, MachinePool, RackLocation, RegionName, nodeId, ClusterId
+| summarize make_list(ExternalVMSKU) by nodeId, RackLocation, MachinePool, ClusterId, RegionName
+| project MachinePoolName = MachinePool, RackLocation, Region = RegionName, NodeId = nodeId, ClusterName = ClusterId, SupportedVmSkus = list_ExternalVMSKU

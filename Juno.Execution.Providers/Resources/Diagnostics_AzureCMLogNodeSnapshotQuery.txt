@@ -1,0 +1,4 @@
+﻿let tipSessionId = $tipSessionId$;
+cluster("AzureCM.kusto.windows.net").database("AzureCM").LogNodeSnapshot
+| where tipNodeSessionId == tipSessionId
+| project TIMESTAMP, nodeState, nodeAvailabilityState, faultInfo, hostingEnvironment, faultDomain, lastStateChangeTime, nsProgressHealthStatus, tipNodeSessionId, healthSignals

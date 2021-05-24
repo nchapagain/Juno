@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+    <!--
+    *****************************************************************************
+    Include all of the environment configuration files in the solution. These 
+    define the settings used by watchdog hosts to target an environment 
+    (e.g. watchdog-dev01, watchdog-prod01).
+    *****************************************************************************
+    -->
+    <ItemGroup>
+        <Folder Include="Configuration\" />
+    </ItemGroup>
+    
+    <ItemGroup>
+        
+        <!--
+        *********************************
+        watchdog-dev01 environment
+        *********************************
+        -->
+        <Content Include="..\Configuration\watchdog-dev01.appsettings.json" Link="Configuration\watchdog-dev01.appsettings.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+        <Content Include="..\Configuration\watchdog-dev01.environmentsettings.json" Link="Configuration\watchdog-dev01.environmentsettings.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+
+        <!--
+        *********************************
+        watchdog-prod01 environment
+        *********************************
+        -->
+        <Content Include="..\Configuration\watchdog-prod01.appsettings.json" Link="Configuration\watchdog-prod01.appsettings.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+        <Content Include="..\Configuration\watchdog-prod01.environmentsettings.json" Link="Configuration\watchdog-prod01.environmentsettings.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+       
+    </ItemGroup>
+</Project>

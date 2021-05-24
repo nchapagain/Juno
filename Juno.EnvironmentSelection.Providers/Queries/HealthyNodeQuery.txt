@@ -1,0 +1,22 @@
+﻿let beginTime = ago(2h);
+let includeCluster = datatable(ClusterId:string)[$includeCluster$];
+let excludeCluster = datatable(ClusterId:string)[$excludeCluster$];
+let readyNodes = cluster('azurecm.kusto.windows.net').database('AzureCM').LogNodeSnapshot
+| where PreciseTimeStamp > beginTime
+| summarize arg_max(PreciseTimeStamp, tipNodeSessionId, nodeAvailabilityState, nodeState, containerCount, ClusterId = tolower(Tenant)) by NodeId = nodeId
+| where nodeState == "Ready" and nodeAvailabilityState == "Available" and containerCount == 0 and tipNodeSessionId == "00000000-0000-0000-0000-000000000000"
+| join kind=inner includeCluster on ClusterId
+| join kind=leftanti excludeCluster on ClusterId;
+let readyAndHealthyNodes = cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').ResourceSnapshotV1
+| summarize arg_max(PreciseTimeStamp, ClusterId = tolower(Tenant), HealthGrade) by ResourceId
+| where HealthGrade == 0 and ResourceId in (readyNodes)
+| project NodeId = ResourceId;
+cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryGenerationMappingV3
+| join kind=inner readyAndHealthyNodes on NodeId
+| where IsLive == true
+| join kind=inner (
+        cluster('cirrus.kusto.windows.net').database('cirrus').Region
+        | distinct RegionName, FabricRegionName
+) on  $left.RegionId == $right.FabricRegionName
+| project Region = RegionName, ClusterId = tolower(ClusterId), MachinePoolName = MachinePool, NodeId, Rack = RackLocation
+| distinct ClusterId, Region, NodeId, MachinePoolName, Rack

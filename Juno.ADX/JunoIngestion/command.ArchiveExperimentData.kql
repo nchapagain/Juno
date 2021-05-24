@@ -1,0 +1,17 @@
+.set-or-append StepsArchive <|
+database('JunoIngestion').table('IngestionExecutionSteps')
+| where timestamp >= datetime({startDatetime}) - 1d and timestamp <= datetime({endDateTime})
+| union database('JunoIngestion').table('IngestionAgentProviderSteps')
+| where timestamp >= datetime({startDatetime}) - 1d and timestamp <= datetime({endDateTime})
+| union database('JunoIngestion').table('IngestionPayloadProviderSteps')
+| where timestamp >= datetime({startDatetime}) -1d and timestamp <= datetime({endDateTime})
+| union database('JunoIngestion').table('IngestionTipProviderSteps')
+| where timestamp >= datetime({startDatetime}) -1d and timestamp <= datetime({endDateTime})
+| extend ingestionTime = now()
+| extend sourceHash = hash_sha256(strcat(timestamp, message))
+| join kind=leftanti (
+    StepsArchive
+    | extend targetHash = hash_sha256(strcat(timestamp, message))
+    | project targetHash
+) on $left.sourceHash == $right.targetHash
+| project timestamp, message, severityLevel, operation_Id, operation_ParentId, customDimensions, appName, ingestionTime

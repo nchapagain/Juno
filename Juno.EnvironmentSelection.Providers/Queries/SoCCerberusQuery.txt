@@ -1,0 +1,21 @@
+﻿let beginTime = ago(2d);
+let includeFirmwares = dynamic([$includeFirmware$]);
+let excludeFirmwares = dynamic([$excludeFirmware$]);
+let includeCluster = datatable(ClusterId:string)[$includeCluster$];
+let excludeCluster = datatable(ClusterId:string)[$excludeCluster$];
+cluster('overlakedata.southcentralus').database("overlake-syslog").OverlakeHealthStoreTable
+| where TIMESTAMP > beginTime and Name == "CerberusVer"
+| summarize arg_max(TIMESTAMP, Value) by NodeId
+| where Value in~ (includeFirmwares) and Value !in (excludeFirmwares)
+| project SoCCerberus = Value, NodeId
+| join kind=inner (
+    cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryGenerationMappingV3
+    | where IsLive == true
+    | project RegionId, ClusterId = tolower(ClusterId), MachinePoolName = MachinePool, NodeId, Rack = RackLocation) on NodeId
+| join kind=inner includeCluster on ClusterId
+| join kind=anti excludeCluster on ClusterId
+| join kind=inner (
+            cluster('cirrus.kusto.windows.net').database('cirrus').Region
+            | project Region = RegionName, FabricRegionName
+            | distinct Region, FabricRegionName) on  $left.RegionId == $right.FabricRegionName
+| distinct ClusterId, Region, NodeId, MachinePoolName, Rack, SoCCerberus

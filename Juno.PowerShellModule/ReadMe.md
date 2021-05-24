@@ -1,0 +1,2 @@
+Execution of these PowerShell modules needs PSCore as the module uses .NET Core. The out of box PowerShell is NOT PS Core.  It must be installed.
+Install location : https://github.com/PowerShell/PowerShell/releases/tag/v7.0.0 (PowerShell-7.0.0-win-x64.msi)

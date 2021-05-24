@@ -1,0 +1,438 @@
+{
+    "Id": "juno-prod01",
+    "Environment": "juno-prod01",
+    "AppInsightsSettings": [
+        {
+            "Id": "Telemetry",
+            "InstrumentationKey": "c2c52761-ece7-4cc9-8854-090990424d73"
+        },
+        {
+            "Id": "Tracing",
+            "InstrumentationKey": "e94d5423-b45f-4b79-933b-4105638495b4"
+        }
+    ],
+    "CosmosSettings": [
+        {
+            "Id": "Experiments",
+            "Uri": "https://junoprod01cosmos.documents.azure.com:443/",
+            "AccountKey": "[secret:keyvault]=CosmosDBAccountKey"
+        },
+        {
+            "Id": "ExperimentSteps",
+            "Uri": "https://junoprod01cosmostable.table.cosmos.azure.com:443/",
+            "AccountKey": "[secret:keyvault]=CosmosDBTableAccountKey"
+        },
+        {
+            "Id": "Heartbeats",
+            "Uri": "https://junoprod01cosmostable02.table.cosmos.azure.com:443/",
+            "AccountKey": "[secret:keyvault]=CosmosDBTable02AccountKey"
+        },
+        {
+            "Id": "Schedules",
+            "Uri": "https://junoprod01schedules.documents.azure.com:443/",
+            "AccountKey": "[secret:keyvault]=SchedulesCosmosDBAccountKey"
+        },
+        {
+            "Id": "ScheduleTables",
+            "Uri": "https://junoprod01scheduletables.table.cosmos.azure.com:443/",
+            "AccountKey": "[secret:keyvault]=SchedulesCosmosDBTableAccountKey"
+        },
+        {
+            "Id": "Portal",
+            "Uri": "https://junoprod01portal.documents.azure.com:443/",
+            "AccountKey": "[secret:keyvault]=PortalCosmosDbAccountKey"
+        }
+    ],
+    "EventHubSettings": [
+        {
+            "Id": "AgentTelemetry",
+            "ConnectionString": "[secret:keyvault]=TelemetryEventHubConnectionString",
+            "EventHub": "telemetry-agents"
+        },
+        {
+            "Id": "ApiTelemetry",
+            "ConnectionString": "[secret:keyvault]=TelemetryEventHubConnectionString",
+            "EventHub": "telemetry-api"
+        },
+        {
+            "Id": "ExecutionTelemetry",
+            "ConnectionString": "[secret:keyvault]=TelemetryEventHubConnectionString",
+            "EventHub": "telemetry-execution"
+        },
+        {
+            "Id": "GarbageCollectionTelemetry",
+            "ConnectionString": "[secret:keyvault]=TelemetryEventHubConnectionString",
+            "EventHub": "telemetry-gc"
+        },
+        {
+            "Id": "SchedulingTelemetry",
+            "ConnectionString": "[secret:keyvault]=TelemetryEventHubConnectionString",
+            "EventHub": "telemetry-scheduling"
+        },
+        {
+            "Id": "VirtualClientTelemetry",
+            "ConnectionString": "[secret:keyvault]=VirtualClientEventHubConnectionString",
+            "EventHub": "vc-monitors"
+        }
+    ],
+    "KeyVaultSettings": [
+        {
+            "Id": "Default",
+            "Uri": "https://junoprod01vault01.vault.azure.net"
+        }
+    ],
+    "KustoSettings": [
+        {
+            "Id": "AzureCM",
+            "ClusterUri": "https://azurecm.kusto.windows.net",
+            "ClusterDatabase": "AzureCM",
+            "AadPrincipals": [
+                {
+                    "Id": "Default",
+                    "AuthorityUri": "https://login.windows.net/33e01921-4d64-4f8c-a055-5bdaffd5e33d",
+                    "TenantId": "33e01921-4d64-4f8c-a055-5bdaffd5e33d",
+                    "EnterpriseObjectId": "a8ff118a-62f8-4e1b-ac7b-741c3fb7d04f",
+                    "PrincipalId": "d8509cac-d9a0-4676-b5ad-9926c3f1bcb1",
+                    "PrincipalName": "crc-air-cirrus-principal",
+                    "PrincipalCertificateThumbprint": "90074D27204FADE18595CB2013140162BEF053D8"
+                }
+            ]
+        }
+    ],
+    "GarbageCollectorSettings": {
+        "GarbageCollectorStorageAccount": "[secret:keyvault]=GarbageCollectorStorageAccountConnectionString",
+        "ExperimentsApiUri": "https://junoprod01experiments.azurewebsites.net/",
+        "AadPrincipals": [
+            {
+                "Id": "GarbageCollector",
+                "AuthorityUri": "https://login.windows.net/33e01921-4d64-4f8c-a055-5bdaffd5e33d",
+                "TenantId": "33e01921-4d64-4f8c-a055-5bdaffd5e33d",
+                "EnterpriseObjectId": "ed290d3b-22aa-4f22-9872-04f52fb1af25",
+                "PrincipalId": "b9572a70-7b55-4792-a8f9-eb6e27892d99",
+                "PrincipalName": "juno-prod01-garbagecollector-principal",
+                "PrincipalCertificateThumbprint": "1A913D928D9798A6D826C2B38DF07719E36425D0"
+            }
+        ],
+        "EnabledSubscriptionIds": [
+            "2bc22578-9fb9-4c23-b6a9-2f135bc83b33",
+            "18493588-5750-4037-ab5d-0b885a9aff28",
+            "83b30cf9-db16-4814-a998-dd97ba09252e",
+            "0ab28700-2ec8-4aed-9485-939a621f3047",
+            "6f5ce363-93e6-4cea-aaeb-3a30e27bd653"
+        ]
+    },
+    "SchedulerSettings": {
+        "SchedulerStorageAccount": "[secret:keyvault]=SchedulerStorageAccountConnectionString",
+        "ExperimentsApiUri": "https://junoprod01experiments.azurewebsites.net/",
+        "AadPrincipals": [
+            {
+                "Id": "Scheduler",
+                "AuthorityUri": "https://login.windows.net/33e01921-4d64-4f8c-a055-5bdaffd5e33d",
+                "TenantId": "33e01921-4d64-4f8c-a055-5bdaffd5e33d",
+                "EnterpriseObjectId": "ed290d3b-22aa-4f22-9872-04f52fb1af25",
+                "PrincipalId": "c986adf1-6cd5-49b3-a54b-e807a7368cd7",
+                "PrincipalName": "juno-prod01-scheduler-principal",
+                "PrincipalCertificateThumbprint": "1A913D928D9798A6D826C2B38DF07719E36425D0"
+            }
+        ]
+    },
+    "StorageAccountSettings": [
+        {
+            "Id": "NotificationsQueue",
+            "Uri": "https://junoprod01execution.queue.core.windows.net/",
+            "AccountKey": "[secret:keyvault]=ExecutionStorageAccountAccountKey"
+        },
+        {
+            "Id": "FileStore",
+            "Uri": "https://junoprod01storage02.blob.core.windows.net/",
+            "AccountKey": "[secret:keyvault]=FileStorageAccountAccountKey"
+        }
+    ],
+    "TipSettings": {
+        "HostAgentBootstrapPilotfishName": "JunoHostAgent",
+        "HostAgentBootstrapPilotfishPath": "\\\\reddog\\Builds\\branches\\git_csi_crc_air_hostagent_master_latest\\release-x64\\Deployment\\Prod\\App\\JunoHostAgent",
+        "AadPrincipals": [
+            {
+                "Id": "Default",
+                "AuthorityUri": "https://login.windows.net/72f988bf-86f1-41af-91ab-2d7cd011db47",
+                "TenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+                "EnterpriseObjectId": "ed290d3b-22aa-4f22-9872-04f52fb1af25",
+                "PrincipalId": "534c543e-d468-4171-b3a3-a981fe804d53",
+                "PrincipalName": "juno-prod01-tip-principal",
+                "PrincipalCertificateThumbprint": "66D8A6368715B909C8B085D5B5708BC24F12E580"
+            }
+        ]
+    },
+    "ExecutionSettings": {
+        "ExecutionApiUri": "https://junoprod01execution.azurewebsites.net/",
+        "EnvironmentApiUri": "https://junoprod01environment.azurewebsites.net/",
+        "WorkQueueName": "experimentnotices",
+        "WorkPollingInterval": "00:00:01",
+      "Installers": [
+        {
+          "Id": "Default",
+          "Uri": "https://junoprod01storage.blob.core.windows.net/guestagent-installer-3-4-3-win-x64/Juno.GuestAgent.Installer.exe"
+        },
+        {
+          "Id": "GuestAgent-win-x64",
+          "Uri": "https://junoprod01storage.blob.core.windows.net/guestagent-installer-3-4-3-win-x64/Juno.GuestAgent.Installer.exe"
+        },
+        {
+          "Id": "GuestAgent-win-arm64",
+          "Uri": "https://junoprod01storage.blob.core.windows.net/guestagent-installer-3-4-4-win-arm64/Juno.GuestAgent.Installer.exe"
+        },
+        {
+          "Id": "GuestAgent-linux-x64",
+          "Uri": "https://junoprod01storage.blob.core.windows.net/guestagent-installer-3-4-3-linux-x64/Juno.GuestAgent.Installer"
+        },
+        {
+          "Id": "GuestAgent-linux-arm64",
+          "Uri": "https://junoprod01storage.blob.core.windows.net/guestagent-installer-3-4-4-linux-arm64/Juno.GuestAgent.Installer"
+        }
+      ],
+        "NuGetFeeds": [
+            {
+                "Id": "Default",
+                "Uri": "https://msazure.pkgs.visualstudio.com/_packaging/d8f12b5e-ca80-4dec-867b-7289c3fc6146/nuget/v2/",
+                "AccessToken": "NugetAccessToken"
+            }
+        ],
+        "AadPrincipals": [
+            {
+                "Id": "ExecutionApi",
+                "AuthorityUri": "https://login.windows.net/33e01921-4d64-4f8c-a055-5bdaffd5e33d",
+                "TenantId": "33e01921-4d64-4f8c-a055-5bdaffd5e33d",
+                "EnterpriseObjectId": "3945f770-497c-47b7-a599-26bed4454d3d",
+                "PrincipalId": "d5ba2f1c-8a67-475b-bc1a-260e654d8e16",
+                "PrincipalName": "juno-prod01-execution-api-principal",
+                "PrincipalCertificateThumbprint": "2C6BAD357953C7482D6B9CB5A56EC2783A0609D3"
+            },
+            {
+                "Id": "EnvironmentsApi",
+                "AuthorityUri": "https://login.windows.net/33e01921-4d64-4f8c-a055-5bdaffd5e33d",
+                "TenantId": "33e01921-4d64-4f8c-a055-5bdaffd5e33d",
+                "EnterpriseObjectId": "33e8857d-cb8c-4186-91c3-123751aa6b08",
+                "PrincipalId": "caca0a75-d7c3-4bf5-a8fb-07b9681ac13f",
+                "PrincipalName": "juno-dev01-environments-api-principal",
+                "PrincipalCertificateThumbprint": "2C6BAD357953C7482D6B9CB5A56EC2783A0609D3"
+            },
+            {
+                "Id": "ExperimentsApi",
+                "AuthorityUri": "https://login.windows.net/33e01921-4d64-4f8c-a055-5bdaffd5e33d",
+                "TenantId": "33e01921-4d64-4f8c-a055-5bdaffd5e33d",
+                "EnterpriseObjectId": "33e8857d-cb8c-4186-91c3-123751aa6b08",
+                "PrincipalId": "e2d9854a-429b-4bcb-ba21-415f7e978a49",
+                "PrincipalName": "juno-prod01-experiments-api-principal",
+                "PrincipalCertificateThumbprint": "9917539E1C404303D2C917A86C004DC281CA6F5A"
+            },
+            {
+                "Id": "ExecutionSvc",
+                "AuthorityUri": "https://login.windows.net/33e01921-4d64-4f8c-a055-5bdaffd5e33d",
+                "TenantId": "33e01921-4d64-4f8c-a055-5bdaffd5e33d",
+                "EnterpriseObjectId": "ebc6d616-6858-41bd-a086-4e017d919d33",
+                "PrincipalId": "4bfabbab-9131-4ac3-80e0-f5ce8db01e8c",
+                "PrincipalName": "juno-prod01-execution-svc-principal",
+                "PrincipalCertificateThumbprint": "45CAA05A00518F78A54F2F275F900D92E0FFB8A4"
+            },
+            {
+                "Id": "ArgusApi",
+                "AuthorityUri": "https://login.windows.net/72f988bf-86f1-41af-91ab-2d7cd011db47",
+                "TenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+                "EnterpriseObjectId": "93d9ce80-c66d-4be3-8947-87fd88ab98a5",
+                "PrincipalId": "9317fca8-6447-4579-90bd-a910f7035acd",
+                "PrincipalName": "argus-webapi-principal",
+                "PrincipalCertificateThumbprint": "B8A16FFD17FAA7D7472E91A90212B4E06CEC0D79"
+            }
+        ],
+        "AuthorizationSettings": [
+            {
+                "Id": "Default",
+                "GroupId": "c8383c1c-31bf-458a-a5af-81e40d19c644",
+                "Group": "ame.gbl\\ESGJIT-JunoImpactfulUser",
+                "Policy": "JITAccessUsersOnly"
+            }
+        ]
+    },
+    "AgentSettings": {
+        "HeartbeatInterval": "00:05:00",
+        "WorkPollingInterval": "00:02:00",
+        "GuestAgentCertificateName": "juno-prod01-guestagent",
+        "HostAgentCertificateName": "juno-prod01-hostagent",
+        "AgentMonitoringSettings": {
+            "SelLogMonitorSettings": {
+                "Enabled": "true",
+                "IpmiUtilExePath": "C:\\BladeFX\\BladeFX\\Tools\\IpmiUtil\\ipmiutil.exe",
+                "IpmiUtilSelLogCommand": "sel -c -s1",
+                "MonitorInterval": "00:30:00"
+            },
+            "SystemInfoMonitorSettings": {
+                "Enabled": "true",
+                "MonitorInterval": "00:30:00"
+            },
+            "VmUptimeMonitorSettings": {
+                "Enabled": "true",
+                "MonitorInterval": "00:05:00"
+            },
+            "FpgaHealthMonitorSettings": {
+                "Enabled": "true",
+                "MonitorInterval": "00:30:00"
+            },
+            "VCMonitorSettings": {
+                "Enabled": "false",
+                "MonitorInterval": "00:30:00"
+            }
+        },
+        "Apis": [
+            {
+                "Id": "AgentsApi",
+                "Uri": "https://junoprod01agents.azurewebsites.net/"
+            },
+            {
+                "Id": "AgentsHeartbeatApi",
+                "Uri": "https://junoprod01agents02.azurewebsites.net/"
+            },
+            {
+                "Id": "AgentsFileUploadApi",
+                "Uri": "https://junoprod01agents02.azurewebsites.net/"
+            }
+        ],
+        "AadPrincipals": [
+            {
+                "Id": "HostAgent",
+                "AuthorityUri": "https://login.windows.net/33e01921-4d64-4f8c-a055-5bdaffd5e33d",
+                "TenantId": "33e01921-4d64-4f8c-a055-5bdaffd5e33d",
+                "EnterpriseObjectId": "c4e94f2e-2755-4c74-8886-03bc1511c461",
+                "PrincipalId": "ba80be85-1914-45e1-9a75-8c3398f07191",
+                "PrincipalName": "juno-prod01-hostagent-principal",
+                "PrincipalCertificateThumbprint": "A15C5DE106F263F21138A4C51F984A31F72DDD77"
+            },
+            {
+                "Id": "GuestAgent",
+                "AuthorityUri": "https://login.windows.net/33e01921-4d64-4f8c-a055-5bdaffd5e33d",
+                "TenantId": "33e01921-4d64-4f8c-a055-5bdaffd5e33d",
+                "EnterpriseObjectId": "f21bf449-23f1-4eca-a49b-4fedee57fd41",
+                "PrincipalId": "791f9ed5-398b-40ce-9287-ab79d2d7c819",
+                "PrincipalName": "juno-prod01-guestagent-principal",
+                "PrincipalCertificateThumbprint": "4D71329644A4C730E048C33ADC9CF423F6A3321E"
+            },
+            {
+                "Id": "AgentsApi",
+                "AuthorityUri": "https://login.windows.net/33e01921-4d64-4f8c-a055-5bdaffd5e33d",
+                "TenantId": "33e01921-4d64-4f8c-a055-5bdaffd5e33d",
+                "EnterpriseObjectId": "7cba48c7-de9b-4058-925c-92b308084d54",
+                "PrincipalId": "5b7f8b8c-d97b-49eb-9add-df52f98d7b97",
+                "PrincipalName": "juno-prod01-agents-api-principal",
+                "PrincipalCertificateThumbprint": "D08F72496360691CAD4355922D75B17E56546DAF"
+            }
+        ]
+    },
+    "NodeExecutableSettings": [
+        {
+            "Id": "BiosUpgradePostCheck",
+            "MaxExecutionTime": "00:20:00",
+            "ExecutableName": "BIOSUpgradePostCheck.cmd",
+            "Payload": "JunoBiosPayload",
+            "LogFileName": "BIOSUpgradePostCheck.txt"
+        },
+        {
+            "Id": "BiosDowngradePostCheck",
+            "MaxExuectionTime": "00:20:00",
+            "ExecutableName": "BIOSDowngradePostCheck.cmd",
+            "Payload": "JunoBiosPayload",
+            "LogFileName": "BIOSDowngradePostCheck.txt"
+        },
+        {
+            "Id": "BiosCheck",
+            "MaxExecutionTime": "00:10:00",
+            "ExecutableName": "BIOSCheck.cmd",
+            "LogFileName": "BIOSCheck.txt",
+            "Payload": "JunoBiosPayload"
+        },
+        {
+            "Id": "VerifyBiosAfterBoot",
+            "MaxExecutionTime": "00:10:00",
+            "ExecutableName": "VerifyBIOSVersion.cmd",
+            "LogFileName": "VerifyBIOSVersion.txt",
+            "Payload": "JunoBiosPayload"
+        },
+        {
+            "Id": "BiosUpdate",
+            "MinimumExecutionTime": "00:02:00",
+            "MaxExecutionTime": "02:00:00",
+            "ExecutableName": "BIOSUpgrade.cmd",
+            "LogFileName": "BIOSUpgrade.txt",
+            "Payload": "JunoBiosPayload",
+            "SuccessStrings": [
+                "Please reboot system",
+                "exitCode 0"
+            ]
+        },
+        {
+            "Id": "BiosDowngrade",
+            "MinimumExecutionTime": "00:02:00",
+            "MaxExecutionTime": "02:00:00",
+            "ExecutableName": "BIOSDowngrade.cmd",
+            "LogFileName": "BIOSDowngrade.txt",
+            "Payload": "JunoBiosPayload",
+            "SuccessStrings": [
+                "Please reboot system",
+                "exitCode 0"
+            ]
+        },
+        {
+            "Id": "BmcUpdate",
+            "ExecutableName": "csi_bmc_upd.bat",
+            "LogFileName": "csi_bmc_upd.txt",
+            "Payload": "JunoBmcPayload"
+        },
+        {
+            "Id": "FpgaReconfig",
+            "ExecutableName": "FPGAMgmt.exe",
+            "Arguments": "/reconfig-golden",
+            "LogFileName": "reconfig.log",
+            "Payload": "PayloadFromSME",
+            "SuccessStrings": [
+                "Command reconfig-golden succeeded!"
+            ]
+        },
+        {
+            "Id": "FpgaFlash",
+            "ExecutableName": "FPGADiagnostics.exe",
+            "Arguments": "/reconfig-golden",
+            "LogFileName": "goldenFlash.log",
+            "Payload": "PayloadFromSME",
+            "SuccessStrings": [
+                "Exiting WriteFlashSlot FPGA_STATUS 0x0"
+            ]
+        },
+        {
+            "Id": "CertifyBlade",
+            "ExecutableName": "Juno.CRCBladeCertificationAgent.exe",
+            "Payload": "CrcTipBladeCertification",
+            "LogFileName": "certificationOutput.log",
+            "Arguments": "-e juno-dev01"
+        },
+        {
+            "Id": "SsdUpgrade",
+            "ExecutableName": "parallel_firmware_update.bat",
+            "Payload": "JunoSsdPayload",
+            "LogFileName": "parallel_firmware_update.txt",
+            "MaxExecutionTime": "00:30:00"
+        },
+      {
+        "Id": "SsdDowngrade",
+        "ExecutableName": "parallel_firmware_downgrade.bat",
+        "Payload": "JunoSsdPayload",
+        "LogFileName": "parallel_firmware_downgrade.txt",
+        "MaxExecutionTime": "00:30:00"
+      },
+      {
+        "Id": "UsbUnlock",
+        "ExecutableName": "PnpPolicy.cmd",
+        "Arguments": "USB unlock",
+        "Payload": "JunoBmcPayload",
+        "LogFileName": "PnpPolicy.txt",
+        "MaxExecutionTime": "00:15:00"
+      }
+    ]
+}

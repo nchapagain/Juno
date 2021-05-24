@@ -1,0 +1,58 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <RunCodeAnalysis></RunCodeAnalysis>
+    <EnableBaseIntermediateOutputPathMismatchWarning>false</EnableBaseIntermediateOutputPathMismatchWarning>
+    <NoWarn>CA2000,SA1117,SA1508</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!--
+        Version information for an assembly consists of the following four values:
+
+        Major Version
+        Minor Version
+        Build Number
+        Revision
+        -->
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <AssemblyName>Juno.Hosting.Common</AssemblyName>
+    <RootNamespace>Juno.Hosting.Common</RootNamespace>
+    <PackageId>Juno.Hosting.Common</PackageId>
+    <Authors>crcteam@microsoft.com</Authors>
+    <AssemblyVersion>1.0.0</AssemblyVersion>
+    <Description>Components used to by Juno API and agent host applications at runtime.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="3.1.0" />
+    <PackageReference Include="Microsoft.AspNetCore" Version="2.2.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication" Version="2.2.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="5.0.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+
+    <!-- 
+        Adding Swagger to ASP.NET Core APIs
+        https://docs.microsoft.com/en-us/aspnet/core/tutorials/getting-started-with-swashbuckle?view=aspnetcore-3.1&tabs=visual-studio
+        -->
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.AspNetCore\Microsoft.Azure.CRC.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Common\Microsoft.Azure.CRC.Common.csproj" />
+    <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Contracts\Microsoft.Azure.CRC.Contracts.csproj" />
+    <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Kusto\Microsoft.Azure.CRC.Kusto.csproj" />
+    <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Repository\Microsoft.Azure.CRC.Repository.csproj" />
+    <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Subscriptions\Microsoft.Azure.CRC.Subscriptions.csproj" />
+    <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Telemetry\Microsoft.Azure.CRC.Telemetry.csproj" />
+    <ProjectReference Include="..\Juno.Api.Client\Juno.Api.Client.csproj" />
+    <ProjectReference Include="..\Juno.Contracts\Juno.Contracts.csproj" />
+    <ProjectReference Include="..\Juno.DataManagement\Juno.DataManagement.csproj" />
+  </ItemGroup>
+
+  <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Module.props" />
+</Project>

@@ -1,0 +1,20 @@
+﻿// Filter on hardware sku id.
+let excludeHwSku = dynamic([$excludeHwSku$]);
+let includeHwSku = dynamic([$includeHwSku$]);
+let includeCluster = datatable(ClusterId:string)[$includeCluster$];
+let excludeCluster = datatable(ClusterId:string)[$excludeCluster$];
+cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryGenerationMappingV3
+| where IsLive == true
+| extend ClusterId = tolower(ClusterId)
+| join kind=inner includeCluster on ClusterId
+| join kind=leftanti excludeCluster on ClusterId
+| where ClusterId contains "prd"
+| join kind=inner hint.strategy=broadcast (
+        cluster('cirrus.kusto.windows.net').database('cirrus').Region
+        | distinct RegionName, FabricRegionName
+    ) on  $left.RegionId == $right.FabricRegionName
+| extend HwSku=HwSkuId,Region = RegionName, Rack=RackLocation
+| distinct Region,Rack, HwSku, NodeId, ClusterId
+| where (isempty(includeHwSku) or HwSku in~ (includeHwSku)) and HwSku !in~ (excludeHwSku)
+| distinct Region, Rack, ClusterId, NodeId, HwSku
+| take 500000;

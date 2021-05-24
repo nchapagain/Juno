@@ -1,0 +1,98 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+        <RunCodeAnalysis></RunCodeAnalysis>
+        <EnableBaseIntermediateOutputPathMismatchWarning>false</EnableBaseIntermediateOutputPathMismatchWarning>
+        <NoWarn>CA2227,SA1118</NoWarn>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <!--
+        Version information for an assembly consists of the following four values:
+
+        Major Version
+        Minor Version
+        Build Number
+        Revision
+        -->
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+        <AssemblyName>Juno.TestExtensions</AssemblyName>
+        <RootNamespace>Juno</RootNamespace>
+        <PackageId>Juno.TestExtensions</PackageId>
+        <Authors>crcteam@microsoft.com</Authors>
+        <AssemblyVersion>1.0.0</AssemblyVersion>
+        <Description>Shared classes and interfaces used by CRC AIR (Juno) libraries for testing and validation.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <Content Include="..\Juno.Documentation\Examples\ABC_Experiment.json" Link="Resources\Experiments\ABC_Experiment.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <Content Include="..\Juno.Documentation\Examples\AB_Experiment.json" Link="Resources\Experiments\AB_Experiment.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <Content Include="..\Juno.Documentation\Examples\AB_Experiment2.json" Link="Resources\Experiments\AB_Experiment2.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <Content Include="..\Juno.Documentation\Examples\AB_Experiment3.json" Link="Resources\Experiments\AB_Experiment3.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <Content Include="..\Juno.Documentation\Examples\A_Experiment.json" Link="Resources\Experiments\A_Experiment.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <Content Include="..\Juno.Documentation\Examples\A_Experiment2.json" Link="Resources\Experiments\A_Experiment2.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+      <Content Include="..\Juno.Documentation\Examples\A_Experiment3.json" Link="Resources\Experiments\A_Experiment3.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="AutoFixture" Version="4.11.0" />
+        <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
+        <PackageReference Include="Microsoft.Extensions.Configuration" Version="5.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Json" version="5.0.0" />
+        <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+        <PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.8" />
+        <PackageReference Include="Microsoft.Azure.KeyVault" Version="3.0.5" />
+        <PackageReference Include="Moq" Version="4.16.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Common\Microsoft.Azure.CRC.Common.csproj" />
+      <ProjectReference Include="..\Juno.Contracts\Juno.Contracts.csproj" />
+      <ProjectReference Include="..\Juno.DataManagement\Juno.DataManagement.csproj" />
+      <ProjectReference Include="..\Juno.EnvironmentSelection.Providers\Juno.EnvironmentSelection.Providers.csproj" />
+      <ProjectReference Include="..\Juno.Execution.Providers\Juno.Execution.Providers.csproj" />
+      <ProjectReference Include="..\Juno.Extensions.AspNetCore\Juno.Extensions.AspNetCore.csproj" />
+      <ProjectReference Include="..\Juno.Providers\Juno.Providers.csproj" />
+      <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Repository\Microsoft.Azure.CRC.Repository.csproj" />
+      <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.TestExtensions\Microsoft.Azure.CRC.TestExtensions.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="Properties\Resources.Designer.cs">
+        <DesignTime>True</DesignTime>
+        <AutoGen>True</AutoGen>
+        <DependentUpon>Resources.resx</DependentUpon>
+      </Compile>
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Update="Properties\Resources.resx">
+        <Generator>ResXFileCodeGenerator</Generator>
+        <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      </EmbeddedResource>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Resources\Experiments\" />
+    </ItemGroup>
+
+    <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Module.props" />
+    <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Configuration.targets" />
+
+</Project>

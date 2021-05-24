@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <EnableBaseIntermediateOutputPathMismatchWarning>false</EnableBaseIntermediateOutputPathMismatchWarning>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <!--
+        Version information for an assembly consists of the following four values:
+
+        Major Version
+        Minor Version
+        Build Number
+        Revision
+        -->
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+        <AssemblyName>Juno.Documentation</AssemblyName>
+        <RootNamespace>Juno.Documentation</RootNamespace>
+        <PackageId>Juno.Documentation</PackageId>
+        <Authors>crcteam@microsoft.com</Authors>
+        <AssemblyVersion>0.0.1</AssemblyVersion>
+        <Description>Documentation for Juno system components.</Description>
+    </PropertyGroup>
+
+    <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Module.props" />
+    <Import Project="$(BuildEnvToolsetsPath)\Robocopy.targets" />
+
+    <!-- Overrides for paths and settings -->
+    <PropertyGroup>
+        <DocumentationFile />
+        <OutDir>$([System.IO.Directory]::GetParent($(OutDir)).FullName)</OutDir>
+    </PropertyGroup>
+    
+    <!--
+    There is an MSBuild error that happens when running 'dotnet build':
+    MSB4801: The task factory "CodeTaskFactory" is not supported on the .NET Core version of MSBuild.
+    
+    As soon as we have a solution, we can reenable this target to copy the documentation to output.
+    
+    <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+        <Exec Command="del /F /Q $(TargetDir)*.dll $(TargetDir)*.pdb $(TargetDir)*.deps.json" />
+
+        <Robocopy
+            From="$(ProjectDir.TrimEnd('\'))"
+            To="$(OutDir.TrimEnd('\'))"
+            ExcludeFiles="*.csproj"
+            ExcludeDirectories="bin;obj"
+            />
+
+    </Target>
+    -->
+
+</Project>

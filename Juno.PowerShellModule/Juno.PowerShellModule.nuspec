@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>Juno</id>
+    <version>$version$</version>
+    <title>Juno CRC Flighting PowerShell Module</title>
+    <authors>crcairteam@microsoft.com</authors>
+    <owners>crcairteam@microsoft.com</owners>
+    <!-- licenseUrl>Internal Use Only</licenseUrl -->
+    <!-- projectUrl></projectUrl -->
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Juno Experiments Client PowerShell Module.</description>
+    <releaseNotes />
+    <copyright>Copyright 2017</copyright>
+    <tags>Juno CRC Flighting Experiments PSModule PSIncludes_Cmdlet</tags>
+  </metadata>
+  <files>
+    <file src="win-x64\publish\**\*.*" target="." />
+  </files>
+</package>

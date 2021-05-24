@@ -1,0 +1,14 @@
+﻿To Enable Debugging within the Visual Studio IDE to run CmdLets:
+----------------------------------------------------------------------------------------------
+1) Consider running Visual Studio as Administrator - depending on what operation
+   you need to test (and whether it needs to be elevated to work)
+
+2) In the properties for the project, go to the Debug section and set
+   'Start external program' to:  C:\Program Files\PowerShell\7\pwsh.exe
+
+3) In 'Command line arguments' textbox add the following:
+  -noexit -command "&{Import-Module $(TargetDir)win-x64\publish\Juno.PowerShellModule.dll -DisableNameChecking -Verbose}
+
+Backgrounders:
+--------------
+http://www.codeproject.com/Articles/32999/How-to-Write-a-Custom-PowerShell-Cmdlet-Part-I

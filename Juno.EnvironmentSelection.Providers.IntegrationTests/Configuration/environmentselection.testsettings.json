@@ -1,0 +1,22 @@
+{
+  "EnvironmentSelectionSettings": {
+    "Regions": [ "East US", "East US 2", "West US 2", "Central US", "South Central US" ],
+    "CpuIds": [ "50657", "306f2", "08f12", "38f10" ],
+    "BiosVersions": [ "C2030.BS.2A35.AT1", "02.07.01.01", "C2020.BS.3A18.AA1" ],
+    "OSVersions": [ "427", "295", "455" ],
+    "SsdFamilies": [ "PM983" ],
+    "SsdModels": [ "SAMSUNG MZ1LB960HAJQ-000MV", "Micron_5200_MTFDDAK960TDD", "Micron_X100_MTXDHBR805PFB", "HFS960GD0TEG-6410A" ],
+    "SsdFirmwares": [ "EDA78M5Q", "1.0", "5.09d" ],
+    "SsdClusters": [ "bnz10prdapp05", "bz7prdapp13", "bn1prdapp10" ],
+    "ClusterSkus": [ "app", "cai", "vhm", "gpc" ],
+    "HwSkus": [ "ZT_Gen4.0_HPCv2", "Wiwynn_Azure_AMD_Gen6_GP_Low_Compute", "Ingrasys-Azure-Compute-Intel-WCS-C2030" ],
+    "VmSkus": [ "Standard_D4s_v3", "Standard_D2s_v3" ],
+    "MicrocodeVersions": [ "000000002C000005", "43000000", "3012000800000000" ],
+    "ExampleClusters": [ "mnz20prdapp13", "bl3prdapp15", "blaprdhpc01" ],
+    "CpuDescriptionRootString": "Intel",
+    "SoCFipFirmwares": [ "0002.03.200729-prd", "0002.06.210223-dev", "0002.05.201110-prd" ],
+    "SoCCerberusFirmwares": [ "2.4.3.0", "2.4.4.0" ],
+    "SoCNitroFirmwares": [ "0002.06.210223-dev", "0002.06.210223-prd", "0002.05.201110-prd" ],
+    "ExperimentNames": [ "MCU2021.1_Gen7_Candidate" ]
+  }
+}

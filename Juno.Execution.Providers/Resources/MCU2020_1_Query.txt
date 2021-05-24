@@ -1,0 +1,164 @@
+// MCU2020_1_Query
+let externalSkus = $vmSkus$;
+let cpuIDList = $cpuIDList$;
+let regions = $regions$;
+let beginTime = ago(4h);
+let internalVmSkus = cluster('cirrus.kusto.windows.net').database('cirrus').VMSKU
+    | distinct FabricVMSkuName, VMSKUName
+    | project VmSku = tolower(FabricVMSkuName), ExternalVMSKU = VMSKUName
+    | where isempty(externalSkus) or ExternalVMSKU in~ (externalSkus)
+    | distinct VmSku;
+let clusterMetadata = cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryComponentCPUMicrocode
+    | distinct ClusterId, ProcessorNameString, Identifier
+    | where isnotempty(ProcessorNameString)
+    | project Cluster = ClusterId, ProcessorDescription = tolower(ProcessorNameString), Identifier;
+// Step 2: Get CPU Id information with Processor description.
+let cpuIds = cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryComponentCPU
+    | distinct Description, CPUIDExtModel, CPUIDExtFamily, CPUIDFamily, CPUIDModel, CPUIDSteppingID
+    | extend CPUID=strcat(tolower(tohex(CPUIDExtModel)),tolower(tohex(CPUIDExtFamily)), tolower(tohex(CPUIDFamily)), tolower(tohex(CPUIDModel)),tolower(tohex(CPUIDSteppingID)))
+    | where (isempty( cpuIDList) or CPUID in~ (cpuIDList))
+    | project CPUID, ProcessorDescription = tolower(Description);
+let clusterWithCPUId = clusterMetadata
+    | join kind=inner cpuIds on $left.ProcessorDescription == $right.ProcessorDescription
+    | project clusterName = tolower(Cluster), CPUID;
+cluster('azurecm.kusto.windows.net').database('AzureCM').AllocableVmCount
+| where PreciseTimeStamp > beginTime
+| where vmType == "IOwnMachine" and deploymentType == "NewDeployment" and partitionType == "Cluster"
+// filter clusters that are usable for VM deployment i.e sellable clusters
+| where partitionName contains "PrdApp"
+| summarize arg_max(PreciseTimeStamp, vmCount) by partitionName
+| project clusterName = tolower(partitionName), allocableEmptyNodeCountPerCluster = vmCount
+| join kind=inner hint.strategy=broadcast(
+        // Step 2: Find clusters that support the list of VMTypes and the corresponding available VMCount
+        cluster('azurecm.kusto.windows.net').database('AzureCM').AllocableVmCount
+        | where PreciseTimeStamp > beginTime and vmType != "IOwnMachine" and deploymentType == "NewDeployment" and partitionType == "Cluster"
+        | where  vmType in~ (internalVmSkus)
+        | summarize arg_max(PreciseTimeStamp, vmCount) by partitionName, vmType
+        | where vmCount > 50
+        | project clusterName = tolower(partitionName), vmType=tolower(vmType)
+    ) on clusterName
+| join kind=inner hint.strategy=broadcast(
+        // Step 3: Join with AzureCM for supported CpuId
+        clusterWithCPUId
+    ) on clusterName
+| join kind=inner hint.strategy=broadcast(
+        // Step 4: Get the Fabric Setting to determine if new deployment is allowed on a cluster
+        cluster('azurecm.kusto.windows.net').database('AzureCM').TMMgmtFabricSettingEtwTable
+        | where PreciseTimeStamp >= beginTime and Name =~ "Fabric.EnableNewDeploymentForAllocation"
+        | summarize arg_max(PreciseTimeStamp, Name, Value) by clusterName = Tenant, Name, Region
+        | where Value =~ "True"
+        | project clusterName = tolower(clusterName), Region
+    ) on clusterName
+| join kind=inner hint.strategy=broadcast(
+        // Step 5: Get the Fabric Setting to determine if TipNode session creation is allowed on a cluster
+        cluster('azurecm.kusto.windows.net').database('AzureCM').TMMgmtFabricSettingEtwTable
+        | where PreciseTimeStamp >= beginTime and Name =~ "Fabric.TiP.AllowNewTipNodeSessions"
+        | summarize arg_max(PreciseTimeStamp, Name, Value) by clusterName = Tenant, Name
+        | where Value =~ "True"
+        | project clusterName = tolower(clusterName)
+) on clusterName
+| join kind=leftanti hint.strategy=broadcast (
+        // Step 6: Filter out clusters reserved for specific subscriptions only
+        cluster('azurecm.kusto.windows.net').database('AzureCM').TMMgmtFabricSettingEtwTable
+        | where TIMESTAMP > ago(30min)
+        | where Name == "Fabric.AllowOnlyWhiteListedSubscriptionsOrPlatformTenantToDeploy" and Value =~"True"
+        | extend clusterName = tolower(Tenant)
+    ) on clusterName
+| join kind=leftouter hint.strategy=broadcast (
+        // Step 7: Get the used TiPNodeSession and used TipNode count for each cluster
+        cluster('azurecm.kusto.windows.net').database('AzureCM').LogNodeSnapshot
+        | where PreciseTimeStamp > beginTime
+        | summarize arg_max(PreciseTimeStamp, tipNodeSessionId) by nodeId, clusterName = tolower(Tenant)
+        | where tipNodeSessionId != "00000000-0000-0000-0000-000000000000" 
+        | summarize numTipNodesUsed = countif(tipNodeSessionId != "00000000-0000-0000-0000-000000000000") by clusterName, tipNodeSessionId
+        | summarize numTipSessionsUsed = count(), numTotalTipNodesUsed = sum(numTipNodesUsed) by clusterName
+    ) on clusterName
+| join kind=inner hint.strategy=broadcast (
+        // Step 8: Check CRP enablement
+        cluster('azurecm.kusto.windows.net').database('AzureCM').AllocatorAllocationResult
+        | where TIMESTAMP > ago(7d)
+        | where allocationRequestType == "NewDeployment"
+        | where tenantId !startswith "00000000" and correlationId !startswith "0000000"
+        | project  clusterName = tolower(Tenant)
+        | distinct clusterName
+    ) on clusterName
+| join kind=leftouter hint.strategy=broadcast (
+        // Step 9: Get the Fabric Setting to find Number Of TiPNodeSessions allowed on each cluster
+        cluster('azurecm.kusto.windows.net').database('AzureCM').TMMgmtFabricSettingEtwTable
+        | where PreciseTimeStamp >= beginTime and Name =~ "Fabric.TiP.MaxTipNodeSessionsPerCluster"
+        | summarize arg_max(PreciseTimeStamp, Name, Value) by clusterName = tolower(Tenant), TiPSessionlimitPerCluster= toint(Value)
+    ) on clusterName
+| join kind=leftouter hint.strategy=broadcast (
+        // Step 10: Get the Fabric Setting to find Number Of TiPNodeSessions allowed on each cluster
+        cluster('azurecm.kusto.windows.net').database('AzureCM').TMMgmtFabricSettingEtwTable
+        | where PreciseTimeStamp >= beginTime and Name =~ "Fabric.TiP.MaxTipNodesPerCluster"
+        | summarize arg_max(PreciseTimeStamp, Name, Value) by clusterName = tolower(Tenant), TiPNodeslimitPerCluster= toint(Value)
+    ) on clusterName
+| join kind=leftouter hint.strategy=broadcast (
+        // Step 11: Convert external VMSKU to fabric VMSKU
+        cluster('cirrus.kusto.windows.net').database('cirrus').VMSKU
+        | distinct FabricVMSkuName, VMSKUName
+        | project VMSKU = tolower(FabricVMSkuName), ExternalVMSKU = VMSKUName
+    ) on $left.vmType == $right.VMSKU
+// Step 12: Project cluster supported VMTypes, Hardware SKU, the calculated Available TipNode sessions and Available TiPNodes on every cluster
+| project
+    clusterName,
+    Region,
+    vmType,
+    allocableEmptyNodeCountPerCluster,
+    TiPNodeslimitPerCluster,
+    TiPSessionlimitPerCluster,
+    CPUID,
+    ExternalVMSKU,
+    currentUsedTiPNodeSessionsPerCluster = iff(notempty(numTipSessionsUsed), toint(numTipSessionsUsed), 0), // in case numTipSessionsUsed is empty
+    currentUsedTiPNodesPerCluster = iff(notempty(numTotalTipNodesUsed), toint(numTotalTipNodesUsed), 0) // in case numTotalTipNodesUsed is empty
+| extend  RemainingTipSessions = max_of(0, TiPSessionlimitPerCluster - currentUsedTiPNodeSessionsPerCluster)
+| summarize SupportedVMSku= make_list(ExternalVMSKU) by clusterName, CPUID, Region, RemainingTipSessions
+| project ClusterId=clusterName, CPUID, Region, RemainingTipSessions, SupportedVMSku
+| join kind=inner hint.strategy=broadcast (
+        // Step 13: Grab only ready and available nodes
+        cluster('azurecm.kusto.windows.net').database('AzureCM').LogNodeSnapshot
+        | where PreciseTimeStamp > beginTime
+        | summarize arg_max(PreciseTimeStamp, tipNodeSessionId, nodeAvailabilityState, nodeState, containerCount) by NodeId = nodeId, ClusterId = tolower(Tenant), MachinePoolName = machinePoolName
+        | where nodeState == "Ready" and nodeAvailabilityState == "Available" and containerCount == 0 and tipNodeSessionId == "00000000-0000-0000-0000-000000000000"
+        | project ClusterId, NodeId, MachinePoolName
+    ) on ClusterId
+| join kind=inner hint.strategy=broadcast (
+        // Step 14: Get the rack location
+        cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryGenerationMappingV3
+        | project NodeId, HwSkuId, ClusterId = tolower(ClusterId), RackLocation
+    ) on ClusterId, NodeId
+| join kind=inner hint.strategy=broadcast (
+        // Step 15: Filter out probation and other nodes where HealthGrade > 0
+        cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').ResourceSnapshotV1
+        | where HealthGrade == 0 | project NodeId = ResourceId
+    ) on NodeId
+// CPU id recheck to avoid mix mode cluster issue, cannot do it above due to out of memory queries.
+| join kind=inner hint.strategy=broadcast (
+        // Step 16: Check node's CPU ID (needed for mixed-mode clusters)
+        cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryComponentCPU
+        | distinct Description, CPUIDExtModel, CPUIDExtFamily, CPUIDFamily, CPUIDModel, CPUIDSteppingID, NodeId
+        | extend CPUID = strcat(tolower(tohex(CPUIDExtModel)), tolower(tohex(CPUIDExtFamily)), tolower(tohex(CPUIDFamily)), tolower(tohex(CPUIDModel)), tolower(tohex(CPUIDSteppingID)))
+        | where CPUID in~ (cpuIDList)
+        | project NodeId
+    ) on NodeId
+// Target only RS1.8+
+| join kind=inner hint.strategy=broadcast (
+        cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryComponentSystem
+        | summarize arg_max(DataCollectedOn, BIOSVersion, OsBuildUbr) by ClusterId, NodeId
+        | where OsBuildUbr == 455
+        | distinct ClusterId,  NodeId
+    ) on NodeId, ClusterId
+| summarize NodeList = make_list(NodeId) by HwSkuId, ClusterId, RackLocation, Region, RemainingTipSessions, tostring(SupportedVMSku), CPUID, MachinePoolName
+| extend NodeCount = array_length(NodeList)
+| where NodeCount >= 2
+| summarize arg_max(NodeCount, *) by ClusterId
+| join kind=inner hint.strategy=broadcast (
+        // Step 17: Convert internal region name to external region name
+        cluster('cirrus.kusto.windows.net').database('cirrus').Region
+        | distinct FabricRegionName, RegionName
+    ) on $left.Region == $right.FabricRegionName
+| extend Region = RegionName
+| where (isempty(regions) or Region in~ (regions))
+| where Region !contains "STG"
+| project RackLocation,ClusterId, CPUID, Region, RemainingTipSessions, SupportedVMSku, NodeList, MachinePoolName

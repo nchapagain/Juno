@@ -1,0 +1,6 @@
+.create-or-alter function with (folder = "Mapping") getPreferredTerm(T:(term:string),dataClassificationSystem:string,dataClassification:string) {
+    getPreferredTerms(dataClassificationSystem)
+    | where classification == dataClassification
+    | join kind=rightouter  (T | project term) on term
+    | project originalTerm = term1, preferredTerm = coalesce(preferredTerm, term1)
+}

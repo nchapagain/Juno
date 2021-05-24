@@ -1,0 +1,5 @@
+﻿let executionGoalName = "$executionGoalFilter$";
+let environmentSetting = "$environment$";
+cluster('azurecrc.westus2.kusto.windows.net').database('JunoStaging').getExecutionGoalStatus(executionGoalName)
+| where environment == environmentSetting
+| project experimentId, experimentName, experimentStatus, environment, executionGoal, targetGoal, impactType, experimentStartTime, lastIngestionTime;

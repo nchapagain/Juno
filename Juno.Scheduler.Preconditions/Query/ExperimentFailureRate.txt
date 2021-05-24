@@ -1,0 +1,20 @@
+﻿// The query is for Failure Rate Precondition Provider
+// This query will return a dataTable with column: FailureRate Value 
+// FailureRate value looks at total Experiment Instances and compares it with total experimentStatus == "Failed" under the governing target goal that launched it
+// failureRate is percent value that is rounded to the nearest int 
+// This query relies on getTargetGoalSummary() from Staging DB
+//
+let minimumExperimentInstance = $minimumRuns$;
+let targetGoalExpected = "$targetGoal$";
+let environmentSetting = "$environment$";
+let queryStart = $startTime$;
+let queryEnd = now();
+let targetGoalFailure = cluster('azurecrc.westus2.kusto.windows.net').database('JunoStaging').getTargetGoalSummary(targetGoalExpected, queryStart, queryEnd)
+| where environment == environmentSetting
+| where totalruns >= minimumExperimentInstance
+| project targetGoal, toreal(totalruns), toreal(FailedExp);
+targetGoalFailure
+| extend percentage = 100*(FailedExp/totalruns)
+| extend failureRate = round(percentage, 0)
+| take 1
+| project failureRate;

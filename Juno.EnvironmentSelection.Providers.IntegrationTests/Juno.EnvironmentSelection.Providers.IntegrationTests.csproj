@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+	<NoWarn>CA2007,IDE00003,AZCA1001</NoWarn>
+	<RootNamespace>Juno.EnvironmentSelection.NodeSelectionFilters</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NUnit" Version="3.13.1" />
+    <PackageReference Include="NUnit3TestAdapter" Version="3.17.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.8.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Telemetry\Microsoft.Azure.CRC.Telemetry.csproj" />
+    <ProjectReference Include="..\Juno.Contracts\Juno.Contracts.csproj" />
+    <ProjectReference Include="..\Juno.EnvironmentSelection.Providers\Juno.EnvironmentSelection.Providers.csproj" />
+    <ProjectReference Include="..\Juno.TestExtensions\Juno.TestExtensions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Configuration\environmentselection.testsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Module.props" />
+
+</Project>

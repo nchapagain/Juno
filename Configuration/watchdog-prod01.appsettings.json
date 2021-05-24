@@ -1,0 +1,15 @@
+{
+  "Id": "watchdog-prod01",
+  "Environment": "watchdog-prod01",
+  "Logging": {
+    "IncludeScopes": true,
+    "Debug": {
+      "LogLevel": {
+        "Default": "trace"
+      }
+    },
+    "LogLevel": {
+      "Default": "trace"
+    }
+  }
+}

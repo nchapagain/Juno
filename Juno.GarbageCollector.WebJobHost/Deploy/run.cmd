@@ -1,0 +1,1 @@
+Juno.GarbageCollector.WebJobHost.exe %*

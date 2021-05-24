@@ -1,0 +1,13 @@
+{
+  "KeyVaultSettings": {
+    "KeyVaultUri": "https://junodev01vault.vault.azure.net/",
+    "PrincipalApplicationID": "06b4fd69-87e9-4b7e-ab2f-7b09ddb6a375",
+    "PrincipalCertificateThumbprint": "8C0F86BC58F329C1CD9A8D8D9C619A0A7107D067"
+  },
+  "StorageSettings": {
+    "CosmosDocumentsUri": "https://junodev01cosmos.documents.azure.com:443/",
+    "CosmosTableUri": "https://junodev01cosmostable.table.cosmos.azure.com:443/",
+    "StorageAccountBlobUri": "https://junodev01storage.blob.core.windows.net",
+    "StorageAccountQueueUri": "https://junodev01storage.queue.core.windows.net"
+  }
+}

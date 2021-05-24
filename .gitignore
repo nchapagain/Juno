@@ -1,0 +1,3 @@
+# Ignore Azure WebApp Deployment/Publishing Artifact folders
+# and files
+.[Cc]onfig/

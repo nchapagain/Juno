@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>netcoreapp3.1</TargetFramework>
+        <RuntimeIdentifiers>win-x64;linux-x64;linux-arm64</RuntimeIdentifiers>
+        <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+        <NoWarn>IDE0003,IDE0060,CA1801,CA1812,CA2000,CA1001,SA1508,NU5111,NU1603,NU1603</NoWarn>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <PackagePreReleaseSuffix></PackagePreReleaseSuffix>
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+        <AssemblyName>Juno.GuestAgent.Installer</AssemblyName>
+        <RootNamespace>Juno.GuestAgent.Installer</RootNamespace>
+        <AssemblyVersion>3.4.4</AssemblyVersion>
+        <Description>Juno VM Guest Agent installer.</Description>
+    </PropertyGroup>
+	
+    <ItemGroup>
+        <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="3.1.0" />
+        <!--
+        The following package references are used to address package reference conflicts. Whereas, none
+        of these packages are actually used by the Juno Guest Agent installer, there are package dependencies
+        referenced as part of the .NET Core framework that do reference them. We are defining these to remove
+        build warnings.
+        -->
+
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Juno.Execution.AgentRuntime\Juno.Execution.AgentRuntime.csproj" />
+        <ProjectReference Include="..\Juno.Execution.NuGetIntegration\Juno.Execution.NuGetIntegration.csproj" />
+        <ProjectReference Include="..\Juno.Hosting.Common\Juno.Hosting.Common.csproj" />
+        <ProjectReference Include="..\Juno.Extensions.Telemetry\Juno.Extensions.Telemetry.csproj" />
+    </ItemGroup>
+
+    <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Module.props" />
+    <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Configuration.targets" />
+    
+</Project>

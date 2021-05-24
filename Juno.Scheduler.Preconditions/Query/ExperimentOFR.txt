@@ -1,0 +1,10 @@
+﻿// The query is for Juno Experiment Goal OFR Precondition Provider
+// This query will return a dataTable with values in JunoOFRNode contract 
+// This query relies on getJunoOFRsWithExperimentData() from Ingestion DB
+let queryStart = $startTime$;
+let queryEnd = now();
+let junoOFRs = cluster('azurecrc.westus2.kusto.windows.net').database('JunoIngestion').getJunoOFRsWithExperimentData(queryStart, queryEnd)
+    | project TIMESTAMP = ofrStartTime, tipNodeSessionId, nodeId, experimentName = junoExperimentName, experimentId = junoExperimentId, environment;
+junoOFRs
+| where environment == "$environmentSetting$"
+| where experimentName in ($JunoExperimentName$);

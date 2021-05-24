@@ -1,0 +1,88 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>netstandard2.1</TargetFramework>
+		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<RunCodeAnalysis></RunCodeAnalysis>
+		<EnableBaseIntermediateOutputPathMismatchWarning>false</EnableBaseIntermediateOutputPathMismatchWarning>
+		<NoWarn>CS1998,SA1202,CS1570,CS1587,CA1054</NoWarn>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<!--
+        Version information for an assembly consists of the following four values:
+        Major Version
+        Minor Version
+        Build Number
+        Revision
+        -->
+		<AssemblyAndPackageVersion>1.1.3</AssemblyAndPackageVersion>
+		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+		<AssemblyName>Juno.Scheduler.Preconditions</AssemblyName>
+		<RootNamespace>Juno.Scheduler.Preconditions</RootNamespace>
+		<AssemblyVersion>$(AssemblyAndPackageVersion)</AssemblyVersion>
+		<Description>Juno Scheduler Preconditions</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="ncrontab.signed" Version="3.3.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Common\Microsoft.Azure.CRC.Common.csproj" />
+		<ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Contracts\Microsoft.Azure.CRC.Contracts.csproj" />
+		<ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Rest\Microsoft.Azure.CRC.Rest.csproj" />
+		<ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Subscriptions\Microsoft.Azure.CRC.Subscriptions.csproj" />
+		<ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Telemetry\Microsoft.Azure.CRC.Telemetry.csproj" />
+		<ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Kusto\Microsoft.Azure.CRC.Kusto.csproj" />
+		<ProjectReference Include="..\Juno.Contracts\Juno.Contracts.csproj" />
+		<ProjectReference Include="..\Juno.DataManagement\Juno.DataManagement.csproj" />
+		<ProjectReference Include="..\Juno.Extensions.AspNetCore\Juno.Extensions.AspNetCore.csproj" />
+		<ProjectReference Include="..\Juno.Providers\Juno.Providers.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Update="Properties\PreconditionResource.Designer.cs">
+			<DesignTime>True</DesignTime>
+			<AutoGen>True</AutoGen>
+			<DependentUpon>PreconditionResource.resx</DependentUpon>
+		</Compile>
+		<Compile Update="Properties\Resources.Designer.cs">
+		  <DesignTime>True</DesignTime>
+		  <AutoGen>True</AutoGen>
+		  <DependentUpon>Resources.resx</DependentUpon>
+		</Compile>
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Update="Properties\PreconditionResource.resx">
+			<Generator>PublicResXFileCodeGenerator</Generator>
+			<LastGenOutput>PreconditionResource.Designer.cs</LastGenOutput>
+		</EmbeddedResource>
+		<EmbeddedResource Update="Properties\Resources.resx">
+		  <Generator>ResXFileCodeGenerator</Generator>
+		  <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+		</EmbeddedResource>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="Query\ExperimentFailureRate.txt">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Query\ExperimentOFR.txt">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Query\JunoOfr.txt">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Query\InProgressExperiments.txt">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="Query\SuccessfulExperiments.txt">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>
+
+	<Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Module.props" />
+
+</Project>

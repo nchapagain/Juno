@@ -1,0 +1,7 @@
+let nodeId = $nodeId$;
+let startTime = $startTime$;
+let endTime = $endTime$;
+cluster("AzureCM.kusto.windows.net").database("AzureCM").CSIMicrocodeEvents
+| where resourceId == nodeId
+| where env_time >= startTime and env_time <= endTime
+| project env_time, resultType, resultSignature, resultDescription

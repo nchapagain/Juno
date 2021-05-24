@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>Juno.Api.Client</id>
+    <version>$version$</version>
+    <title>Juno REST API clients.</title>
+    <authors>crcair@microsoft.com</authors>
+    <owners>crcair@microsoft.com</owners>
+    <!-- licenseUrl>Internal Use Only</licenseUrl -->
+    <!-- projectUrl></projectUrl -->
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Juno REST API clients library.</description>
+    <releaseNotes />
+    <copyright>Copyright 2020</copyright>
+    <tags>Juno Experiment API</tags>
+  </metadata>
+  <files>
+    <file src="$outputdir$\*.dll" target="lib\netstandard2.1" />
+    <file src="$outputdir$\*.pdb" target="lib\netstandard2.1" />
+  </files>
+</package>

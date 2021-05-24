@@ -1,0 +1,20 @@
+﻿// Filter on Cluster Sku.
+let excludeClusterSku = $excludeClusterSku$;
+let includeClusterSku = $includeClusterSku$;
+let includeRegion = $includeRegion$;
+let excludeRegion = $excludeRegion$;
+cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryGenerationMappingV3
+| where IsLive == true
+| extend ClusterId = tolower(ClusterId)
+| where ClusterId contains "prd"
+| extend ClusterSku = tolower(substring(tostring(split(ClusterId, 'prd')[1]), 0, 3))
+| extend ClusterSku = case( HwSkuId contains "vhm", "vhm",HwSkuId contains "Compute" and HwSkuId contains "hm" and HwSkuId !contains "vhm", "hm",ClusterSku)
+| where (isempty(includeClusterSku) or ClusterSku in~ (includeClusterSku)) and ClusterSku !in~ (excludeClusterSku)
+| distinct RegionId, ClusterId, ClusterSku
+| join kind = inner (
+    cluster('cirrus.kusto.windows.net').database('cirrus').Region
+    | where RegionName in~ (includeRegion) and RegionName !in~ (excludeRegion)
+    | distinct RegionName, FabricRegionName) on $left.RegionId == $right.FabricRegionName
+| extend Region = RegionName
+| distinct Region, ClusterId, ClusterSku
+| take 500000;

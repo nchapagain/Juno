@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <NoWarn>CA1812,CA2000,CA2007,CS1570,CS1587,IDE0058,SA1117,SA1508,AZCA1001,AsyncFixer04</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <AssemblyName>Juno.DataManagement.UnitTests</AssemblyName>
+    <RootNamespace>Juno.DataManagement</RootNamespace>
+    <AssemblyVersion>1.0.0</AssemblyVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Resources\**" />
+    <EmbeddedResource Remove="Resources\**" />
+    <None Remove="Resources\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Juno.Contracts\Juno.Contracts.csproj" />
+    <ProjectReference Include="..\Juno.DataManagement\Juno.DataManagement.csproj" />
+    <ProjectReference Include="..\Juno.TestExtensions\Juno.TestExtensions.csproj" />
+  </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.OData" Version="7.3.0" />
+        <PackageReference Include="nunit" Version="3.13.1" />
+        <PackageReference Include="NUnit3TestAdapter" Version="3.17.0" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.8.3" />
+        <PackageReference Include="Moq" Version="4.16.1" />
+    </ItemGroup>
+
+  <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Module.props" />
+</Project>

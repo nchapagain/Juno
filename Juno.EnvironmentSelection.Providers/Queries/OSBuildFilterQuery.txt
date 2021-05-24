@@ -1,0 +1,23 @@
+﻿// takes in the filters for the OS build and returns the cluster id node id,
+// and the OS Build. This is very similar to the BIOS query. 
+let includeOsBuildUbr = dynamic([$includeOSBuild$]);
+let excludeOsBuildUbr = dynamic([$excludeOSBuild$]);
+let includeCluster = datatable(ClusterId:string)[$includeCluster$];
+let excludeCluster = datatable(ClusterId:string)[$excludeCluster$];
+cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryGenerationMappingV3
+| where IsLive == true
+| extend ClusterId = tolower(ClusterId)
+| join kind=inner includeCluster on ClusterId
+| join kind=leftanti excludeCluster on ClusterId
+| join kind = inner hint.strategy=broadcast(
+    cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryComponentSystem
+    | summarize arg_max(DataCollectedOn, BIOSVersion, OsBuildUbr) by ClusterId, NodeId
+    | where (isempty(includeOsBuildUbr) or tostring(OsBuildUbr) in~ (includeOsBuildUbr)) and (excludeOsBuildUbr) !has tostring(OsBuildUbr)) on NodeId
+| distinct ClusterId, NodeId, OsBuildUbr, RegionId, RackLocation
+| join kind=inner hint.strategy=broadcast (
+        cluster('cirrus.kusto.windows.net').database('cirrus').Region
+        | distinct RegionName, FabricRegionName
+    ) on  $left.RegionId == $right.FabricRegionName
+| extend Region = RegionName
+| project Region, Rack = RackLocation, ClusterId, OsBuildUbr, NodeId
+| take 500000;

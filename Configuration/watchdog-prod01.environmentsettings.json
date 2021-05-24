@@ -1,0 +1,15 @@
+{
+  "Id": "watchdog-prod01",
+  "Environment": "watchdog-prod01",
+
+  "AppInsightsSettings": [
+    {
+      "Id": "Telemetry",
+      "InstrumentationKey": "b66e3092-314c-459f-a638-f3bbc1325769"
+    },
+    {
+      "Id": "Tracing",
+      "InstrumentationKey": "b66e3092-314c-459f-a638-f3bbc1325769"
+    }
+  ]
+}

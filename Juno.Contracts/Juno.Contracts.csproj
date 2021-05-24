@@ -1,0 +1,56 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <RunCodeAnalysis></RunCodeAnalysis>
+        <EnableBaseIntermediateOutputPathMismatchWarning>false</EnableBaseIntermediateOutputPathMismatchWarning>
+        <NoWarn>CA1308,SA1118</NoWarn>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <!--
+        Version information for an assembly consists of the following four values:
+
+        Major Version
+        Minor Version
+        Build Number
+        Revision
+        -->
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+        <AssemblyName>Juno.Contracts</AssemblyName>
+        <RootNamespace>Juno.Contracts</RootNamespace>
+        <PackageId>Juno.Contracts</PackageId>
+        <Authors>crcteam@microsoft.com</Authors>
+        <AssemblyVersion>1.4.0</AssemblyVersion>
+        <Description>Shared client/server data contract classes and interfaces used by CRC AIR (Juno) libraries and components.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Logging" Version="5.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Configuration" Version="5.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="5.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="5.0.0" />
+        <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
+        <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+        <PackageReference Include="ncrontab.signed" Version="3.3.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Common\Microsoft.Azure.CRC.Common.csproj" />
+      <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Contracts\Microsoft.Azure.CRC.Contracts.csproj" />
+    </ItemGroup>
+
+    <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Module.props" />
+    <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\NuGetPackaging.targets" />
+
+    <PropertyGroup>
+        <!-- 
+        NuGet packaging properties
+        https://docs.microsoft.com/en-us/nuget/reference/msbuild-targets
+        -->
+        <PackageId>$(AssemblyName)</PackageId>
+        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+        
+    </PropertyGroup>
+
+</Project>

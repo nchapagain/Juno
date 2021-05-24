@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net5.0</TargetFramework>
+        <IsPackable>false</IsPackable>
+        <NoWarn>AZCA1001,CA1812,CA2000;CA2007,IDE1006,SA1116,SA1300,NU1604</NoWarn>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <!--
+        Version information for an assembly consists of the following four values:
+
+        Major Version
+        Minor Version
+        Build Number
+        Revision
+        -->
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+        <AssemblyName>Juno.Execution.UnitTests</AssemblyName>
+        <RootNamespace>Juno.Execution</RootNamespace>
+        <AssemblyVersion>1.0.0</AssemblyVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Juno.Hosting.Common\Juno.Hosting.Common.csproj" />
+        <ProjectReference Include="..\Juno.TestExtensions\Juno.TestExtensions.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="nunit" Version="3.13.1" />
+        <PackageReference Include="NUnit3TestAdapter" Version="3.17.0" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.8.3" />
+    </ItemGroup>
+
+    <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Module.props" />
+</Project>

@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+        <RunCodeAnalysis></RunCodeAnalysis>
+        <EnableBaseIntermediateOutputPathMismatchWarning>false</EnableBaseIntermediateOutputPathMismatchWarning>
+        <NoWarn>CA1308,CA2227,IDE0058,SA1118</NoWarn>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <!--
+    Version information for an assembly consists of the following four values:
+    Major Version
+    Minor Version
+    Build Number
+    Revision
+    -->
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+        <AssemblyName>Juno.Execution.TipIntegration</AssemblyName>
+        <RootNamespace>Juno.Execution.TipIntegration</RootNamespace>
+        <PackageId>Juno.Execution.TipIntegration</PackageId>
+        <Authors>crcteam@microsoft.com</Authors>
+        <AssemblyVersion>1.0.0</AssemblyVersion>
+        <Description>Components used to interface with TIP resource management service.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- PackageReference Include="TipGateway" Version="1.0.1472.1" / -->
+        <!-- PackageReference Include="TipGateway" Version="1.0.1528.3" /-->
+        <PackageReference Include="TipGateway" Version="1.0.1531.1" />
+        <PackageReference Include="Polly" Version="7.2.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Telemetry\Microsoft.Azure.CRC.Telemetry.csproj" />
+        <ProjectReference Include="..\Juno.Contracts\Juno.Contracts.csproj" />
+    </ItemGroup>
+
+    <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Module.props" />
+</Project>

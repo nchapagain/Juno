@@ -1,0 +1,75 @@
+﻿<Project Sdk="Microsoft.NET.Sdk;Microsoft.NET.Sdk.Publish">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net5.0</TargetFramework>
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+        <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
+        <EnableBaseIntermediateOutputPathMismatchWarning>false</EnableBaseIntermediateOutputPathMismatchWarning>
+        <NoWarn>CA1052,CA2000</NoWarn>
+    </PropertyGroup>
+    
+    <PropertyGroup>
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+        <AssemblyName>Juno.Execution.Service.WebJobHost</AssemblyName>
+        <RootNamespace>Juno.Execution.Service.WebJobHost</RootNamespace>
+        <PackageId>Juno.Execution.Service.WebJobHost</PackageId>
+        <Authors>crcteam@microsoft.com</Authors>
+        <AssemblyVersion>3.4.7</AssemblyVersion>
+        <Description>Juno execution/orchestration service host.</Description>
+    </PropertyGroup>
+
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.Azure.WebJobs.Extensions" Version="4.0.1" />
+      <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Storage" Version="4.0.4" />
+      <PackageReference Include="Microsoft.Azure.WebJobs.Logging.ApplicationInsights" Version="3.0.27" />
+      <PackageReference Include="Microsoft.Azure.WebJobs.Host.Storage" Version="4.0.1" />
+      <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="5.0.0" />
+      <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="5.0.0" />
+      <PackageReference Include="System.IO.FileSystem.AccessControl" Version="5.0.0" />
+    </ItemGroup>
+    
+    <ItemGroup>
+        <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Rest\Microsoft.Azure.CRC.Rest.csproj" />
+        <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Telemetry\Microsoft.Azure.CRC.Telemetry.csproj" />
+        <ProjectReference Include="..\Juno.Execution.Management\Juno.Execution.Management.csproj" />
+        <ProjectReference Include="..\Juno.Execution.Providers\Juno.Execution.Providers.csproj" />
+        <ProjectReference Include="..\Juno.Hosting.Common\Juno.Hosting.Common.csproj" />
+        <ProjectReference Include="..\Juno.Extensions.AspNetCore\Juno.Extensions.AspNetCore.csproj" />
+        <ProjectReference Include="..\Juno.Extensions.Telemetry\Juno.Extensions.Telemetry.csproj" />
+    </ItemGroup>
+    
+    <ItemGroup>
+        <None Update="Settings.job">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Update="Deploy\**\*.*" CopyToPublishDirectory="Never" />
+    </ItemGroup>
+  
+    <ItemGroup>
+      <None Include="Deploy\**\**\*.*">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+    
+  <Target Name="CICDDeployment">
+    <PropertyGroup>
+      <PublishOptions Condition="'$(WithRestore)' == 'false'">--no-restore</PublishOptions>
+    </PropertyGroup>
+    <Exec Command="rd /S /Q $(OutDir)\PublishedContent" ContinueOnError="true" />
+    <Exec Command="md $(OutDir)\PublishedContent\app_data\Jobs\Continuous\Juno.Execution.Service.WebJobHost" ContinueOnError="true" />
+    <Exec Command="IF EXIST $(OutDir)\Deploy\ServiceGroupRoot\bin\WebApp.zip del /F $(OutDir)\Deploy\ServiceGroupRoot\bin\WebApp.zip" ContinueOnError="true" />
+    <Exec Command="IF NOT EXIST $(OutDir)\Deploy\ServiceGroupRoot\bin md $(OutDir)\Deploy\ServiceGroupRoot\bin" ContinueOnError="true" />
+    <Exec Command="dotnet publish $(ProjectPath) --configuration $(Configuration) -f net5.0 --self-contained false -r win-x64 --output $(OutDir)\PublishedContent\app_data\Jobs\Continuous\Juno.Execution.Service.WebJobHost --no-restore" />
+    <Exec Command="rd /S /Q $(OutDir)\PublishedContent\app_data\Jobs\Continuous\Juno.Execution.Service.WebJobHost\Deploy" ContinueOnError="true" />
+    <Exec Command="xcopy $(OutDir)\Deploy\run.cmd $(OutDir)\PublishedContent\app_data\Jobs\Continuous\Juno.Execution.Service.WebJobHost\" ContinueOnError="true" />
+    <ZipDirectory SourceDirectory="$(OutDir)\PublishedContent" DestinationFile="$(OutDir)\Deploy\ServiceGroupRoot\bin\WebApp.zip" />
+  </Target>
+  
+    <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Module.props" />
+    <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Configuration.targets" />
+    
+</Project>

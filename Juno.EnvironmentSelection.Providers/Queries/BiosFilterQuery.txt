@@ -1,0 +1,25 @@
+﻿// Filter on bios version of node. Takes in the bios versions to filter on and return the cluster
+// node id and bios version. This query is very similar to the OS Build query.
+let includeBiosVersion = dynamic([$includeBiosVersion$]);
+let excludeBiosVersion = dynamic([$excludeBiosVersion$]);
+let includeCluster = datatable(ClusterId:string)[$includeCluster$];
+let excludeCluster = datatable(ClusterId:string)[$excludeCluster$];
+cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryGenerationMappingV3
+| where IsLive == true
+| extend ClusterId = tolower(ClusterId)
+| join kind=inner includeCluster on ClusterId
+| join kind=leftanti excludeCluster on ClusterId
+| join kind = inner hint.strategy=broadcast(
+    cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryComponentSystem
+    | summarize arg_max(DataCollectedOn, BIOSVersion, OsBuildUbr) by ClusterId, NodeId
+    | where (isempty(includeBiosVersion) or BIOSVersion in~ (includeBiosVersion)) and BIOSVersion !in~ (excludeBiosVersion)
+    | distinct ClusterId, NodeId, BIOSVersion) on NodeId
+| distinct ClusterId, NodeId, BIOSVersion, RegionId, RackLocation
+| join kind=inner hint.strategy=broadcast (
+        cluster('cirrus.kusto.windows.net').database('cirrus').Region
+        | distinct RegionName, FabricRegionName
+    ) on  $left.RegionId == $right.FabricRegionName
+| extend Region = RegionName
+| project Region, Rack = RackLocation, ClusterId, BiosVersion = BIOSVersion, NodeId
+| distinct Region, Rack, ClusterId, BiosVersion, NodeId
+| take 500000;

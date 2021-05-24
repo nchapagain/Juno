@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+    <!--
+    *****************************************************************************
+    Include all of the environment configuration files in the solution. These 
+    define the settings used by Juno hosts to target an environment 
+    (e.g. juno-dev01, juno-prod01).
+    *****************************************************************************
+    -->
+    <ItemGroup>
+        <Folder Include="Configuration\" />
+    </ItemGroup>
+    
+    <ItemGroup>
+        
+        <!--
+        *********************************
+        juno-dev01 environment
+        *********************************
+        -->
+        <Content Include="..\Configuration\juno-dev01.appsettings.json" Link="Configuration\juno-dev01.appsettings.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+        <Content Include="..\Configuration\juno-dev01.environmentsettings.json" Link="Configuration\juno-dev01.environmentsettings.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+        <Content Include="..\Configuration\juno-dev01.testsettings.json" Link="Configuration\juno-dev01.testsettings.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+
+        <!--
+        *********************************
+        juno-ppe01 environment
+        *********************************
+        -->
+        <Content Include="..\Configuration\juno-ppe01.appsettings.json" Link="Configuration\juno-ppe01.appsettings.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+        <Content Include="..\Configuration\juno-ppe01.environmentsettings.json" Link="Configuration\juno-ppe01.environmentsettings.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+
+        <!--
+        *********************************
+        juno-prod01 environment
+        *********************************
+        -->
+        <Content Include="..\Configuration\juno-prod01.appsettings.json" Link="Configuration\juno-prod01.appsettings.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+        <Content Include="..\Configuration\juno-prod01.environmentsettings.json" Link="Configuration\juno-prod01.environmentsettings.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+
+        <!--
+        *********************************
+        local test/testing settings
+        *********************************
+        -->
+        <Content Include="..\Configuration\juno-local.testsettings.json" Link="Configuration\juno-local.testsettings.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+</Project>

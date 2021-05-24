@@ -1,0 +1,23 @@
+﻿let includeCpuId = dynamic([$includeCpuId$]);
+let excludeCpuId = dynamic([$excludeCpuId$]);
+let includeCluster = datatable(ClusterId:string)[$includeCluster$];
+let excludeCluster = datatable(ClusterId:string)[$excludeCluster$];
+let eligibleNodes = cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryComponentCPU
+| summarize arg_max(DataCollectedOn, *) by NodeId
+| extend CPUID=strcat(tolower(tohex(CPUIDExtModel)),tolower(tohex(CPUIDExtFamily)), tolower(tohex(CPUIDFamily)), tolower(tohex(CPUIDModel)),tolower(tohex(CPUIDSteppingID)))
+| where (isempty(includeCpuId) or CPUID in~ (includeCpuId)) and CPUID !in~ (excludeCpuId)
+| project CpuId = CPUID, NodeId;
+cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryGenerationMappingV3
+| where IsLive == true
+| extend ClusterId = tolower(ClusterId)
+| join kind=inner includeCluster on ClusterId
+| join kind=leftanti excludeCluster on ClusterId
+| project ClusterId = tolower(ClusterId), NodeId, Rack = RackLocation, RegionId
+| join kind = inner eligibleNodes on NodeId
+| join kind=inner hint.strategy=broadcast (
+        cluster('cirrus.kusto.windows.net').database('cirrus').Region
+        | distinct RegionName, FabricRegionName
+    ) on  $left.RegionId == $right.FabricRegionName
+| extend Region = RegionName
+| distinct Region, Rack, ClusterId, CpuId, NodeId
+| take 500000;

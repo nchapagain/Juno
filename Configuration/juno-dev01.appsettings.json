@@ -1,0 +1,19 @@
+{
+  "Logging": {
+    "IncludeScopes": true,
+    "Debug": {
+      "LogLevel": {
+        "Default": "Trace"
+      }
+    },
+    "Console": {
+      "LogLevel": {
+        "HostAgent": "Trace",
+        "Default": "Trace"
+      }
+    },
+    "LogLevel": {
+      "Default": "Trace"
+    }
+  }
+}

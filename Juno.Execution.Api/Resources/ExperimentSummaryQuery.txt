@@ -1,0 +1,10 @@
+﻿SELECT 
+exp.id,
+exp.definition.name,
+exp.status,
+exp.definition.metadata.teamName,
+exp.definition.metadata.revision ?? CONCAT(exp.definition.metadata.payloadVersion, "_", exp.definition.metadata.payloadPFVersion) as revision,
+exp.definition.metadata.workload,
+exp.created,
+exp.lastModified
+FROM exp WHERE exp.definition.name = '{0}'

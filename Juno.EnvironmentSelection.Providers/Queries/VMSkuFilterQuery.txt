@@ -1,0 +1,41 @@
+﻿// VmSku filter query. First translates the External VMSku name to the internal name 
+// and then checks for the allocable VM count on the nodes. 
+let beginTime = ago(2h);
+let excludeVmSku = $excludeVmSku$;
+let includeVmSku = $includeVmSku$;
+let includeRegion = $includeRegion$;
+let excludeRegion = $excludeRegion$;
+let allocableVmCount = $allocableVmCount$;
+let internalVmSkus=
+    cluster('cirrus.kusto.windows.net').database('cirrus').VMSKU
+    | distinct FabricVMSkuName, VMSKUName
+    | project VmSku = tolower(FabricVMSkuName), ExternalVMSKU = VMSKUName
+    | where (isempty(includeVmSku) or ExternalVMSKU in~ (includeVmSku)) and ExternalVMSKU !in~ (excludeVmSku)
+    | distinct VmSku, ExternalVMSKU;
+cluster('Azurecm').database('AzureCM').AllocableVmCount
+| where PreciseTimeStamp > beginTime
+| join kind=inner hint.strategy=broadcast (
+        cluster('cirrus.kusto.windows.net').database('cirrus').Region
+        | where (RegionName in~ (includeRegion) and RegionName !in~ (excludeRegion))  
+        | distinct RegionName, FabricRegionName
+    ) on  $left.Region == $right.FabricRegionName
+| where vmType == "IOwnMachine" and deploymentType == "NewDeployment" and partitionType == "Cluster"
+// filter clusters that are usable for VM deployment i.e sellable clusters
+| where partitionName contains "Prd"
+| summarize arg_max(PreciseTimeStamp, Region = RegionName, vmCount) by partitionName
+| project clusterName = tolower(partitionName), allocableEmptyNodeCountPerCluster = vmCount, Region
+| join kind=inner hint.strategy=broadcast(
+        // Step 2: Find clusters that support the list of VMTypes and the corresponding available VMCount
+        cluster('Azurecm').database('AzureCM').AllocableVmCount
+        | where PreciseTimeStamp > beginTime and vmType != "IOwnMachine" and deploymentType == "NewDeployment" and partitionType == "Cluster"
+        | extend vmType = tolower(vmType)
+        | where vmType in (internalVmSkus)
+        | join kind=inner internalVmSkus on $left.vmType == $right.VmSku
+        | summarize arg_max(PreciseTimeStamp, vmCount) by partitionName, ExternalVMSKU
+        | where (allocableVmCount > 0 and vmCount > allocableVmCount) or (allocableVmCount < 0 and vmCount > 100)
+        | project clusterName = tolower(partitionName), ExternalVMSKU
+    ) on clusterName
+| extend ClusterId = clusterName, VmSku = ExternalVMSKU, Region
+| summarize VmSku = make_list(VmSku) by ClusterId, Region
+| extend MinVmCount = allocableVmCount
+| distinct tostring(VmSku), ClusterId, Region, MinVmCount;

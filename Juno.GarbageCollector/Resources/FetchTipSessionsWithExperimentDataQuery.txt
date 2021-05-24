@@ -1,0 +1,9 @@
+﻿//
+// Purpose of this query is to find all tip sessions that Juno attemped to reach with experiment data.
+//
+let startQuery = now(-60d);
+let endQuery = now();
+cluster('azurecrc.westus2.kusto.windows.net').database('JunoIngestion').getTipAttemptsWithExperimentName(startQuery, endQuery)
+| extend nodeId = ""
+| extend daysLeaked = toint(datetime_diff('day', now(), experimentCreatedTime))
+| project createdTime = experimentCreatedTime, tipNodeSessionId = tipSessionId, nodeId, daysLeaked, experimentId, experimentName, impactType;

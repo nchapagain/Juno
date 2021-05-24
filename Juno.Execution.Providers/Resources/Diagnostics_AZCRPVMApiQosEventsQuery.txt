@@ -1,0 +1,7 @@
+﻿let rGName = $rGName$;
+let startTime = $startTime$;
+let endTime = $endTime$;
+cluster("azcrp.kusto.windows.net").database("crp_allprod").VMApiQosEvent 
+| where resourceGroupName == rGName
+| where TIMESTAMP > startTime and TIMESTAMP < endTime
+| project TIMESTAMP, correlationId, operationId, resourceGroupName, resourceName, subscriptionId, exceptionType, errorDetails, vMId, vMSize, oSType, oSDiskStorageAccountType, availabilitySet, fabricCluster, allocationAction

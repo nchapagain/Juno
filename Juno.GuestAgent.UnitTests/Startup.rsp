@@ -1,0 +1,4 @@
+﻿--environment="juno-dev01"
+--agentId="undefined,undefined,bryantest,undefined"
+--vmSku="Standard_Issue_v3"
+--region="South Africa North"

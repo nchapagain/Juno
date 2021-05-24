@@ -1,0 +1,27 @@
+﻿// Filters on the microcode of the node. Takes in the microcode filters and return the cluster id, node id, 
+// and microcode
+let includeMicrocode = dynamic([$includeMicrocode$]);
+let excludeMicrocode = dynamic([$excludeMicrocode$]);
+let includeCluster = datatable(ClusterId:string)[$includeCluster$];
+let excludeCluster = datatable(ClusterId:string)[$excludeCluster$];
+let microcodeTable = cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryComponentCPUMicrocode
+| where DateCollectedOn > ago(24h)
+| summarize arg_max(DateCollectedOn, UpdateRevision) by ClusterId,  NodeId
+| where (isempty(includeMicrocode) or UpdateRevision  in~ (includeMicrocode)) and UpdateRevision  !in~ (excludeMicrocode)     
+| project-rename Microcode = UpdateRevision
+| distinct ClusterId, NodeId, Microcode;
+cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryGenerationMappingV3
+| where IsLive == true
+| extend ClusterId = tolower(ClusterId)
+| join kind=inner includeCluster on ClusterId
+| join kind=leftanti excludeCluster on ClusterId
+| join kind=inner hint.strategy=broadcast (
+        cluster('cirrus.kusto.windows.net').database('cirrus').Region
+        | distinct RegionName, FabricRegionName
+    ) on  $left.RegionId == $right.FabricRegionName
+| extend Region = RegionName
+| project ClusterId = tolower(ClusterId), NodeId, Rack = RackLocation, Region
+| join kind = inner microcodeTable on NodeId
+| distinct ClusterId, NodeId, Microcode, Region, Rack
+| distinct Region, Microcode, NodeId, ClusterId, Rack
+| take 500000

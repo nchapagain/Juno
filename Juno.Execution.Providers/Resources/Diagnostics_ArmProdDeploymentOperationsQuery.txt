@@ -1,0 +1,7 @@
+﻿let rGName = $rGName$;
+let startTime = $startTime$;
+let endTime = $endTime$;
+cluster("ARMProd.kusto.windows.net").database("ARMProd").DeploymentOperations
+| where resourceGroupName == rGName 
+| where TIMESTAMP >= startTime and TIMESTAMP <= endTime 
+| project TIMESTAMP, tenantId, resourceGroupName, executionStatus, statusCode, statusMessage

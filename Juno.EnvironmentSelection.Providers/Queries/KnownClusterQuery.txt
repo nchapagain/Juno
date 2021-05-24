@@ -1,0 +1,13 @@
+﻿let includeRegion = $includeRegion$;
+let excludeRegion = $excludeRegion$;
+let includeCluster = $includeCluster$;
+let excludeCluster = $excludeCluster$;
+cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryGenerationMappingV3
+| extend ClusterId = tolower(ClusterId)
+| where ClusterId in~ (includeCluster) and ClusterId !in~ (excludeCluster)
+| distinct ClusterId, RegionId
+| join kind = inner (
+    cluster('cirrus.kusto.windows.net').database('cirrus').Region
+    | where RegionName in~ (includeRegion) and RegionName !in~ (excludeRegion)
+    | distinct RegionName, FabricRegionName) on $left.RegionId == $right.FabricRegionName
+| project ClusterId, Region = RegionName

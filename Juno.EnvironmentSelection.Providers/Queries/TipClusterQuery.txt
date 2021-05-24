@@ -1,0 +1,43 @@
+﻿let settingsBeginTime = ago(4h);
+let snapshotBeginTime = ago(2h);
+let includeRegion = $includeRegion$;
+let excludeRegion = $excludeRegion$;
+let tipSessionsRequired = $tipSessionsRequired$;
+// Materialize commonly used table for searching for Fabric settings.
+let _azurecm_ETW = materialize (cluster('azurecm.kusto.windows.net').database('AzureCM').TMMgmtFabricSettingEtwTable
+    | where PreciseTimeStamp >= settingsBeginTime
+    | extend ClusterId = tolower(Tenant)
+    // Make sure to only materialize the settings that will be used later.
+    | where Name in ("Fabric.EnableNewDeploymentForAllocation", "Fabric.AllowOnlyWhiteListedSubscriptionsOrPlatformTenantToDeploy", "Fabric.TiP.MaxTipNodeSessionsPerCluster")
+    // Table of all of the latest settings per cluster in the past few hours. 
+    | summarize hint.strategy=shuffle arg_max(PreciseTimeStamp, Value) by ClusterId, Name );
+// Generate list of Cluster that have "EnableNewDeploymentForAllocation" set to True
+let newDeployments = _azurecm_ETW
+| where Name == "Fabric.EnableNewDeploymentForAllocation" and Value =~ "True"
+| project ClusterId;
+// Generate list of clusters that have "AllowOnlyWhiteListedSubscriptionsOrPlatformTenantToDeploy" set to True
+let nonWhiteListed = _azurecm_ETW
+| where Name == "Fabric.AllowOnlyWhiteListedSubscriptionsOrPlatformTenantToDeploy" and Value =~ "True"
+| project ClusterId;
+// Generate table of Clusters and the number of tip sessions they can support.
+let tipSessionLimits = _azurecm_ETW
+| where Name == "Fabric.TiP.MaxTipNodeSessionsPerCluster"
+| project ClusterId, TiPSessionLimitPerCluster = toint(Value);
+ cluster('azurecm.kusto.windows.net').database('AzureCM').LogNodeSnapshot
+ // Do not need to look back the entire 4h timespan.
+| where PreciseTimeStamp > snapshotBeginTime
+| extend ClusterId = tolower(Tenant)
+| where ClusterId in (newDeployments) and ClusterId !in (nonWhiteListed)
+| summarize hint.strategy=shuffle arg_max(PreciseTimeStamp, tipNodeSessionId, Region, ClusterId) by nodeId
+| summarize numTipSessionsUsed = countif(tipNodeSessionId != "00000000-0000-0000-0000-000000000000") by ClusterId, Region
+// Retrieve max tip nodes, and tip sessions for supported cluster
+| join kind = inner hint.strategy=broadcast tipSessionLimits on ClusterId
+| extend RemainingTipSessions = max_of(0, TiPSessionLimitPerCluster - iff(isnotempty(numTipSessionsUsed), toint(numTipSessionsUsed), 0))
+| where (tipSessionsRequired > 0 and RemainingTipSessions > tipSessionsRequired) or (tipSessionsRequired < 0 and RemainingTipSessions > 2)
+| join kind=inner (
+    cluster('cirrus.kusto.windows.net').database('cirrus').Region
+    | where (RegionName in~ (includeRegion) and RegionName !in~ (excludeRegion))  
+    | distinct RegionName, FabricRegionName
+) on  $left.Region == $right.FabricRegionName
+| project ClusterId, Region = RegionName, RemainingTipSessions, TipSessionLowerBound = tipSessionsRequired
+| distinct ClusterId, Region, RemainingTipSessions, TipSessionLowerBound;

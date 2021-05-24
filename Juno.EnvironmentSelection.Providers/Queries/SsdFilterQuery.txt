@@ -1,0 +1,29 @@
+﻿let includeFamily = $includeFamily$;
+let driveType = dynamic([$driveType$]);
+let includeCluster = datatable(ClusterId:string)[$includeCluster$];
+let excludeCluster = datatable(ClusterId:string)[$excludeCluster$];
+let driveMapping = datatable(Literal:string, Boolean:bool)['System', 1, 'Data', 0];
+// Map the Family to a set of ModelNumbers
+let models = cluster('hqse.kusto.windows.net').database('hqsedb').DriveDecoder
+| where Family =~ includeFamily 
+| distinct DriveProductId, Family;
+let supportedNodes = cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryComponentDisk
+| where DriveProductId has_any (models)
+| extend ClusterId = tolower(ClusterId)
+| where ClusterId in~ (includeCluster) and ClusterId !in~ (excludeCluster)
+| join kind=inner driveMapping on $left.SystemDrive == $right.Boolean
+| join kind=inner models on DriveProductId
+| extend SystemDrive = Literal
+| where SystemDrive in~ (driveType)
+| distinct NodeId, Family, SystemDrive;
+// Gather more context for environment candidate.
+cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryGenerationMappingV3
+| where NodeId in~ (supportedNodes)
+| join kind=inner supportedNodes on NodeId
+| distinct ClusterId, RegionId, NodeId, RackLocation, Family, SystemDrive
+| join kind=inner (
+    cluster('cirrus.kusto.windows.net').database('cirrus').Region
+    | distinct RegionName, FabricRegionName
+) on $left.RegionId == $right.FabricRegionName
+| summarize SsdDriveType=make_set(SystemDrive) by ClusterId = tolower(ClusterId), Region = RegionName, NodeId, Rack = RackLocation, SsdFamily=Family
+| extend SsdDriveType = translate('["]', '', tostring(array_sort_asc(driveType)))

@@ -1,0 +1,10 @@
+﻿//
+// Purpose of this query is to find leaked tip sessions Juno created
+// This query will run on Azure CM
+// The results from this query will be a source of truth for Garbage Collector
+// And will be deleted if Impactful
+//
+let startQuery = now(-60d);
+let endQuery = now();
+cluster('azurecrc.westus2.kusto.windows.net').database('JunoIngestion').getLeakedTipSessionsForGarbageCollectorV2(startQuery, endQuery)
+| project createdTime, tipNodeSessionId, nodeId, daysLeaked, experimentId, experimentName, impactType;

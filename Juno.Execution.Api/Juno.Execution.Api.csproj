@@ -1,0 +1,71 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+        <RunCodeAnalysis></RunCodeAnalysis>
+        <EnableBaseIntermediateOutputPathMismatchWarning>false</EnableBaseIntermediateOutputPathMismatchWarning>
+        <NoWarn>SA1508</NoWarn>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <!--
+        Version information for an assembly consists of the following four values:
+
+        Major Version
+        Minor Version
+        Build Number
+        Revision
+        -->
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+        <AssemblyName>Juno.Execution.Api</AssemblyName>
+        <RootNamespace>Juno.Execution.Api</RootNamespace>
+        <PackageId>Juno.Execution.Api</PackageId>
+        <Authors>crcteam@microsoft.com</Authors>
+        <AssemblyVersion>2.4.0</AssemblyVersion>
+        <Description>Juno experiment execution REST API/service.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore" Version="2.2.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication" Version="2.2.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Mvc" Version="2.2.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.Formatters.Json" Version="2.2.0" />
+        <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.17.0" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Logging" Version="5.0.0" />
+        <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.AspNetCore\Microsoft.Azure.CRC.AspNetCore.csproj" />
+        <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Common\Microsoft.Azure.CRC.Common.csproj" />
+        <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Contracts\Microsoft.Azure.CRC.Contracts.csproj" />
+        <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Telemetry\Microsoft.Azure.CRC.Telemetry.csproj" />
+        <ProjectReference Include="..\Juno.Contracts\Juno.Contracts.csproj" />
+        <ProjectReference Include="..\Juno.DataManagement\Juno.DataManagement.csproj" />
+        <ProjectReference Include="..\Juno.EnvironmentSelection.Service\Juno.EnvironmentSelection.Service.csproj" />
+        <ProjectReference Include="..\Juno.Execution.Providers\Juno.Execution.Providers.csproj" />
+        <ProjectReference Include="..\Juno.Extensions.AspNetCore\Juno.Extensions.AspNetCore.csproj" />
+        <ProjectReference Include="..\Juno.Extensions.Telemetry\Juno.Extensions.Telemetry.csproj" />
+        <ProjectReference Include="..\Juno.Providers\Juno.Providers.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="Resources\Queries.Designer.cs">
+        <DesignTime>True</DesignTime>
+        <AutoGen>True</AutoGen>
+        <DependentUpon>Queries.resx</DependentUpon>
+      </Compile>
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Update="Resources\Queries.resx">
+        <Generator>ResXFileCodeGenerator</Generator>
+        <LastGenOutput>Queries.Designer.cs</LastGenOutput>
+      </EmbeddedResource>
+    </ItemGroup>
+
+    <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Module.props" />
+
+</Project>

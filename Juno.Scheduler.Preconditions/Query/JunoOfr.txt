@@ -1,0 +1,8 @@
+﻿// The query is for Juno Overall OFR Precondition Provider and Juno Daily OFR Precondition Provider
+// This query will return a dataTable with values in JunoOFRNode contract 
+// This query relies on getJunoOFRs() from Ingestion DB
+let queryStart = $startTime$;
+let queryEnd = now();
+let junoOFRs = cluster('azurecrc.westus2.kusto.windows.net').database('JunoIngestion').getJunoOFRs(queryStart, queryEnd)
+    | project TIMESTAMP = ofrStartTime, nodeId, tipNodeSessionId;
+junoOFRs

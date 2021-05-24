@@ -1,0 +1,137 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "siteName": {
+      "type": "String"
+    },
+    "servicePlanName": {
+      "type": "String"
+    },
+    "servicePackageLink": {
+      "type": "String"
+    },
+    "location": {
+      "type": "String"
+    },
+    "IISWebAppName": {
+      "type": "String"
+    },
+    "Sku": {
+      "type": "String"
+    },
+    "sites_buildVersion": {
+      "type": "String",
+      "defaultValue": "[newGuid()]"
+    }
+  },
+  "variables": {
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2020-06-01",
+      "name": "[parameters('servicePlanName')]",
+      "location": "[parameters('location')]",
+      "kind": "app",
+      "sku": {
+        "name": "[parameters('Sku')]"
+      },
+      "properties": {}
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2020-06-01",
+      "name": "[parameters('siteName')]",
+      "location": "[parameters('location')]",
+      "kind": "WebApp",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverFarms', parameters('servicePlanName'))]"
+      ],
+      "properties": {
+        "name": "[parameters('siteName')]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('servicePlanName'))]",
+        "kind": "WebApp",
+        "httpsOnly": true
+      },
+      "resources": [
+        {
+          "type": "Microsoft.Web/sites/slots",
+          "apiVersion": "2020-06-01",
+          "name": "[concat(parameters('siteName'), '/staging')]",
+          "location": "[parameters('location')]",
+          "kind": "app",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/sites', parameters('siteName'))]"
+          ],
+          "properties": {
+            "enabled": true,
+            "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', parameters('servicePlanName'))]",
+            "reserved": false,
+            "isXenon": false,
+            "hyperV": false,
+            "scmSiteAlsoStopped": false,
+            "clientAffinityEnabled": false,
+            "clientCertEnabled": false,
+            "hostNamesDisabled": false,
+            "containerSize": 0,
+            "dailyMemoryTimeQuota": 0,
+            "httpsOnly": false,
+            "redundancyMode": "None",
+            "buildVersion": "[parameters('sites_buildVersion')]"
+          },
+          "resources": [
+            {
+              "name": "ZipDeploy",
+              "type": "extensions",
+              "apiVersion": "2020-06-01",
+              "dependsOn": [
+                "[resourceId('Microsoft.Web/sites/slots', parameters('siteName'), 'staging')]"
+              ],
+              "properties": {
+                "packageUri": "[parameters('servicePackageLink')]",
+                "AppOffline": true,
+                "setParameters": {
+                  "IIS Web Application Name": "[parameters('IISWebAppName')]"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SwapSlots",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2019-10-01",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites/slots/extensions', parameters('siteName'), 'staging', 'ZipDeploy')]"
+      ],
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "outer"
+        },
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "resources": [
+            {
+              "type": "Microsoft.Web/sites",
+              "apiVersion": "2020-06-01",
+              "name": "[parameters('siteName')]",
+              "location": "[parameters('location')]",
+              "kind": "app",
+              "properties": {
+                "targetBuildVersion": "[parameters('sites_buildVersion')]"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

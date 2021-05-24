@@ -1,0 +1,43 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net5.0</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <NoWarn>IDE0060,CA1801,CA2000,NU5111,CA1307,IDE0044</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AssemblyAndPackageVersion>1.0.0</AssemblyAndPackageVersion>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <AssemblyName>Juno.CRCBladeCertificationAgent</AssemblyName>
+    <RootNamespace>Juno.CRCBladeCertificationAgent</RootNamespace>
+    <AssemblyVersion>$(AssemblyAndPackageVersion)</AssemblyVersion>
+    <Description>Logs Azure node configuration </Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="5.0.0" />
+    <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="3.1.0" />
+    <PackageReference Include="XmlUnit.Core" Version="2.8.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Telemetry\Microsoft.Azure.CRC.Telemetry.csproj" />
+    <ProjectReference Include="..\Juno.Execution.AgentRuntime\Juno.Execution.AgentRuntime.csproj" />
+  </ItemGroup>
+  
+  <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Configuration.targets" />
+  <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Module.props" />
+
+  <PropertyGroup>
+    <PackageId>$(AssemblyName)</PackageId>
+    <Authors>crcteam@microsoft.com</Authors>
+    <Version>$(AssemblyAndPackageVersion)</Version>
+    <NuspecFile>$(AssemblyName).nuspec</NuspecFile>
+    <NuspecBasePath>$(OutputPath)$(TargetFramework)</NuspecBasePath>
+    <NuspecProperties>version=$(Version);outputdir=$(OutputPath)$(TargetFramework)</NuspecProperties>
+  </PropertyGroup>
+  
+</Project>

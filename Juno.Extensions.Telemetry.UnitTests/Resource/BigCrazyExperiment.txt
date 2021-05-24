@@ -1,0 +1,347 @@
+﻿{
+    "$schema": "https://junodev01execution.azurewebsites.net/v1.0/schema",
+    "contentVersion": "1.0.0",
+    "name": "Juno IPU2019.2 Patrol Scrubber",
+    "description": "Validate the effect of IPU2019.2 on the Azure Gen 5 nodes running Intel Broadwell processors, with patrol scrubber update on RS1.8.",
+    "metadata": {
+        "teamName": "CRC AIR",
+        "email": "crcair@microsoft.com",
+        "owners": "crcair"
+    },
+    "parameters": {
+        "subscription": "18493588-5750-4037-ab5d-0b885a9aff28",
+        "regions": "East US 2,East US,West US 2,West US 3,South Central US,West Europe,UK South 2,UK South,Sweden South,Sweden Central,North Europe,Australia East",
+        "vmSku": "Standard_E4s_v3",
+        "vmCount": 2,
+        "intelCpuId": "406F1",
+        "ipuMicrocodeVersion": "b000039",
+        "ipuPFServiceName": "CSIMicrocodeUpdate",
+        "ipuPFServicePath": "\\\\reddog\\Builds\\branches\\git_azure_compute_move_feature_csifw_release\\10.8.5006.31\\retail-amd64\\app\\CSIMicrocodeUpdate",
+        "hostingEnvironmentType": "OSHostPlugin",
+        "hostingEnvironmentPath": "\\\\reddog\\Builds\\branches\\git_azure_compute_oshostplugin_rel_m3bmc_rs18_upgr_dev\\144.0.10.220\\retail-amd64\\RDTools\\Deploy\\Packages\\144.0.10.220.OsHostPlugin-rel_m3bmc_rs18_upgr_dev.200312-1639.zip,\\\\reddog\\builds\\branches\\git_azure_compute_oshostplugin_rel_m3bmc_rs18_upgr_dev\\144.0.10.220\\retail-amd64\\RDTools\\Deploy\\Config\\OSHostPlugin\\144.0.10.220.OsHostPlugin-rel_m3bmc_rs18_upgr_dev.200312-1639.HostPluginsConfigTemplate.xml,\\\\reddog\\builds\\branches\\git_azure_compute_oshostplugin_rel_m3bmc_rs18_upgr_dev\\144.0.10.220\\retail-amd64\\RDTools\\Deploy\\Config\\OSHostPlugin\\144.0.10.220.OsHostPlugin-rel_m3bmc_rs18_upgr_dev.200312-1639.OSHostPlugin.PluginSetup.xml,\\\\reddog\\builds\\branches\\git_azure_compute_oshostplugin_rel_m3bmc_rs18_upgr_dev\\144.0.10.220\\retail-amd64\\RDTools\\Deploy\\Config\\OSHostPlugin\\144.0.10.220.OsHostPlugin-rel_m3bmc_rs18_upgr_dev.200312-1639.OSHostPlugin.PluginSpecific.xml",
+        "crcWatchdogPFServiceName": "JunoBladewatchdog",
+        "crcWatchdogPFServicePath": "\\\\reddog\\Builds\\branches\\git_csi_crc_air_bladewatchdog_master_latest\\release-x64\\Deployment\\Prod\\App\\JunoBladeWatchdog",
+        "vcCommandArguments": "--profile=PERF-IO-V1.json --platform=Juno"
+    },
+    "tags": {
+        "subscriptionName": "CRC-3",
+        "nodeGeneration": "Gen5",
+        "nodeCpuName": "Broadwell"
+    },
+    "workflow": [
+        {
+            "type": "Juno.Execution.Providers.Environment.ClusterSelectionProvider",
+            "name": "Select Clusters and Nodes",
+            "description": "Select clusters that have physical nodes that can support the requirements of the experiment.",
+            "group": "*",
+            "parameters": {
+                "cpuId": "$.parameters.intelCpuId",
+                "vmSkus": "$.parameters.vmSku",
+                "regions": "$.parameters.regions"
+            }
+        },
+        {
+            "type": "Juno.Execution.Providers.Environment.TipCreationProvider",
+            "name": "Create TiP sessions",
+            "description": "Create TiP sessions for the A/B experiment groups to isolate physical nodes in the Azure fleet.",
+            "group": "*",
+            "parameters": {
+                "duration": "00.04:00:00"
+            }
+        },
+        {
+            "type": "ParallelExecution",
+            "name": "Upgrading to RS1.8 in-parallel",
+            "steps": [
+                {
+                    "type": "Juno.Execution.Providers.Environment.DeployHostingEnvironmentProvider",
+                    "name": "Upgrade to RS1.8",
+                    "description": "Upgrade the OS on physical nodes in Group A to RS1.8.",
+                    "group": "Group A",
+                    "parameters": {
+                        "componentType": "$.parameters.hostingEnvironmentType",
+                        "componentLocation": "$.parameters.hostingEnvironmentPath"
+                    }
+                },
+                {
+                    "type": "Juno.Execution.Providers.Environment.DeployHostingEnvironmentProvider",
+                    "name": "Upgrade to RS1.8",
+                    "description": "Upgrade the OS on physical nodes in Group B to RS1.8.",
+                    "group": "Group B",
+                    "parameters": {
+                        "componentType": "$.parameters.hostingEnvironmentType",
+                        "componentLocation": "$.parameters.hostingEnvironmentPath"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "ParallelExecution",
+            "name": "Install Juno Host Agents in-parallel",
+            "steps": [
+                {
+                    "type": "Juno.Execution.Providers.Environment.InstallHostAgentProvider",
+                    "name": "Install Juno Host Agent",
+                    "description": "Install the Juno Host agent on experiment Group A nodes.",
+                    "group": "Group A",
+                    "parameters": {
+                        "timeout": "00.01:00:00"
+                    }
+                },
+                {
+                    "type": "Juno.Execution.Providers.Environment.InstallHostAgentProvider",
+                    "name": "Install Juno Host Agent",
+                    "description": "Install the Juno Host agent on experiment Group B nodes.",
+                    "group": "Group B",
+                    "parameters": {
+                        "timeout": "00.01:00:00"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "ParallelExecution",
+            "name": "Install CRC Watchdog Agents in-parallel",
+            "steps": [
+                {
+                    "type": "Juno.Execution.Providers.Environment.ApplyPilotFishProvider",
+                    "name": "Install CRC watchdog agent",
+                    "description": "Installs the CRC watchdog service on physical nodes in Group A.",
+                    "group": "Group A",
+                    "parameters": {
+                        "timeout": "00.01:00:00",
+                        "pilotFishServiceName": "$.parameters.crcWatchdogPFServiceName",
+                        "pilotFishServicePath": "$.parameters.crcWatchdogPFServicePath"
+                    }
+                },
+                {
+                    "type": "Juno.Execution.Providers.Environment.ApplyPilotFishProvider",
+                    "name": "Install CRC watchdog agent",
+                    "description": "Installs the CRC watchdog service on physical nodes in Group B.",
+                    "group": "Group B",
+                    "parameters": {
+                        "timeout": "00.01:00:00",
+                        "pilotFishServiceName": "$.parameters.crcWatchdogPFServiceName",
+                        "pilotFishServicePath": "$.parameters.crcWatchdogPFServicePath"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "ParallelExecution",
+            "name": "Deploy Virtual Machines in-parallel",
+            "steps": [
+                {
+                    "type": "Juno.Execution.Providers.Environment.ArmVmProvider",
+                    "name": "Create Virtual Machines for Group A",
+                    "description": "Create virtual machines to run workloads for experiment Group A.",
+                    "group": "Group A",
+                    "parameters": {
+                        "subscriptionId": "$.parameters.subscription",
+                        "osDiskStorageAccountType": "Premium_LRS",
+                        "osPublisher": "MicrosoftWindowsServer",
+                        "osOffer": "WindowsServer",
+                        "osSku": "2016-Datacenter",
+                        "osVersion": "latest",
+                        "dataDiskCount": 2,
+                        "dataDiskSizeInGB": 32,
+                        "dataDiskSku": "Premium_LRS",
+                        "dataDiskStorageAccountType": "Premium_LRS",
+                        "vmSize": "$.parameters.vmSku",
+                        "vmCount": "$.parameters.vmCount"
+                    }
+                },
+                {
+                    "type": "Juno.Execution.Providers.Environment.ArmVmProvider",
+                    "name": "Create Virtual Machines for Group B",
+                    "description": "Create virtual machines to run workloads for experiment Group B.",
+                    "group": "Group B",
+                    "parameters": {
+                        "subscriptionId": "$.parameters.subscription",
+                        "osDiskStorageAccountType": "Premium_LRS",
+                        "osPublisher": "MicrosoftWindowsServer",
+                        "osOffer": "WindowsServer",
+                        "osSku": "2016-Datacenter",
+                        "osVersion": "latest",
+                        "dataDiskCount": 2,
+                        "dataDiskSizeInGB": 32,
+                        "dataDiskSku": "Premium_LRS",
+                        "dataDiskStorageAccountType": "Premium_LRS",
+                        "vmSize": "$.parameters.vmSku",
+                        "vmCount": "$.parameters.vmCount"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "ParallelExecution",
+            "name": "Install Juno Guest Agents in-parallel",
+            "steps": [
+                {
+                    "type": "Juno.Execution.Providers.Environment.InstallGuestAgentProvider",
+                    "name": "Install Juno Guest Agent",
+                    "description": "Installs the Juno Guest agent on the VMs for group A.",
+                    "group": "Group A",
+                    "parameters": {
+                        "timeout": "00.00:45:00"
+                    }
+                },
+                {
+                    "type": "Juno.Execution.Providers.Environment.InstallGuestAgentProvider",
+                    "name": "Install Juno Guest Agent",
+                    "description": "Installs the Juno Guest agent on the VMs for group B.",
+                    "group": "Group B",
+                    "parameters": {
+                        "timeout": "00.00:45:00"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "ParallelExecution",
+            "name": "Install Geneva Monitoring Configurations in-parallel",
+            "steps": [
+                {
+                    "type": "Juno.Execution.Providers.Workloads.GenevaConfigProvider",
+                    "name": "Configure Geneva MA",
+                    "description": "Configure monitoring agents",
+                    "group": "Group A",
+                    "parameters": {
+                        "certificateKey": "juno-prod01-geneva",
+                        "certificateThumbprint": "D8478279411C4D9ED62AC0DB37C7A683BD5D4669",
+                        "genevaTenantName": "crcExperiments",
+                        "genevaAccountName": "crcair",
+                        "genevaNamespace": "prodcrcair",
+                        "genevaRegion": "westus2",
+                        "genevaConfigVersion": "1.0",
+                        "genevaRoleName": "junoGuestVM",
+                        "timeout": "00.00:45:00"
+                    }
+                },
+                {
+                    "type": "Juno.Execution.Providers.Workloads.GenevaConfigProvider",
+                    "name": "Configure Geneva MA",
+                    "description": "Configure monitoring agents",
+                    "group": "Group B",
+                    "parameters": {
+                        "certificateKey": "juno-prod01-geneva",
+                        "certificateThumbprint": "D8478279411C4D9ED62AC0DB37C7A683BD5D4669",
+                        "genevaTenantName": "crcExperiments",
+                        "genevaAccountName": "crcair",
+                        "genevaNamespace": "prodcrcair",
+                        "genevaRegion": "westus2",
+                        "genevaConfigVersion": "1.0",
+                        "genevaRoleName": "junoGuestVM",
+                        "timeout": "00.00:45:00"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "Juno.Execution.Providers.Workloads.VirtualClientWorkloadProvider",
+            "name": "Run performance and IO Workload",
+            "description": "Run performance and IO workload on the VMs in Group A",
+            "group": "Group A",
+            "parameters": {
+                "command": "{NuGetPackagePath}\\VirtualClient\\1.0.1208.46\\content\\win-x64\\VirtualClient.exe",
+                "commandArguments": "$.parameters.vcCommandArguments",
+                "timeout": "01.00:00:00"
+            },
+            "dependencies": [
+                {
+                    "type": "Juno.Execution.Providers.Dependencies.NuGetPackageProvider",
+                    "name": "Virtual Client NuGet Package",
+                    "description": "Download the Virtual Client NuGet package to the VM.",
+                    "group": "Group A",
+                    "parameters": {
+                        "feedUri": "https://msazure.pkgs.visualstudio.com/_packaging/CRC/nuget/v3/index.json",
+                        "packageName": "VirtualClient",
+                        "packageVersion": "1.0.1208.46",
+                        "personalAccessToken": "[secret:keyvault]=NuGetAccessToken"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "Juno.Execution.Providers.Workloads.VirtualClientWorkloadProvider",
+            "name": "Run performance and IO Workload",
+            "description": "Run performance and IO workload on the VMs in Group B",
+            "group": "Group B",
+            "parameters": {
+                "command": "{NuGetPackagePath}\\VirtualClient\\1.0.1208.46\\content\\win-x64\\VirtualClient.exe",
+                "commandArguments": "$.parameters.vcCommandArguments",
+                "timeout": "01.00:00:00"
+            },
+            "dependencies": [
+                {
+                    "type": "Juno.Execution.Providers.Dependencies.NuGetPackageProvider",
+                    "name": "Virtual Client NuGet Package",
+                    "description": "Download the Virtual Client NuGet package to the VM.",
+                    "group": "Group B",
+                    "parameters": {
+                        "feedUri": "https://msazure.pkgs.visualstudio.com/_packaging/CRC/nuget/v3/index.json",
+                        "packageName": "VirtualClient",
+                        "packageVersion": "1.0.1208.46",
+                        "personalAccessToken": "[secret:keyvault]=NuGetAccessToken"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "Juno.Execution.Providers.Payloads.MicrocodeUpdateProvider",
+            "name": "Apply IPU2020.1 Microcode Update",
+            "description": "Applies the IPU2020.1 microcode update to the physical nodes in Group B.",
+            "group": "Group B",
+            "parameters": {
+                "microcodeProvider": "Intel",
+                "microcodeVersion": "$.parameters.ipuMicrocodeVersion",
+                "pfServiceName": "$.parameters.ipuPFServiceName",
+                "pfServicePath": "$.parameters.ipuPFServicePath",
+                "requestTimeout": "00.00:30:00",
+                "verificationTimeout": "00.00:30:00"
+            }
+        },
+        {
+            "type": "ParallelExecution",
+            "name": "Cleanup Virtual Machines in-parallel",
+            "steps": [
+                {
+                    "type": "Juno.Execution.Providers.Environment.ArmVmCleanupProvider",
+                    "name": "Cleanup VM Resources",
+                    "description": "Cleanup VMs and related Azure subscription resources.",
+                    "group": "Group A",
+                    "parameters": {
+                        "timeout": "00.02:00:00"
+                    }
+                },
+                {
+                    "type": "Juno.Execution.Providers.Environment.ArmVmCleanupProvider",
+                    "name": "Cleanup VM Resources",
+                    "description": "Cleanup VMs and related Azure subscription resources.",
+                    "group": "Group B",
+                    "parameters": {
+                        "timeout": "00.02:00:00"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "ParallelExecution",
+            "name": "Cleanup TiP sessions in-parallel",
+            "steps": [
+                {
+                    "type": "Juno.Execution.Providers.Environment.TipCleanupProvider",
+                    "name": "Release TiP Sessions/Nodes",
+                    "description": "Release nodes associated with TiP sessions back to the Azure production fleet.",
+                    "group": "Group A"
+                },
+                {
+                    "type": "Juno.Execution.Providers.Environment.TipCleanupProvider",
+                    "name": "Release TiP Sessions/Nodes",
+                    "description": "Release nodes associated with TiP sessions back to the Azure production fleet.",
+                    "group": "Group B"
+                }
+            ]
+        }
+    ]
+}

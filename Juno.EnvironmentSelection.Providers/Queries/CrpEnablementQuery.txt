@@ -1,0 +1,12 @@
+﻿let includeRegion = $includeRegion$;
+let excludeRegion = $excludeRegion$;
+cluster('Azurecm').database('AzureCM').AllocatorAllocationResult
+| where TIMESTAMP > ago(3d)
+| join kind=inner hint.strategy=broadcast (
+        cluster('cirrus.kusto.windows.net').database('cirrus').Region
+        | where (RegionName in~ (includeRegion) and RegionName !in~ (excludeRegion))  
+        | distinct RegionName, FabricRegionName
+    ) on  $left.Region == $right.FabricRegionName
+| where allocationRequestType == "NewDeployment" and tenantId !startswith "00000000" and correlationId !startswith "0000000"
+| project ClusterId=tolower(Tenant), Region = RegionName
+| distinct ClusterId, Region

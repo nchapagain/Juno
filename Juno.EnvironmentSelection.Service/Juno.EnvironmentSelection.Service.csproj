@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+	<NoWarn>CA2000</NoWarn>
+  </PropertyGroup>
+
+	<PropertyGroup>
+		<!--
+        Version information for an assembly consists of the following four values:
+
+        Major Version
+        Minor Version
+        Build Number
+        Revision
+        -->
+		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+		<AssemblyName>Juno.EnvironmentSelection.Service</AssemblyName>
+		<RootNamespace>Juno.EnvironmentSelection</RootNamespace>
+		<PackageId>Juno.EnvironmentSelection.Service</PackageId>
+		<Authors>crcteam@microsoft.com</Authors>
+		<AssemblyVersion>2.1.1</AssemblyVersion>
+		<Description>Service that offers functionality to select an apporpiate environment given a context</Description>
+	</PropertyGroup>
+	
+  <ItemGroup>
+    <ProjectReference Include="..\Juno.EnvironmentSelection.Providers\Juno.EnvironmentSelection.Providers.csproj" />
+    <ProjectReference Include="..\Juno.Extensions.AspNetCore\Juno.Extensions.AspNetCore.csproj" />
+    <ProjectReference Include="..\Juno.Providers\Juno.Providers.csproj" />
+  </ItemGroup>
+	
+  <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Module.props" />
+
+</Project>

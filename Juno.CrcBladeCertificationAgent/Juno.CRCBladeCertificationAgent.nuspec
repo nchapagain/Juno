@@ -1,0 +1,19 @@
+﻿<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>Juno.CRCBladeCertificationAgent</id>
+    <version>$version$</version>
+    <title>CRC AIR CRCBladeCertificationAgent</title>
+    <authors>crcair@microsoft.com</authors>
+    <owners>crcair@microsoft.com</owners>
+    <!-- licenseUrl>Internal Use Only</licenseUrl -->
+    <!-- projectUrl></projectUrl -->
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Executable to certify blade before and after experiment</description>
+    <releaseNotes />
+    <copyright>Copyright 2020</copyright>
+  </metadata>
+  <files>
+    <file src="$outputdir$\win-x64\publish\**\*.*" exclude="*.nupkg;*.nuspec" target="tools\win-x64" />
+  </files>
+</package>

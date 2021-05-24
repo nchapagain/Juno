@@ -1,0 +1,43 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+	<NoWarn>CS1998,SA1202,CS1570,CS1587,CA2007,CA1054,CA2000,AZCA1001,AsyncFixer04</NoWarn>
+
+  </PropertyGroup>
+	
+	<PropertyGroup>
+		<!--
+        Version information for an assembly consists of the following four values:
+
+        Major Version
+        Minor Version
+        Build Number
+        Revision
+        -->
+		<AssemblyAndPackageVersion>1.0.0</AssemblyAndPackageVersion>
+		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+		<AssemblyName>Juno.Scheduler.Actions.UnitTests</AssemblyName>
+		<RootNamespace>Juno.Scheduler.Actions</RootNamespace>
+		<AssemblyVersion>$(AssemblyAndPackageVersion)</AssemblyVersion>
+		<Description>Juno Scheduler Actions Unit Tests</Description>
+	</PropertyGroup>
+  
+   <ItemGroup>
+     <PackageReference Include="Moq" Version="4.16.1" />
+     <PackageReference Include="nunit" Version="3.13.1" />
+     <PackageReference Include="NUnit3TestAdapter" Version="3.17.0" />
+     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.8.3" />
+   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Juno.EnvironmentSelection.Providers\Juno.EnvironmentSelection.Providers.csproj" />
+    <ProjectReference Include="..\Juno.Scheduler.Actions\Juno.Scheduler.Actions.csproj" />
+  	<ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.TestExtensions\Microsoft.Azure.CRC.TestExtensions.csproj" />
+	<ProjectReference Include="..\Juno.TestExtensions\Juno.TestExtensions.csproj" />
+  </ItemGroup>
+	
+  <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Module.props" />
+
+</Project>

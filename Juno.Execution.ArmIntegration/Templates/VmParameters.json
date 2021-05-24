@@ -1,0 +1,62 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "value": "westus2"
+    },
+    "osDiskStorageAccountType": {
+      "value": "Premium_LRS"
+    },
+    "dataDiskResources": {
+      "value": [
+        {
+          "sku": "Premium_LRS",
+          "lun": 0,
+          "storageAccountType": null,
+          "diskSizeGB": 1024
+        },
+        {
+          "sku": "Premium_LRS",
+          "lun": 1,
+          "storageAccountType": null,
+          "diskSizeGB": 256
+        }
+      ]
+    },
+    "virtualMachineSize": {
+      "value": "Standard_DS3_v2"
+    },
+    "imageReference": {
+      "value": {
+        "publisher": "MicrosoftWindowsServer",
+        "offer": "WindowsServer",
+        "sku": "2016-Datacenter",
+        "version": "latest"
+      }
+    },
+    "virtualMachineName": {
+      "value": "junovm2"
+    },
+    "adminUsername": {
+      "value": "junoadmin"
+    },
+    "adminCredentialSecret": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/94f4f5c5-3526-4f0d-83e5-2e7946a41b75/resourceGroups/rtest-rg/providers/Microsoft.KeyVault/vaults/rtest-pub"
+        },
+        "secretName": "adminCredentialSecret"
+      }
+    },
+    "subnetName": {
+      "value": "rtest-subnet"
+    },
+    "networkSecurityGroupName": {
+      "value": "rtest-nsg"
+    },
+    "virtualNetworkName": {
+      "value": "rtest-vnet"
+    }
+  }
+}

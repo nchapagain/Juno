@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    
+    <!--
+    *****************************************************************************
+    Set the module name and root path properties.
+    *****************************************************************************
+    -->
+    <PropertyGroup>
+      <ModuleName>$([MSBuild]::MakeRelative($([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Repo.props)), $(MSBuildThisFileDirectory)).TrimEnd('\'))</ModuleName>
+      <ModulePath>$(MSBuildThisFileDirectory)</ModulePath>
+      <Platforms>x64;ARM64;AnyCPU</Platforms>
+    </PropertyGroup>
+
+    <!--
+    *****************************************************************************
+    Ensure the target .NET Core runtime is explicitly defined to avoid issues
+    between NuGet package restores and build.
+    *****************************************************************************
+    -->
+    <PropertyGroup Condition="'$(TargetFramework)' == 'net5.0'">
+        <RuntimeFrameworkVersion>5.0.3</RuntimeFrameworkVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="System.Text.Encodings.Web" Version="5.0.1" />
+    </ItemGroup>
+
+    <!--
+    *****************************************************************************
+    Import the build environment settings.  These settings define the paths that 
+    will be used during build/compilation 
+    
+    (e.g. bin/output path, intermediates path, NuGet package cache path).
+    *****************************************************************************
+    -->
+    <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Repo.props))\Repo.props" />
+    <Import Project="$(BuildEnvToolsetsPath)\CodeQuality.targets" />
+    <Import Project="$(BuildEnvToolsetsPath)\Documentation.targets" />
+
+</Project>

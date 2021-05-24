@@ -1,0 +1,62 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+        <RunCodeAnalysis></RunCodeAnalysis>
+        <EnableBaseIntermediateOutputPathMismatchWarning>false</EnableBaseIntermediateOutputPathMismatchWarning>
+        <NoWarn>CA1308,IDE0003,SA1508</NoWarn>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <!--
+        Version information for an assembly consists of the following four values:
+
+        Major Version
+        Minor Version
+        Build Number
+        Revision
+        -->
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+        <AssemblyName>Juno.DataManagement</AssemblyName>
+        <RootNamespace>Juno.DataManagement</RootNamespace>
+        <PackageId>Juno.DataManagement</PackageId>
+        <Authors>crcteam@microsoft.com</Authors>
+        <AssemblyVersion>2.2.0</AssemblyVersion>
+        <Description>Data management classes and interfaces used by CRC AIR (Juno) libraries and components.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Polly" Version="7.2.1" />
+        <PackageReference Include="System.Runtime.Caching" Version="5.0.0" />
+		<PackageReference Include="ncrontab.signed" Version="3.3.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Common\Microsoft.Azure.CRC.Common.csproj" />
+        <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Contracts\Microsoft.Azure.CRC.Contracts.csproj" />
+        <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Kusto\Microsoft.Azure.CRC.Kusto.csproj" />
+        <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Repository\Microsoft.Azure.CRC.Repository.csproj" />
+        <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Telemetry\Microsoft.Azure.CRC.Telemetry.csproj" />
+        <ProjectReference Include="..\Juno.Contracts\Juno.Contracts.csproj" />
+        <ProjectReference Include="..\Juno.Extensions.Telemetry\Juno.Extensions.Telemetry.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="Kusto\Resources.Designer.cs">
+        <DesignTime>True</DesignTime>
+        <AutoGen>True</AutoGen>
+        <DependentUpon>Resources.resx</DependentUpon>
+      </Compile>
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Update="Kusto\Resources.resx">
+        <Generator>PublicResXFileCodeGenerator</Generator>
+        <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      </EmbeddedResource>
+    </ItemGroup>
+
+    <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Module.props" />
+
+</Project>

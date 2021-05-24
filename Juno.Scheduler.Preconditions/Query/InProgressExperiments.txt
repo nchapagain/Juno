@@ -1,0 +1,5 @@
+﻿SELECT COUNT(b.id) AS Count
+FROM b
+WHERE b.lastModified > DateTimeAdd("dd", -2, GetCurrentDateTime ()) 
+    AND b.definition.metadata.targetGoal = '@targetGoal'
+    AND b.status = 'InProgress'

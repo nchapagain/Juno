@@ -1,0 +1,159 @@
+﻿let experimentNames = $experimentName$;
+let cpuIds = $cpuId$;
+let includeRegions = $includeRegion$;
+let excludeRegions = $excludeRegion$;
+let dateRangeBegin = ago(60d);
+let dateRangeEnd = now();
+let environments = dynamic(['juno-prod01']);
+let clusterTypes = dynamic(["Compute", "GPC", "GPZ", "HPC"]);
+let getCpuId = (extModel : int, extFamily : int, family : int, model : int, steppingId : int) {
+    strcat(
+        tolower(tohex(extModel)),
+        tolower(tohex(extFamily)), 
+        tolower(tohex(family)), 
+        tolower(tohex(model)),
+        tolower(tohex(steppingId))
+    )
+};
+let getCpuIdFromIdentifier = (id:string) {
+    let identifier = split(id, ' ');
+    let family = toint(identifier[2]);
+    let baseFamily = tohex(iff(family > 15, 15, family));
+    let extendedFamily = tohex(iff(family > 15, family-15, 0));
+    let model = tohex(toint(identifier[4]));
+    let stepping = tohex(toint(identifier[6]));
+    strcat(
+        iff(strlen(model) == 1, '0', substring(model, 0, 1)), 
+        '0', 
+        baseFamily,
+        iff(strlen(model) == 1, substring(model, 0, 1), substring(model, 1, 1)), 
+        stepping
+    )
+};
+let AdressableFleet = 
+    materialize(
+        cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryGenerationMappingV3
+        | where ClusterType in~ (clusterTypes) and CloudName == 'Public' and IsLive == 'True'
+        | project ClusterId, NodeId, HwSkuId
+        | join
+            hint.strategy = broadcast ( cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryComponentCPU
+            | distinct NodeId, CPUIDExtModel, CPUIDExtFamily, CPUIDFamily, CPUIDModel, CPUIDSteppingID 
+            | extend CPUID = getCpuId(CPUIDExtModel, CPUIDExtFamily, CPUIDFamily, CPUIDModel, CPUIDSteppingID)
+            | project NodeId, CPUID
+        )
+        on NodeId
+        | where CPUID in~ (cpuIds)
+    );
+let CompletedExperiments = 
+    materialize
+    (
+        cluster('azurecrc.westus2.kusto.windows.net').database('JunoStaging').NewStagingExperiments
+        | where experimentCreatedTime > dateRangeBegin and experimentEndTime < dateRangeEnd and experimentName in~ (experimentNames) and environment in~ (environments)
+    );
+let SucceededExperiments = 
+    CompletedExperiments
+    | join
+    (
+        cluster("AzureCRC.westus2.kusto.windows.net").database("JunoStaging").NewStagingExperimentSteps
+        | where stepName == 'Apply Microcode Update' and stepStatus == 'Succeeded' and experimentGroup == 'Group B'
+        | distinct experimentId
+    )
+    on experimentId;
+let JunoNodeResources = 
+    cluster('azurecrc.westus2.kusto.windows.net').database('JunoStaging').NewStagingNodeResources
+    | where tipStartTime > dateRangeBegin and tipEndTime < dateRangeEnd
+    | distinct experimentId, experimentGroup, cluster, nodeId, tipSessionId, tipStartTime, tipEndTime;
+let JunoTargetNodes = 
+    SucceededExperiments
+    | join kind=inner
+    (
+        JunoNodeResources
+    )
+    on experimentId
+    | where experimentGroup == 'Group B';
+let JunoHostSnapshot = 
+    JunoTargetNodes
+    | join kind=inner
+    (
+        cluster("AzureCRC.westus2.kusto.windows.net").database("JunoStaging").getNewStagingHostSnapshotInfo
+        | summarize arg_max(ingestionTimeUtc, *) by tipSessionId
+        | project tipSessionId, nodeId, CPUID=getCpuIdFromIdentifier(iff(isempty(tostring(initialCpuSnapshot.CpuIdentifier)), tostring(initialCpuSnapshot.cpuIdentifier), tostring(initialCpuSnapshot.CpuIdentifier)))
+    )
+    on tipSessionId
+    | join kind=inner
+    (
+        cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryGenerationMappingV3
+        | project ClusterId, NodeId, HwSkuId
+    )
+    on $left.nodeId == $right.NodeId
+    | project CPUID, ClusterId, NodeId = nodeId, HwSkuId, ExperimentId = experimentId, TipSessionId = tipSessionId;
+let InprogressNodeResources =
+    cluster('azurecrc.westus2.kusto.windows.net').database('JunoStaging').NewStagingExperimentsInProgress
+    | where experimentCreatedTime > ago(2d) and experimentName in~ (experimentNames) and environment in~ (environments)
+    | summarize arg_max(ingestionTime, *) by experimentId
+    | join (
+        cluster('azurecrc.westus2.kusto.windows.net').database('JunoStaging').NewStagingNodeResourcesInProgress
+        | where tipStartTime > ago(2d) and environment in~ (environments)
+        | summarize arg_max(ingestionTime, *) by experimentId
+    ) on experimentId;
+let InProgressExperiments = 
+    CompletedExperiments
+    | distinct experimentId
+    | join kind=rightanti 
+      (
+        InprogressNodeResources
+      ) 
+      on experimentId;
+let InProgressHwSkus = 
+    InProgressExperiments
+    | distinct experimentId, nodeId
+    | join kind=inner
+    (
+        cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryGenerationMappingV3
+        | project ClusterId, NodeId, HwSkuId
+    )
+    on $left.nodeId == $right.NodeId
+    | summarize JunoExecutionsInProgress=dcount(experimentId) by HwSkuId;
+let ZeroExecutions = 
+    AdressableFleet
+    | summarize TotalNodes=dcount(NodeId) by CPUID, HwSkuId
+    | join kind = leftouter
+        hint.strategy = broadcast (
+            JunoHostSnapshot
+            | summarize JunoExecutions=count() by CPUID, HwSkuId
+        )
+    on CPUID, HwSkuId
+    | join kind = leftouter
+        hint.strategy = broadcast (
+            InProgressHwSkus
+        )
+    on HwSkuId        
+    | order by TotalNodes desc
+    | project CPUID, HwSkuId, TotalNodes, JunoExecutions=iff(isempty(JunoExecutions), 0, JunoExecutions), JunoExecutionsInProgress=iff(isempty(JunoExecutionsInProgress), 0, JunoExecutionsInProgress)
+    | where JunoExecutions == 0 and JunoExecutionsInProgress == 0;
+let ZeroExecutionsWithRegions = 
+    ZeroExecutions
+    | join kind=innerunique
+    (
+        cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryGenerationMappingV3
+        | project ClusterId, RegionId, HwSkuId
+    )
+    on HwSkuId;
+let Regions = 
+    cluster('cirrus.kusto.windows.net').database('cirrus').Region
+    | distinct FabricRegionName, RegionName;
+let ResultSet =
+    Regions
+    | join kind = innerunique 
+    (
+        ZeroExecutionsWithRegions 
+    )
+    on $left.FabricRegionName == $right.RegionId
+    | project RegionId = RegionName, ClusterId, CPUID, HwSkuId, TotalNodes
+    | where RegionId in~ (includeRegions) and RegionId !in~ (excludeRegions)
+    | distinct CPUID, HwSkuId, ClusterId, RegionId;
+let EssProviderResultSet =
+    ResultSet
+    | project ExperimentName = tostring(experimentNames[0]), CpuId = CPUID, Region = RegionId, ClusterId = tolower(ClusterId)
+    | distinct ExperimentName, CpuId, Region, ClusterId;
+EssProviderResultSet

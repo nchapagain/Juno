@@ -1,0 +1,3 @@
+.create-or-alter function with (folder = "Mapping") getJunoPreferredTerm(dataClassification:string,dataTerm:string) {
+    getPreferredTerm("Juno", dataClassification, dataTerm)
+}

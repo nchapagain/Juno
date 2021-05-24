@@ -1,0 +1,107 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+        <RunCodeAnalysis></RunCodeAnalysis>
+        <EnableBaseIntermediateOutputPathMismatchWarning>false</EnableBaseIntermediateOutputPathMismatchWarning>
+        <NoWarn>CA1308,CA2000,CS1570,CS1587,SA1117,SA1508,SA1202,SA1204</NoWarn>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <!--
+        Version information for an assembly consists of the following four values:
+
+        Major Version
+        Minor Version
+        Build Number
+        Revision
+        -->
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+        <AssemblyName>Juno.Execution.Providers</AssemblyName>
+        <RootNamespace>Juno.Execution.Providers</RootNamespace>
+        <PackageId>Juno.Execution.Providers</PackageId>
+        <Authors>crcteam@microsoft.com</Authors>
+        <AssemblyVersion>3.7.0</AssemblyVersion>
+        <Description>Providers used to by Juno execution services and agents at runtime.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="System.IO.Abstractions" Version="13.2.25" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Juno.Execution.AgentRuntime\Juno.Execution.AgentRuntime.csproj" />
+      <ProjectReference Include="..\Juno.Execution.NuGetIntegration\Juno.Execution.NuGetIntegration.csproj" />
+      <ProjectReference Include="..\Juno.Execution.TipIntegration\Juno.Execution.TipIntegration.csproj" />
+      <ProjectReference Include="..\Juno.Execution.ArmIntegration\Juno.Execution.ArmIntegration.csproj" />
+      <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Kusto\Microsoft.Azure.CRC.Kusto.csproj" />
+      <ProjectReference Include="..\Juno.Providers\Juno.Providers.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="Properties\Resources.Designer.cs">
+        <DesignTime>True</DesignTime>
+        <AutoGen>True</AutoGen>
+        <DependentUpon>Resources.resx</DependentUpon>
+      </Compile>
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Update="Properties\Resources.resx">
+        <Generator>ResXFileCodeGenerator</Generator>
+        <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      </EmbeddedResource>
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="Resources\Diagnostics_ArmProdDeploymentOperationsQuery.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Resources\Diagnostics_AZCRPVMApiQosEventsQuery.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Resources\Diagnostics_AzureCMLogNodeSnapshotQuery.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Resources\Diagnostics_MicrocodeUpdateEventsQuery.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Resources\Diagnostics_TipSessionStatusEventsQuery.txt">
+ 	<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Resources\IERR_Repro_Query_1_65.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Resources\MCU2019_2_Refresh_Mitigation_Query.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Resources\MCU2020_1_Query.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Resources\IERR_Repro_Query.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Resources\MCU2020_2_Query.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Resources\MCU2019_2_Gen4_Query.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Resources\MPU2019_2_RefreshQuery.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Resources\PinnedClusters.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Resources\TipRackQuery.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Resources\NodeInfoQuery.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+    <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Module.props" />
+
+</Project>

@@ -1,0 +1,1 @@
+Juno.Execution.Service.WebJobHost.exe %*

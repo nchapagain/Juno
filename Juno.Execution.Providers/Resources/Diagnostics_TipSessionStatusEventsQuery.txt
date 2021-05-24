@@ -1,0 +1,4 @@
+let tipSessionId = $tipSessionId$;
+cluster("AzureCM.kusto.windows.net").database("AzureCM").LogTipNodeSessionStatusEventMessages
+| where tipNodeSessionId == tipSessionId
+| project TIMESTAMP, tipNodeSessionId, AvailabilityZone, Tenant, message

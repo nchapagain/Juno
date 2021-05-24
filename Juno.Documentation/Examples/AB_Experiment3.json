@@ -1,0 +1,332 @@
+﻿{
+    "$schema": "http://juno-prod01.westus2/workflows/v1.0/schema",
+    "contentVersion": "1.0.0",
+    "name": "IPU2020.1 microcode update validation",
+    "description": "AB experiment to validate the changes in performance and reliability when applying the IPU2020.1 microcode update.",
+    "metadata": {
+        "teamName": "CSI AIR",
+        "email": "csiair@microsoft.com",
+        "owners": "rashah"
+    },
+    "parameters": {
+        "subscription": "27C13372-7209-4EE7-AC71-D99C0328CD48",
+        "vmSku": "Standard_DS2_V2",
+        "vmCount": 5,
+        "nodeCPUId": "56345",
+        "IPUPFServicePath": "\\\\reddog\\builds\\some\\path\\to\\PF\\service\\ipu2020.1"
+    },
+    "workflow": [
+        {
+            "type": "Juno.Providers.Environment.ExampleCriteriaProvider",
+            "name": "Group A Cluster selection",
+            "description": "Select clusters in the Azure fleet that meet the criteria of the experiment for Group A.",
+            "group": "Group A",
+            "parameters": {
+                "nodeCPUId": "$.parameters.nodeCPUId",
+                "vmSku": "$.parameters.vmSku",
+                "minAvailableVmCount": 10
+            },
+            "tags": {
+                "tag1": "AnyTag"
+            }
+        },
+        {
+            "type": "Juno.Providers.Environment.ExampleCriteriaProvider",
+            "name": "Group B Cluster selection",
+            "description": "Select clusters in the Azure fleet that meet the criteria of the experiment for Group B.",
+            "group": "Group B",
+            "parameters": {
+                "nodeCPUId": "$.parameters.nodeCPUId",
+                "vmSku": "$.parameters.vmSku",
+                "minAvailableVmCount": 10
+            },
+            "tags": {
+                "tag1": "AnyTag"
+            }
+        },
+        {
+            "type": "Juno.Providers.Environment.ExampleSetupProvider",
+            "name": "Isolate Group A Node",
+            "description": "Acquire an isolated node in one of the clusters selected to run Group A steps.",
+            "group": "Group A",
+            "parameters": {
+                "anyParameter": true
+            },
+            "tags": {
+                "tag1": "AnyTag"
+            }
+        },
+        {
+            "type": "Juno.Providers.Environment.ExampleSetupProvider",
+            "name": "Isolate Group B Node",
+            "description": "Acquire an isolated node in one of the clusters selected to run Group B steps.",
+            "group": "Group B",
+            "parameters": {
+                "anyParameter": true
+            },
+            "tags": {
+                "tag1": "AnyTag"
+            }
+        },
+        {
+            "type": "Juno.Providers.Environment.ExampleSetupProvider",
+            "name": "Group A Virtual Machines",
+            "description": "Create virtual machines on isolated TiP nodes to run Group A workloads.",
+            "group": "Group A",
+            "parameters": {
+                "subscription": "$.metadata.subscription",
+                "vmSku": "$.parameters.vmSku",
+                "vmCount": "$.parameters.vmCount"
+            },
+            "tags": {
+                "tag1": "AnyTag"
+            }
+        },
+        {
+            "type": "Juno.Providers.Environment.ExampleSetupProvider",
+            "name": "Group B Virtual Machines",
+            "description": "Create virtual machines on isolated TiP nodes to run Group B workloads.",
+            "group": "Group B",
+            "parameters": {
+                "subscription": "$.metadata.subscription",
+                "vmSku": "$.parameters.vmSku",
+                "vmCount": "$.parameters.vmCount"
+            },
+            "tags": {
+                "tag1": "AnyTag"
+            }
+        },
+        {
+            "type": "Juno.Providers.Payloads.ExamplePayloadProvider",
+            "name": "Apply IPU2020.1 Payload",
+            "description": "Applies the payload to nodes in Group B.",
+            "group": "Group B",
+            "parameters": {
+                "buildPath": "$.parameters.IPUPFServicePath"
+            },
+            "tags": {
+                "ipu": "IPU2020.1"
+            }
+        },
+        {
+            "type": "ParallelExecution",
+            "name": "Parallel Workload Steps",
+            "description": "Runs stress on the VM CPU, memory and disk resources in parallel.",
+            "group": "Group A",
+            "parameters": {
+                "anyParameter": 1234
+            },
+            "tags": {
+                "tag1": "default workload"
+            },
+            "steps": [
+                {
+                    "type": "Juno.Providers.Workloads.ExampleWorkloadProvider",
+                    "name": "Run CPU workload",
+                    "description": "Customer-representative CPU workload",
+                    "parameters": {
+                        "command": "/Workloads/workload.exe -profile:basic-cpu-workload -runtime:24:00:00"
+                    },
+                    "tags": {
+                        "tag1": "AnyTag"
+                    },
+                    "dependencies": [
+                        {
+                            "type": "Juno.Providers.ExampleDependency",
+                            "name": "Workload",
+                            "description": "Workload.exe NuGet package",
+                            "parameters": {
+                                "feedUri": "https://any.nuget.feed/_packaging/any/nuget/v3/index.json",
+                                "packageName": "Workload",
+                                "packageVersion": "2.2.0",
+                                "personalAccessToken": "[secret:azurekeyvault]=AnyNuGetFeedAccessToken",
+                                "installationPath": "/Workloads"
+                            },
+                            "tags": {
+                                "tag1": "AnyTag"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "type": "Juno.Providers.Workloads.ExampleWorkloadProvider",
+                    "name": "Run IO workload",
+                    "description": "Customer-representative IO workload",
+                    "parameters": {
+                        "command": "/Workloads/workload.exe -profile:basic-io-workload -runtime:24:00:00"
+                    },
+                    "tags": {
+                        "tag1": "AnyTag"
+                    },
+                    "dependencies": [
+                        {
+                            "type": "Juno.Providers.ExampleDependency",
+                            "name": "Workload",
+                            "description": "Workload.exe NuGet package",
+                            "parameters": {
+                                "feedUri": "https://any.nuget.feed/_packaging/any/nuget/v3/index.json",
+                                "packageName": "Workload",
+                                "packageVersion": "2.2.0",
+                                "personalAccessToken": "[secret:azurekeyvault]=AnyNuGetFeedAccessToken",
+                                "installationPath": "/Workloads"
+                            },
+                            "tags": {
+                                "tag1": "AnyTag"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "type": "Juno.Providers.Workloads.ExampleWorkloadProvider",
+                    "name": "Run memory usage workload",
+                    "description": "Customer-representative memory usage workload",
+                    "parameters": {
+                        "command": "/Workloads/workload.exe -profile:basic-mem-workload -runtime:24:00:00"
+                    },
+                    "tags": {
+                        "tag1": "AnyTag"
+                    },
+                    "dependencies": [
+                        {
+                            "type": "Juno.Providers.ExampleDependency",
+                            "name": "Workload",
+                            "description": "Workload.exe NuGet package",
+                            "parameters": {
+                                "feedUri": "https://any.nuget.feed/_packaging/any/nuget/v3/index.json",
+                                "packageName": "Workload",
+                                "packageVersion": "2.2.0",
+                                "personalAccessToken": "[secret:azurekeyvault]=AnyNuGetFeedAccessToken",
+                                "installationPath": "/Workloads"
+                            },
+                            "tags": {
+                                "tag1": "AnyTag"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "ParallelExecution",
+            "name": "Parallel Workload Steps",
+            "description": "Runs stress on the VM CPU, memory and disk resources in parallel.",
+            "group": "Group B",
+            "parameters": {
+                "anyParameter": 1234
+            },
+            "tags": {
+                "tag1": "default workload"
+            },
+            "steps": [
+                {
+                    "type": "Juno.Providers.Workloads.ExampleWorkloadProvider",
+                    "name": "Run CPU workload",
+                    "description": "Customer-representative CPU workload",
+                    "parameters": {
+                        "command": "/Workloads/workload.exe -profile:basic-cpu-workload -runtime:24:00:00"
+                    },
+                    "tags": {
+                        "tag1": "AnyTag"
+                    },
+                    "dependencies": [
+                        {
+                            "type": "Juno.Providers.ExampleDependency",
+                            "name": "Workload",
+                            "description": "Workload.exe NuGet package",
+                            "parameters": {
+                                "feedUri": "https://any.nuget.feed/_packaging/any/nuget/v3/index.json",
+                                "packageName": "Workload",
+                                "packageVersion": "2.2.0",
+                                "personalAccessToken": "[secret:azurekeyvault]=AnyNuGetFeedAccessToken",
+                                "installationPath": "/Workloads"
+                            },
+                            "tags": {
+                                "tag1": "AnyTag"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "type": "Juno.Providers.Workloads.ExampleWorkloadProvider",
+                    "name": "Run IO workload",
+                    "description": "Customer-representative IO workload",
+                    "parameters": {
+                        "command": "/Workloads/workload.exe -profile:basic-io-workload -runtime:24:00:00"
+                    },
+                    "tags": {
+                        "tag1": "AnyTag"
+                    },
+                    "dependencies": [
+                        {
+                            "type": "Juno.Providers.ExampleDependency",
+                            "name": "Workload",
+                            "description": "Workload.exe NuGet package",
+                            "parameters": {
+                                "feedUri": "https://any.nuget.feed/_packaging/any/nuget/v3/index.json",
+                                "packageName": "Workload",
+                                "packageVersion": "2.2.0",
+                                "personalAccessToken": "[secret:azurekeyvault]=AnyNuGetFeedAccessToken",
+                                "installationPath": "/Workloads"
+                            },
+                            "tags": {
+                                "tag1": "AnyTag"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "type": "Juno.Providers.Workloads.ExampleWorkloadProvider",
+                    "name": "Run memory usage workload",
+                    "description": "Customer-representative memory usage workload",
+                    "parameters": {
+                        "command": "/Workloads/workload.exe -profile:basic-mem-workload -runtime:24:00:00"
+                    },
+                    "tags": {
+                        "tag1": "AnyTag"
+                    },
+                    "dependencies": [
+                        {
+                            "type": "Juno.Providers.ExampleDependency",
+                            "name": "Workload",
+                            "description": "Workload.exe NuGet package",
+                            "parameters": {
+                                "feedUri": "https://any.nuget.feed/_packaging/any/nuget/v3/index.json",
+                                "packageName": "Workload",
+                                "packageVersion": "2.2.0",
+                                "personalAccessToken": "[secret:azurekeyvault]=AnyNuGetFeedAccessToken",
+                                "installationPath": "/Workloads"
+                            },
+                            "tags": {
+                                "tag1": "AnyTag"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "Juno.Providers.Environment.ExampleCleanupProvider",
+            "name": "Cleanup environment resources used in the experiment.",
+            "group": "Group A",
+            "parameters": {
+                "cleanUpCondition": "OnTimeExpiry",
+                "durationInHours": 24
+            },
+            "tags": {
+                "tag1": "AnyTag"
+            }
+        },
+        {
+            "type": "Juno.Providers.Environment.ExampleCleanupProvider",
+            "name": "Cleanup environment resources used in the experiment.",
+            "group": "Group B",
+            "parameters": {
+                "cleanUpCondition": "OnTimeExpiry",
+                "durationInHours": 24
+            },
+            "tags": {
+                "tag1": "AnyTag"
+            }
+        }
+    ]
+}

@@ -1,0 +1,6 @@
+.create-or-alter function with (folder = "Mapping") getPreferredTerms(dataClassificationSystem:string) {
+    StagingDataDictionary
+    | where classificationSystem == dataClassificationSystem
+    | summarize arg_max(createdTime, classificationSystem, classification, term, preferredTerm) by term
+    | project classificationSystem, classification, term, preferredTerm, createdTime
+}

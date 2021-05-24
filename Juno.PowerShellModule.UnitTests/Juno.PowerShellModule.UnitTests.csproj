@@ -1,0 +1,44 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net5.0</TargetFramework>
+        <IsPackable>false</IsPackable>
+        <NoWarn>CA1812,IDE1006,SA1300,NU1604,CA2000</NoWarn>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <!--
+        Version information for an assembly consists of the following four values:
+
+        Major Version
+        Minor Version
+        Build Number
+        Revision
+        -->
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+        <AssemblyName>Juno.PowerShellModule.UnitTests</AssemblyName>
+        <RootNamespace>Juno.PowerShellModule</RootNamespace>
+        <AssemblyVersion>1.0.0</AssemblyVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <Compile Remove="CommandLine\**" />
+      <EmbeddedResource Remove="CommandLine\**" />
+      <None Remove="CommandLine\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.TestExtensions\Microsoft.Azure.CRC.TestExtensions.csproj" />
+        <ProjectReference Include="..\Juno.PowerShellModule\Juno.PowerShellModule.csproj" />
+        <ProjectReference Include="..\Juno.TestExtensions\Juno.TestExtensions.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="nunit" Version="3.13.1" />
+        <PackageReference Include="NUnit3TestAdapter" Version="3.17.0" />	
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.8.3" />	
+    </ItemGroup>
+
+    <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Module.props" />
+
+</Project>

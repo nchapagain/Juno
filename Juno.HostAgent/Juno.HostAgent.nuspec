@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>Juno.HostAgent</id>
+    <version>$version$</version>
+    <title>Juno experiment execution Host agent.</title>
+    <authors>crcair@microsoft.com</authors>
+    <owners>crcair@microsoft.com</owners>
+    <!-- licenseUrl>Internal Use Only</licenseUrl -->
+    <!-- projectUrl></projectUrl -->
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Juno experiment execution Host agent executable.</description>
+    <releaseNotes />
+    <copyright>Copyright 2020</copyright>
+    <tags>Juno Experiment Execution HostAgent</tags>
+  </metadata>
+  <files>
+    <file src="$buildBinPath$\x64\Juno.HostAgent\net5.0\win-x64\publish\**\*" exclude="*.nupkg;*.nuspec" target="tools\win-x64" />
+    <file src="$buildBinPath$\ARM64\Juno.HostAgent\net5.0\win-arm64\publish\**\*" exclude="*.nupkg;*.nuspec" target="tools\win-arm64" />
+  </files>
+</package>

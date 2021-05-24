@@ -1,0 +1,29 @@
+﻿{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"paths": [
+		{
+			"parameterReference": "servicePackageLink"
+		}
+	],
+	"parameters": {
+		"siteName": {
+			"value": "junodev01agents"
+		},
+		"servicePlanName": {
+			"value": "junodev01serviceplan-api-1"
+		},
+		"servicePackageLink": {
+			"value": "bin\\WebApp.zip"
+		},
+		"location": {
+			"value": "West US 2"
+		},
+		"IISWebAppName": {
+			"value": "junodev01agents__staging"
+		},
+		"Sku": {
+			"value": "P2v2"
+		}
+	}
+}

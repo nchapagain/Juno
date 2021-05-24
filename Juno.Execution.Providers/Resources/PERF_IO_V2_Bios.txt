@@ -1,0 +1,78 @@
+{
+  "FriendlyName": "IO Performance Benchmark V2",
+  "ShuffleActions": "true",
+  "Metadata": {
+  },
+  "Actions": [
+    {
+      "Type": "FormattingDiskAction",
+      "Arguments": []
+    },
+    {
+      "Type": "FioExecutor",
+      "Arguments": [
+        {
+          "Name": "CommandLine",
+          "Value": "--name=fio_randrw_4GB_64k_1_16_buffered --ioengine=[win32nt=windowsaio,unix=posixaio] --size=4GB --rw=randrw --bs=64k --iodepth=1 --buffered=1 --thread=16 --group_reporting --filename={FIO.FILEPATH} --output-format=json"
+        },
+        {
+          "Name": "Tags",
+          "Value": "IO,FIO,randrw"
+        },
+        {
+          "Name": "MetricFilter",
+          "Value": "bw,bw_min,bw_max,bw_agg,bw_mean,bw_dev,bw_samples,iops,iops_min,iops_max,iops_mean,iops_stddev,iops_samples,clat_min,clat_max,clat_mean,clat_stddev,clat_percentile_5.000000,clat_percentile_10.000000,clat_percentile_20.000000,clat_percentile_30.000000,clat_percentile_40.000000,clat_percentile_50.000000,clat_percentile_60.000000,clat_percentile_70.000000,clat_percentile_80.000000,clat_percentile_90.000000,clat_percentile_95.000000,clat_percentile_99.000000"
+        }
+      ]
+    },
+    {
+      "Type": "FioExecutor",
+      "Arguments": [
+        {
+          "Name": "CommandLine",
+          "Value": "--name=fio_readwrite_4GB_4k_1_1_buffered --ioengine=[win32nt=windowsaio,unix=posixaio] --size=4GB --rw=readwrite --bs=4k --iodepth=1 --buffered=1 --thread=1 --group_reporting --filename={FIO.FILEPATH} --output-format=json"
+        },
+        {
+          "Name": "Tags",
+          "Value": "IO,FIO,readwrite"
+        },
+        {
+          "Name": "MetricFilter",
+          "Value": "bw,bw_min,bw_max,bw_agg,bw_mean,bw_dev,bw_samples,iops,iops_min,iops_max,iops_mean,iops_stddev,iops_samples,clat_min,clat_max,clat_mean,clat_stddev,clat_percentile_5.000000,clat_percentile_10.000000,clat_percentile_20.000000,clat_percentile_30.000000,clat_percentile_40.000000,clat_percentile_50.000000,clat_percentile_60.000000,clat_percentile_70.000000,clat_percentile_80.000000,clat_percentile_90.000000,clat_percentile_95.000000,clat_percentile_99.000000"
+        }
+      ]
+    },
+    {
+      "Type": "FioExecutor",
+      "Arguments": [
+        {
+          "Name": "CommandLine",
+          "Value": "--name=fio_readwrite_24GB_64k_1_1_buffered --ioengine=[win32nt=windowsaio,unix=posixaio] --size=24GB --rw=readwrite --bs=64k --iodepth=1 --buffered=1 --thread=1 --group_reporting --filename={FIO.FILEPATH} --output-format=json"
+        },
+        {
+          "Name": "Tags",
+          "Value": "IO,FIO,readwrite"
+        },
+        {
+          "Name": "MetricFilter",
+          "Value": "bw,bw_min,bw_max,bw_agg,bw_mean,bw_dev,bw_samples,iops,iops_min,iops_max,iops_mean,iops_stddev,iops_samples,clat_min,clat_max,clat_mean,clat_stddev,clat_percentile_5.000000,clat_percentile_10.000000,clat_percentile_20.000000,clat_percentile_30.000000,clat_percentile_40.000000,clat_percentile_50.000000,clat_percentile_60.000000,clat_percentile_70.000000,clat_percentile_80.000000,clat_percentile_90.000000,clat_percentile_95.000000,clat_percentile_99.000000"
+        }
+      ]
+    }
+  ],
+  "Monitors": [
+    {
+      "Type": "PerfCounterMonitor",
+      "Arguments": [
+        {
+          "Name": "WindowsPerfCounters",
+          "Value": "Processor|% Idle Time|_Total||PhysicalDisk|% Disk Time|_Total||PhysicalDisk|% Disk Write Time|_Total||PhysicalDisk|% Idle Time|_Total||PhysicalDisk|Disk Bytes/sec|_Total||PhysicalDisk|Disk Read Bytes/sec|_Total||PhysicalDisk|Disk Write Bytes/sec|_Total||PhysicalDisk|Disk Reads/sec|_Total||PhysicalDisk|Disk Writes/sec|_Total"
+        },
+        {
+          "Name": "MonitorFrequency",
+          "Value": "30000"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+﻿let includeFirmware = dynamic([$IncludeFirmware$]);
+let excludeFirmware = dynamic([$ExcludeFirmware$]);
+let driveType = dynamic([$DriveType$]);
+let includeCluster = datatable(ClusterId:string)[$includeCluster$];
+let excludeCluster = datatable(ClusterId:string)[$excludeCluster$];
+let driveMapping =datatable(Literal:string, Boolean:bool)['System', 1, 'Data', 0];
+let supportedNodes = cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryComponentDisk
+// Interesting that some of them include spaces >:(
+| extend FirmwareRevision = trim(' ', FirmwareRevision)
+| where FirmwareRevision in~ (includeFirmware) and FirmwareRevision  !in~ (excludeFirmware)
+| extend ClusterId = tolower(ClusterId)
+| where ClusterId in~ (includeCluster) and ClusterId !in~ (excludeCluster)
+| join kind=inner driveMapping on $left.SystemDrive == $right.Boolean // System Drive -> OS or Data attribute.
+| extend SystemDrive = Literal
+| where SystemDrive in~ (driveType)
+| distinct NodeId, FirmwareRevision, SystemDrive;
+// Gather more context for environment candidate.
+cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryGenerationMappingV3
+| where NodeId in~ (supportedNodes)
+| join kind=inner supportedNodes on NodeId
+| distinct ClusterId, RegionId, NodeId, RackLocation, SystemDrive, FirmwareRevision
+| join kind=inner (
+    cluster('cirrus.kusto.windows.net').database('cirrus').Region
+    | distinct RegionName, FabricRegionName
+) on $left.RegionId == $right.FabricRegionName
+| summarize SsdDriveType=make_set(SystemDrive), SsdFirmware=make_set(FirmwareRevision) by ClusterId = tolower(ClusterId), Region = RegionName, NodeId, Rack = RackLocation
+// We need to map the ssd drive type that we asked for to each node so that the caching can be accurate.
+// Scenario: ask for System and Data drive but cluster only has data drives. This is untraceable.
+| extend SsdDriveType = translate('["]', '', tostring(array_sort_asc(driveType)))
+| extend SsdFirmware = translate('["]', '', tostring(SsdFirmware))

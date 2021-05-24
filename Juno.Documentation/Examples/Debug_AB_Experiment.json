@@ -1,0 +1,195 @@
+{
+    "$schema": "https://junodev01execution.azurewebsites.net/v1.0/schema",
+    "contentVersion": "1.0.0",
+    "name": "Juno Debug/Demo A/B experiment",
+    "description": "An experiment that can be used for local debugging to visualize the workflow of an experiment (e.g. in the Execution Service).",
+    "metadata": {
+        "teamName": "CRC AIR",
+        "email": "crcair@microsoft.com",
+        "owners": "crcair"
+    },
+    "parameters": {
+        "subscription": "5E93ACA2-2718-449D-9393-140EE4C09559",
+        "regions": "East US 2,East US,West US 3,South Central US",
+        "vmSku": "Standard_F4s_v2",
+        "vmCount": 2,
+        "intelCpuId": "50654",
+        "ipuMicrocodeVersion": "2000069",
+        "ipuPFServiceName": "CSIMicrocodeUpdate",
+        "ipuPFServicePath": "\\\\official\\build\\share\\branches\\git_release_branch\\10.8.5006.7\\retail-amd64\\app\\CSIMicrocodeUpdate"
+    },
+    "workflow": [
+        {
+            "type": "Juno.Execution.Providers.Demo.ExampleClusterSelectionProvider",
+            "name": "Select Clusters and Nodes",
+            "description": "Select clusters that have physical nodes that can support the requirements of the experiment (for example only, does not actually query for Azure cluster data).",
+            "group": "*",
+            "parameters": {
+                "cpuId": "$.parameters.intelCpuId",
+                "vmSkus": "$.parameters.vmSku",
+                "regions": "$.parameters.regions"
+            }
+        },
+        {
+            "type": "Juno.Execution.Providers.Demo.ExampleTipCreationProvider",
+            "name": "Create TiP sessions",
+            "description": "Create TiP sessions for the A/B experiment groups to isolate physical nodes in the Azure fleet (for example only, does not actually create TiP sessions).",
+            "group": "*",
+            "parameters": {
+                "duration": "01.03:00:00"
+            }
+        },
+        {
+            "type": "Juno.Execution.Providers.Demo.ExampleInstallHostAgentProvider",
+            "name": "Install Juno Host Agent",
+            "description": "Install the Juno Host agent on experiment Group A nodes (for example only, does not actually install an agent).",
+            "group": "Group A",
+            "parameters": {
+                "timeout": "00.01:00:00"
+            }
+        },
+        {
+            "type": "Juno.Execution.Providers.Demo.ExampleInstallHostAgentProvider",
+            "name": "Install Juno Host Agent",
+            "description": "Install the Juno Host agent on experiment Group B nodes (for example only, does not actually install an agent).",
+            "group": "Group B",
+            "parameters": {
+                "timeout": "00.01:00:00"
+            }
+        },
+        {
+            "type": "ParallelExecution",
+            "name": "Deploy Virtual Machines in-parallel",
+            "steps": [
+                {
+                    "type": "Juno.Execution.Providers.Demo.ExampleArmVmProvider",
+                    "name": "Create Virtual Machines for Group A",
+                    "description": "Create virtual machines to run workloads for experiment Group A (for example only, does not actually create VMs).",
+                    "group": "Group A",
+                    "parameters": {
+                        "subscriptionId": "$.parameters.subscription",
+                        "vmSize": "$.parameters.vmSku",
+                        "vmCount": "$.parameters.vmCount"
+                    }
+                },
+                {
+                    "type": "Juno.Execution.Providers.Demo.ExampleArmVmProvider",
+                    "name": "Create Virtual Machines for Group B",
+                    "description": "Create virtual machines to run workloads for experiment Group B (for example only, does not actually create VMs).",
+                    "group": "Group B",
+                    "parameters": {
+                        "subscriptionId": "$.parameters.subscription",
+                        "vmSize": "$.parameters.vmSku",
+                        "vmCount": "$.parameters.vmCount"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "Juno.Execution.Providers.Demo.ExampleInstallGuestAgentProvider",
+            "name": "Install Juno Guest Agent",
+            "description": "Installs the Juno Guest agent on the VMs for group A (for example only, does not actually install an agent).",
+            "group": "Group A",
+            "parameters": {
+                "timeout": "00.01:00:00"
+            }
+        },
+        {
+            "type": "Juno.Execution.Providers.Demo.ExampleInstallGuestAgentProvider",
+            "name": "Install Juno Guest Agent",
+            "description": "Installs the Juno Guest agent on the VMs for group B (for example only, does not actually install an agent).",
+            "group": "Group B",
+            "parameters": {
+                "timeout": "00.01:00:00"
+            }
+        },
+        {
+            "type": "Juno.Execution.Providers.Demo.ExampleVirtualClientWorkloadProvider",
+            "name": "Run performance and IO Workload",
+            "description": "Run performance and IO workload on the VMs in Group A (for example only, does not actually run any real workload on VMs).",
+            "group": "Group A",
+            "parameters": {
+                "command": "{NuGetPackagePath}\\VirtualClient\\1.0.1195.44\\content\\win-x64\\VirtualClient.exe",
+                "commandArguments": "--profile=PERF-IO-V1.json --platform=Juno",
+                "timeout": "00.00:15:00"
+            },
+            "dependencies": [
+                {
+                    "type": "Juno.Execution.Providers.Demo.ExampleNuGetPackageProvider",
+                    "name": "Virtual Client NuGet Package",
+                    "description": "Download the Virtual Client NuGet package to the VM (for example only, does not actually install any NuGet package).",
+                    "group": "Group A",
+                    "parameters": {
+                        "feedUri": "https://msazure.pkgs.visualstudio.com/_packaging/CRC/nuget/v3/index.json",
+                        "packageName": "VirtualClient",
+                        "packageVersion": "1.0.1195.44",
+                        "personalAccessToken": "[secret:keyvault]=NuGetAccessToken"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "Juno.Execution.Providers.Demo.ExampleVirtualClientWorkloadProvider",
+            "name": "Run performance and IO Workload",
+            "description": "Run performance and IO workload on the VMs in Group B (for example only, does not actually install any NuGet package).",
+            "group": "Group B",
+            "parameters": {
+                "command": "{NuGetPackagePath}\\VirtualClient\\1.0.1195.44\\content\\win-x64\\VirtualClient.exe",
+                "commandArguments": "--profile=PERF-IO-V1.json --platform=Juno",
+                "timeout": "00.00:15:00"
+            },
+            "dependencies": [
+                {
+                    "type": "Juno.Execution.Providers.Demo.ExampleNuGetPackageProvider",
+                    "name": "Virtual Client NuGet Package",
+                    "description": "Download the Virtual Client NuGet package to the VM.",
+                    "group": "Group B",
+                    "parameters": {
+                        "feedUri": "https://msazure.pkgs.visualstudio.com/_packaging/CRC/nuget/v3/index.json",
+                        "packageName": "VirtualClient",
+                        "packageVersion": "1.0.1195.44",
+                        "personalAccessToken": "[secret:keyvault]=NuGetAccessToken"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "Juno.Execution.Providers.Demo.ExampleMicrocodeUpdateProvider",
+            "name": "Apply MCU2020.1 Microcode Update",
+            "description": "Applies the MCU2020.1 to the physical nodes in Group B (for example only, does not actually deploy any microcode update).",
+            "group": "Group B",
+            "parameters": {
+                "microcodeProvider": "Intel",
+                "microcodeVersion": "$.parameters.ipuMicrocodeVersion",
+                "pfServiceName": "$.parameters.ipuPFServiceName",
+                "pfServicePath": "$.parameters.ipuPFServicePath",
+                "requestTimeout": "00.00:30:00",
+                "verificationTimeout": "00.00:30:00"
+            }
+        },
+        {
+            "type": "Juno.Execution.Providers.Demo.ExampleArmVmCleanupProvider",
+            "name": "Cleanup VM Resources",
+            "description": "Cleanup VMs and related Azure subscription resources.",
+            "group": "Group A"
+        },
+        {
+            "type": "Juno.Execution.Providers.Demo.ExampleArmVmCleanupProvider",
+            "name": "Cleanup VM Resources",
+            "description": "Cleanup VMs and related Azure subscription resources.",
+            "group": "Group B"
+        },
+        {
+            "type": "Juno.Execution.Providers.Demo.ExampleTipCleanupProvider",
+            "name": "Release TiP Sessions/Nodes",
+            "description": "Release nodes associated with TiP sessions back to the Azure production fleet.",
+            "group": "Group A"
+        },
+        {
+            "type": "Juno.Execution.Providers.Demo.ExampleTipCleanupProvider",
+            "name": "Release TiP Sessions/Nodes",
+            "description": "Release nodes associated with TiP sessions back to the Azure production fleet.",
+            "group": "Group B"
+        }
+    ]
+}

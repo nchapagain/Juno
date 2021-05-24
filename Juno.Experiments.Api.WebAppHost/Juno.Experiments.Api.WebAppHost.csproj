@@ -1,0 +1,72 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net5.0</TargetFramework>
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+        <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
+        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+        <RunCodeAnalysis></RunCodeAnalysis>
+        <EnableBaseIntermediateOutputPathMismatchWarning>false</EnableBaseIntermediateOutputPathMismatchWarning>
+        <UserSecretsId>f4d54b80-ec6d-49d8-9bcb-f64cc708daab</UserSecretsId>
+        <NoWarn>CA1052,CA2000,CS8034</NoWarn>
+        <IncludeOpenAPIAnalyzers>false</IncludeOpenAPIAnalyzers>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <!--
+        Version information for an assembly consists of the following four values:
+
+        Major Version
+        Minor Version
+        Build Number
+        Revision
+        -->
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+        <AssemblyName>Juno.Experiments.Api.WebAppHost</AssemblyName>
+        <RootNamespace>Juno.Experiments.Api.WebAppHost</RootNamespace>
+        <PackageId>Juno.Experiments.Api.WebAppHost</PackageId>
+        <Authors>crcteam@microsoft.com</Authors>
+        <AssemblyVersion>2.6.0</AssemblyVersion>
+        <Description>Juno experiment REST API/service Azure WebApp host executable.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Juno.Execution.Providers\Juno.Execution.Providers.csproj" />
+        <ProjectReference Include="..\Juno.Hosting.Common\Juno.Hosting.Common.csproj" />
+        <ProjectReference Include="..\Juno.Experiments.Api\Juno.Experiments.Api.csproj" />
+        <ProjectReference Include="..\Juno.Extensions.AspNetCore\Juno.Extensions.AspNetCore.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="5.0.4" />
+        <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="5.0.0" />
+        <PackageReference Include="System.IO.FileSystem.AccessControl" Version="5.0.0" />
+    </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="Deploy\**\*.*" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Deploy\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  
+  <Target Name="CICDDeployment">
+    <PropertyGroup>
+      <PublishOptions Condition="'$(WithRestore)' == 'false'">--no-restore</PublishOptions>
+    </PropertyGroup>
+    <Exec Command="rd /S /Q $(OutDir)\PublishedContent" ContinueOnError="true" />
+    <Exec Command="md $(OutDir)\PublishedContent" ContinueOnError="true" />
+    <Exec Command="IF EXIST $(OutDir)\Deploy\ServiceGroupRoot\bin\WebApp.zip del /F $(OutDir)\Deploy\ServiceGroupRoot\bin\WebApp.zip" ContinueOnError="true" />
+    <Exec Command="IF NOT EXIST $(OutDir)\Deploy\ServiceGroupRoot\bin md $(OutDir)\Deploy\ServiceGroupRoot\bin" ContinueOnError="true" />
+    <Exec Command="dotnet publish $(ProjectPath) -c $(Configuration) -f net5.0 --self-contained false -r win-x64 --output $(OutDir)\PublishedContent --no-restore" />
+    <Exec Command="rd /S /Q $(OutDir)\PublishedContent\Deploy" ContinueOnError="true" />
+    <ZipDirectory SourceDirectory="$(OutDir)\PublishedContent" DestinationFile="$(OutDir)\Deploy\ServiceGroupRoot\bin\WebApp.zip" />
+  </Target>
+  
+    <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Module.props" />
+    <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Configuration.targets" />
+
+</Project>

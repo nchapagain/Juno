@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <EnableBaseIntermediateOutputPathMismatchWarning>false</EnableBaseIntermediateOutputPathMismatchWarning>
+        <NoWarn>CA1801,CA1812,CA2000,SA1117,SA1508,NU5128</NoWarn>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <AssemblyAndPackageVersion>2.3.3</AssemblyAndPackageVersion>
+        <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+        <AssemblyName>Juno.Execution.AgentRuntime</AssemblyName>
+        <RootNamespace>Juno.Execution.AgentRuntime</RootNamespace>
+        <AssemblyVersion>$(AssemblyAndPackageVersion)</AssemblyVersion>
+        <Description>Juno Agent core runtime abstractions and components.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Mono.Posix.NETStandard" Version="1.0.0" />
+      <PackageReference Include="System.CommandLine" Version="2.0.0-beta1.20371.2" />
+      <PackageReference Include="System.Diagnostics.EventLog" Version="5.0.0" />
+      <PackageReference Include="System.IO.Abstractions" Version="13.2.25" />
+      <PackageReference Include="System.Management" Version="5.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Contracts\Microsoft.Azure.CRC.Contracts.csproj" />
+        <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Rest\Microsoft.Azure.CRC.Rest.csproj" />
+        <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Telemetry\Microsoft.Azure.CRC.Telemetry.csproj" />
+        <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Common\Microsoft.Azure.CRC.Common.csproj" />
+        <ProjectReference Include="..\Juno.Contracts\Juno.Contracts.csproj" />
+        <ProjectReference Include="..\Juno.Api.Client\Juno.Api.Client.csproj" />
+        <ProjectReference Include="..\Juno.Hosting.Common\Juno.Hosting.Common.csproj" />
+        <ProjectReference Include="..\Juno.Extensions.Telemetry\Juno.Extensions.Telemetry.csproj" />
+        <ProjectReference Include="..\Juno.Providers\Juno.Providers.csproj" />
+    </ItemGroup>
+
+    <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Module.props" />
+</Project>

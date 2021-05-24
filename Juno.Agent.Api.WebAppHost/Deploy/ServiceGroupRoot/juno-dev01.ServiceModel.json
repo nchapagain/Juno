@@ -1,0 +1,38 @@
+﻿{
+  "$schema": "http://schema.express.azure.com/schemas/2015-01-01-alpha/ServiceModel.json",
+  "contentVersion": "0.0.0.1",
+  "ServiceMetadata": {
+    "serviceGroup": "RestApis",
+    "environment": "Stage"
+  },
+  "ServiceResourceGroupDefinitions": [
+    {
+      "name": "RestApisResourceDefinition",
+      "serviceResourceDefinitions": [
+        {
+          "name": "RestApis",
+          "composedOf": {
+            "arm": {
+              "templatePath": "Templates\\juno-dev01.WebApp.Template.json"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "ServiceResourceGroups": [
+    {
+      "AzureResourceGroupName": "juno-dev01",
+      "Location": "West US 2",
+      "InstanceOf": "RestApisResourceDefinition",
+      "AzureSubscriptionId": "94f4f5c5-3526-4f0d-83e5-2e7946a41b75",
+      "ServiceResources": [
+        {
+          "name": "deployRestApis",
+          "instanceOf": "RestApis",
+          "armParametersPath": "Parameters\\juno-dev01.WebApp.Parameters.json"
+        }
+      ]
+    }
+  ]
+}

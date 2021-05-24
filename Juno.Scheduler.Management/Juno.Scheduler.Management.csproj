@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>netstandard2.1</TargetFramework>
+		<RunCodeAnalysis></RunCodeAnalysis>
+		<EnableBaseIntermediateOutputPathMismatchWarning>false</EnableBaseIntermediateOutputPathMismatchWarning>
+		<NoWarn>CA1801,CA1812,CA2000,CA2227,SA1117,SA1508,NU5128</NoWarn>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<!--
+        Version information for an assembly consists of the following four values:
+
+        Major Version
+        Minor Version
+        Build Number
+        Revision
+        -->
+		<AssemblyAndPackageVersion>1.1.0</AssemblyAndPackageVersion>
+		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+		<AssemblyName>Juno.Scheduler.Management</AssemblyName>
+		<RootNamespace>Juno.Scheduler.Management</RootNamespace>
+		<AssemblyVersion>$(AssemblyAndPackageVersion)</AssemblyVersion>
+		<Description>Juno scheduler Management</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="ncrontab.signed" Version="3.3.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Repository\Microsoft.Azure.CRC.Repository.csproj" />
+		<ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Rest\Microsoft.Azure.CRC.Rest.csproj" />
+		<ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Telemetry\Microsoft.Azure.CRC.Telemetry.csproj" />
+		<ProjectReference Include="..\Juno.Api.Client\Juno.Api.Client.csproj" />
+		<ProjectReference Include="..\Juno.DataManagement\Juno.DataManagement.csproj" />
+		<ProjectReference Include="..\Juno.Extensions.Telemetry\Juno.Extensions.Telemetry.csproj" />
+		<ProjectReference Include="..\Juno.Providers\Juno.Providers.csproj" />
+		<ProjectReference Include="..\Juno.Scheduler.Actions\Juno.Scheduler.Actions.csproj" />
+		<ProjectReference Include="..\Juno.Scheduler.Preconditions\Juno.Scheduler.Preconditions.csproj" />
+	</ItemGroup>
+
+	<Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Module.props" />
+
+</Project>

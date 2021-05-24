@@ -1,0 +1,5 @@
+﻿let targetGoalName = "$targetGoalFilter$";
+let environmentSetting = "$environment$";
+cluster('azurecrc.westus2.kusto.windows.net').database('JunoStaging').getTargetGoalSummary(targetGoalName)
+| where environment == environmentSetting
+| project experimentName, environment, teamName, executionGoal, targetGoal, lastIngestionTime, totalruns, SucceededExp

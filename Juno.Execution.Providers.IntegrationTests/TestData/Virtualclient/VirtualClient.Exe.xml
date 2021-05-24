@@ -1,0 +1,133 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>VirtualClient.Exe</name>
+    </assembly>
+    <members>
+        <member name="T:Juno.VirtualClient.CustomConsoleLogger">
+            <summary>
+            A custom console logger
+            </summary>
+        </member>
+        <member name="M:Juno.VirtualClient.CustomConsoleLogger.#ctor(System.String)">
+            <summary>
+            Creates a custom console logger
+            </summary>
+            <param name="categoryName"></param>
+        </member>
+        <member name="M:Juno.VirtualClient.CustomConsoleLogger.Log``1(Microsoft.Extensions.Logging.LogLevel,Microsoft.Extensions.Logging.EventId,``0,System.Exception,System.Func{``0,System.Exception,System.String})">
+            <summary>
+            Logs one message
+            </summary>
+            <typeparam name="TState"></typeparam>
+            <param name="logLevel"></param>
+            <param name="eventId"></param>
+            <param name="state"></param>
+            <param name="exception"></param>
+            <param name="formatter"></param>
+        </member>
+        <member name="M:Juno.VirtualClient.CustomConsoleLogger.IsEnabled(Microsoft.Extensions.Logging.LogLevel)">
+            <summary>
+            Checks if this logger is enabled (returns true)
+            </summary>
+            <param name="logLevel"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Juno.VirtualClient.CustomConsoleLogger.BeginScope``1(``0)">
+            <summary>
+            Not implemented (returns null)
+            </summary>
+            <typeparam name="TState"></typeparam>
+            <param name="state"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Juno.VirtualClient.CustomConsoleLoggerProvider">
+            <summary>
+            A custom console logger provider
+            </summary>
+        </member>
+        <member name="M:Juno.VirtualClient.CustomConsoleLoggerProvider.CreateLogger(System.String)">
+            <summary>
+            Creates a custom console logger
+            </summary>
+            <param name="categoryName"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Juno.VirtualClient.CustomConsoleLoggerProvider.Dispose">
+            <summary>
+            Disposes of internal resources.
+            </summary>
+        </member>
+        <member name="T:Juno.VirtualClient.ExecutionProfile">
+            <summary>
+            A profile for one run of this tool
+            </summary>
+        </member>
+        <member name="M:Juno.VirtualClient.ExecutionProfile.#ctor">
+            <summary>
+            Creates one instance of an execution profile
+            </summary>
+        </member>
+        <member name="M:Juno.VirtualClient.ExecutionProfile.#ctor(System.Collections.Generic.List{Juno.VirtualClient.ExecutionProfileElement},System.Collections.Generic.List{Juno.VirtualClient.ExecutionProfileElement})">
+            <summary>
+            Creates one instance of an execution profile, with the given actions and monitors
+            </summary>
+            <param name="actions">The actions to exeucte</param>
+            <param name="monitors">The parameters to execute</param>
+        </member>
+        <member name="P:Juno.VirtualClient.ExecutionProfile.ApplicationInsightsKey">
+            <summary>
+            Application Insights key used to log
+            </summary>
+        </member>
+        <member name="P:Juno.VirtualClient.ExecutionProfile.Actions">
+            <summary>
+            The actions the user has requested
+            </summary>
+        </member>
+        <member name="P:Juno.VirtualClient.ExecutionProfile.Monitors">
+            <summary>
+            The monitors the user has requested
+            </summary>
+        </member>
+        <member name="M:Juno.VirtualClient.ExecutionProfile.LoadFromFile(System.String)">
+            <summary>
+            Loads an executuion profile from a file
+            </summary>
+            <param name="file">The file to load from</param>
+            <returns></returns>
+        </member>
+        <member name="T:Juno.VirtualClient.ExecutionProfileElement">
+            <summary>
+            One element in the execution profile
+            </summary>
+        </member>
+        <member name="P:Juno.VirtualClient.ExecutionProfileElement.Name">
+            <summary>
+            The name of this element
+            </summary>
+        </member>
+        <member name="P:Juno.VirtualClient.ExecutionProfileElement.KeyValuePairs">
+            <summary>
+            Parameters for this element
+            </summary>
+        </member>
+        <member name="T:Juno.VirtualClient.Program">
+            <summary>
+            The main entry point for the program
+            </summary>
+        </member>
+        <member name="M:Juno.VirtualClient.Program.Main(System.String[])">
+            <summary>
+            Entry point of VirtualClient.exe
+            </summary>
+            <param name="args">Passed in arguments</param>
+        </member>
+        <member name="M:Juno.VirtualClient.Program.ExecuteProfile(Juno.VirtualClient.ExecutionProfile)">
+            <summary>
+            Executes the program with the given exeuction profile
+            </summary>
+            <param name="profile"></param>
+        </member>
+    </members>
+</doc>

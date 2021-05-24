@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Juno.Scheduler.WebJobHost": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "Key": "Value"
+      }
+    }
+  }
+}

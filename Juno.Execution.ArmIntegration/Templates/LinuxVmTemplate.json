@@ -1,0 +1,246 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string"
+    },
+    "imageReference": {
+      "type": "object"
+    },
+    "osDiskStorageAccountType": {
+      "type": "string"
+    },
+    "dataDiskResources": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": {
+        "description": "Contains two disk type for managed disk. 1)The sku name. - Standard_LRS, Premium_LRS, StandardSSD_LRS, UltraSSD_LRS .2)storageAccountType.Specifies the storage account type for the managed disk."
+      }
+    },
+    "virtualMachineSize": {
+      "type": "string"
+    },
+    "adminUsername": {
+      "type": "string"
+    },
+    "adminCredentialSecret": {
+      "type": "securestring",
+      "metadata": {
+        "description": "SSH Key for the Linux Virtual Machine."
+      }
+    },
+    "virtualMachineName": {
+      "type": "string"
+    },
+    "subnetName": {
+      "type": "string"
+    },
+    "networkSecurityGroupName": {
+      "type": "string"
+    },
+    "virtualNetworkName": {
+      "type": "string"
+    },
+    "tipSessionId": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "clusterId": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "enableAcceleratedNetworking": {
+      "type": "bool",
+      "defaultValue": false
+    }
+  },
+  "variables": {
+    "availabilitySetPlatformFaultDomainCount": 1,
+    "availabilitySetPlatformUpdateDomainCount": 1,
+    "availabilitySetName": "[concat('avset','-',parameters('virtualMachineName'))]",
+    "tipSessionId": "[if(empty(parameters('tipSessionId')), '', parameters('tipSessionId'))]",
+    "publicIpAddressName": "[concat('ip','-',parameters('virtualMachineName'))]",
+    "networkInterfaceName": "[concat('nic','-',parameters('virtualMachineName'))]",
+    "nsgId": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupName'))]",
+    "vnetId": "[resourceId(resourceGroup().name,'Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
+    "subnetRef": "[concat(variables('vnetId'), '/subnets/', parameters('subnetName'))]",
+    "ipconfigName": "[concat('ipcfg', '-',parameters('virtualMachineName'))]",
+    "publicIpAddressSku": "Basic",
+    "publicIpAddressType": "Dynamic",
+    "datadisk": "_datadisk_",
+    "defaultDisk": [
+      {
+        "sku": "Premium_LRS",
+        "lun": 0,
+        "storageAccountType": null,
+        "diskSizeGB": 512
+      }
+    ],
+    "defaultInternalData": {
+      "pinnedFabricCluster": ""
+    },
+    "inputInternalData": {
+      "pinnedFabricCluster": "[parameters('clusterId')]"
+    },
+    "internalData": "[if(empty(parameters('clusterId')), variables('defaultInternalData'), variables('inputInternalData'))]",
+    "attachedDisks": "[if(empty(parameters('dataDiskResources')), variables('defaultDisk'), parameters('dataDiskResources'))]",
+    "publicIpAddressesApiVersion": "2019-02-01",
+    "networkInterfacesApiVersion": "2019-07-01",
+    "disksApiVersion": "2019-07-01",
+    "virtualMachinesApiVersion": "2019-07-01",
+    "availabilitySetsApiVersion": "2019-07-01"
+  },
+  "resources": [
+    {
+      "name": "[variables('publicIpAddressName')]",
+      "type": "Microsoft.Network/publicIpAddresses",
+      "apiVersion": "[variables('publicIpAddressesApiVersion')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "publicIpAllocationMethod": "[variables('publicIpAddressType')]"
+      },
+      "sku": {
+        "name": "[variables('publicIpAddressSku')]"
+      }
+    },
+    {
+      "name": "[variables('networkInterfaceName')]",
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "[variables('networkInterfacesApiVersion')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/publicIpAddresses/', variables('publicIpAddressName'))]"
+      ],
+      "properties": {
+        "enableAcceleratedNetworking": "[parameters('enableAcceleratedNetworking')]",
+        "ipConfigurations": [
+          {
+            "name": "[variables('ipconfigName')]",
+            "properties": {
+              "subnet": {
+                "id": "[variables('subnetRef')]"
+              },
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIpAddress": {
+                "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/publicIpAddresses', variables('publicIpAddressName'))]"
+              }
+            }
+          }
+        ],
+        "networkSecurityGroup": {
+          "id": "[variables('nsgId')]"
+        }
+      }
+    },
+    {
+      "condition": "[not(empty(parameters('dataDiskResources')))]",
+      "name": "[concat(parameters('virtualMachineName'), variables('datadisk'), copyIndex())]",
+      "type": "Microsoft.Compute/disks",
+      "apiVersion": "[variables('disksApiVersion')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "diskSizeGB": "[variables('attachedDisks')[copyIndex()].diskSizeGB]",
+        "creationData": {
+          "createOption": "Empty"
+        }
+      },
+      "sku": {
+        "name": "[variables('attachedDisks')[copyIndex()].sku]"
+      },
+      "copy": {
+        "name": "managedDiskResources",
+        "count": "[length(variables('attachedDisks'))]"
+      }
+    },
+    {
+      "name": "[parameters('virtualMachineName')]",
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "[variables('virtualMachinesApiVersion')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "managedDiskResources",
+        "[concat('Microsoft.Network/networkInterfaces/', variables('networkInterfaceName'))]",
+        "[concat('Microsoft.Compute/availabilitySets/', variables('availabilitySetName'))]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[parameters('virtualMachineSize')]"
+        },
+        "storageProfile": {
+          "osDisk": {
+            "createOption": "FromImage",
+            "managedDisk": {
+              "storageAccountType": "[parameters('osDiskStorageAccountType')]"
+            }
+          },
+          "imageReference": "[parameters('imageReference')]",
+          "copy": [
+            {
+              "name": "dataDisks",
+              "count": "[if(empty(parameters('dataDiskResources')), 0, length(variables('attachedDisks')))]",
+              "input": {
+                "lun": "[variables('attachedDisks')[copyIndex('dataDisks')].lun]",
+                "createOption": "Attach",
+                "diskSizeGB": "[variables('attachedDisks')[copyIndex('dataDisks')].diskSizeGB]",
+                "managedDisk": {
+                  "id": "[resourceId('Microsoft.Compute/disks', concat(parameters('virtualMachineName'), variables('datadisk'), copyIndex('dataDisks')))]",
+                  "storageAccountType": "[variables('attachedDisks')[copyIndex('dataDisks')].storageAccountType]"
+                }
+              }
+            }
+          ]
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName'))]"
+            }
+          ]
+        },
+        "osProfile": {
+          "computerName": "[parameters('virtualMachineName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "linuxConfiguration": {
+            "provisionVmAgent": true,
+            "disablePasswordAuthentication": true,
+            "ssh": {
+              "publicKeys": [
+                {
+                  "path": "[concat('/home/', parameters('adminUsername'), '/.ssh/authorized_keys')]",
+                  "keyData": "[parameters('adminCredentialSecret')]"
+                }
+              ]
+            }
+          }
+        },
+        "availabilitySet": {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets', variables('availabilitySetName'))]"
+        }
+      }
+    },
+    {
+      "name": "[variables('availabilitySetName')]",
+      "type": "Microsoft.Compute/availabilitySets",
+      "apiVersion": "[variables('availabilitySetsApiVersion')]",
+      "location": "[parameters('location')]",
+      "tags": {
+        "TipNode.SessionId": "[variables('tipSessionId')]"
+      },
+      "properties": {
+        "platformFaultDomainCount": "[variables('availabilitySetPlatformFaultDomainCount')]",
+        "platformUpdateDomainCount": "[variables('availabilitySetPlatformUpdateDomainCount')]",
+        "internalData": "[variables('internalData')]",
+        "virtualMachines": [
+          {
+            "id": "[resourceId('Microsoft.Compute/virtualMachines', parameters('virtualMachineName'))]"
+          }
+        ]
+      },
+      "sku": {
+        "name": "Aligned"
+      }
+    }
+  ],
+  "outputs": {}
+}

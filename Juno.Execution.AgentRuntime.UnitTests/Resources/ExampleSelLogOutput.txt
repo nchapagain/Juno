@@ -1,0 +1,19 @@
+﻿ipmiutil ver 2.94
+isel: version 2.94
+-- BMC version 3.17, IPMI version 2.0 
+SEL  Size = 226 records (Used=13, Free=213)
+RecId | Date/Time  | SEV | Src | Evt_Type | Sensor | Evt_detail 
+0001 | 07/04/19 01:23:38 | INF | BMC  | Event Log | SEL  | Log Cleared 
+0002 | 07/04/19 01:23:43 | INF | BMC  | Power Unit | System Power  | Power Off     
+0003 | 07/04/19 01:23:44 | MIN | BMC  | Power Unit | System Power  | AC Lost 
+0004 | 07/04/19 01:41:49 | INF | BMC  | Microcontroller |  | chg to Running 
+0005 | 07/04/19 01:41:50 | INF | BMC  | Microcontroller |  | chg to Running 
+0006 | 07/04/19 01:45:54 | INF | Sms  | OS Boot |  | C: boot completed 
+0007 | 07/04/19 01:45:54 | INF | dc | 000137 | Microsoft | OEM Event 00 48 5a 1d 5d 00 
+0008 | 07/04/19 01:55:52 | INF | Sms  | OS Boot |  | C: boot completed 
+0009 | 07/04/19 01:55:52 | INF | dc | 000137 | Microsoft | OEM Event 00 a0 5c 1d 5d 00 
+000a | 07/04/19 01:56:57 | INF | Sms  | OS Critical Stop |  | OS Graceful Shutdown 
+000b | 07/04/19 01:56:57 | INF | dd | 000137 | Microsoft | OEM Event 00 03 00 02 80 00 
+000c | 07/04/19 01:58:26 | INF | Sms  | OS Boot |  | C: boot completed 
+000d | 07/04/19 01:58:26 | INF | dc | 000137 | Microsoft | OEM Event 00 3b 5d 1d 5d 00 
+ipmiutil sel, completed successfully

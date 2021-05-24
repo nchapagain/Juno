@@ -1,0 +1,44 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>netstandard2.1</TargetFramework>
+		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<RunCodeAnalysis></RunCodeAnalysis>
+		<EnableBaseIntermediateOutputPathMismatchWarning>false</EnableBaseIntermediateOutputPathMismatchWarning>
+		<NoWarn>CS1998,SA1202,CS1570,CS1587,CA1054</NoWarn>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<!--
+        Version information for an assembly consists of the following four values:
+        Major Version
+        Minor Version
+        Build Number
+        Revision
+        -->
+		<AssemblyAndPackageVersion>1.1.0</AssemblyAndPackageVersion>
+		<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+		<AssemblyName>Juno.Scheduler.Actions</AssemblyName>
+		<RootNamespace>Juno.Scheduler.Actions</RootNamespace>
+		<AssemblyVersion>$(AssemblyAndPackageVersion)</AssemblyVersion>
+		<Description>Juno Scheduler Schedule Actions</Description>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Common\Microsoft.Azure.CRC.Common.csproj" />
+		<ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Contracts\Microsoft.Azure.CRC.Contracts.csproj" />
+		<ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Rest\Microsoft.Azure.CRC.Rest.csproj" />
+		<ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.Telemetry\Microsoft.Azure.CRC.Telemetry.csproj" />
+		<ProjectReference Include="..\Juno.Api.Client\Juno.Api.Client.csproj" />
+		<ProjectReference Include="..\Juno.Contracts\Juno.Contracts.csproj" />
+		<ProjectReference Include="..\Juno.DataManagement\Juno.DataManagement.csproj" />
+		<ProjectReference Include="..\Juno.Providers\Juno.Providers.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Properties\" />
+	</ItemGroup>
+
+	<Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Module.props" />
+
+</Project>

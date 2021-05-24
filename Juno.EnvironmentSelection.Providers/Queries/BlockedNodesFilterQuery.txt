@@ -1,0 +1,31 @@
+﻿let beginTime = ago(1h);
+let includeCluster = datatable(ClusterId:string)[$includeCluster$];
+let excludeCluster = datatable(ClusterId:string)[$excludeCluster$];
+let unallocableNodes = cluster('Azurecm').database('AzureCM').TMMgmtNodeEventsEtwTable
+| where PreciseTimeStamp > beginTime
+// Do not want to include nodes that are in recovery mode.
+| where Message startswith "Setting TimeUntilNodeRecoveryToBeBlocked"
+| extend endTime = todatetime(extract("(\\d{2}\\/\\d{2}\\/\\d{4} \\d{1,2}\\:\\d{2}\\:\\d{2})", 1, Message))
+| extend ClusterId = tolower(Tenant)
+| join kind=inner includeCluster on ClusterId
+| join kind=anti excludeCluster on ClusterId
+| where endTime > now()
+| distinct NodeId;
+cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').ResourceSnapshotV1
+| where HealthGrade == 0 
+| project NodeId = ResourceId, ClusterId = tolower(Tenant)
+| join kind=inner includeCluster on ClusterId
+| join kind=anti excludeCluster on ClusterId
+| distinct NodeId
+| join kind=inner hint.strategy=broadcast (
+        cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryGenerationMappingV3
+        | where NodeId !in~ (unallocableNodes)
+        | where IsLive == true
+) on NodeId
+| join kind=inner hint.strategy=broadcast (
+        cluster('cirrus.kusto.windows.net').database('cirrus').Region
+        | distinct RegionName, FabricRegionName
+    ) on  $left.RegionId == $right.FabricRegionName
+| extend Region = RegionName
+| distinct ClusterId, Region, NodeId, RackLocation
+| project Region, ClusterId = tolower(ClusterId), NodeId, Rack = RackLocation

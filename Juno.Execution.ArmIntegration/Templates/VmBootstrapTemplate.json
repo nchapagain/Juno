@@ -1,0 +1,49 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string"
+    },
+    "fileUri": {
+      "type": "string"
+    },
+    "arguments": {
+      "type": "string"
+    },
+    "virtualMachineName": {
+      "type": "string"
+    }
+  },
+  "variables": {
+    "vmName": "[parameters('virtualMachineName')]",
+    "location": "[parameters('location')]",
+    "fileUris": "[parameters('fileUri')]",
+    "arguments": "[parameters('arguments')]",
+    "extensionsApiVersion": "2018-06-01"
+  },
+  "resources": [
+    {
+      "apiVersion": "[variables('extensionsApiVersion')]",
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "name": "[concat(variables('vmName'),'/bootstrap')]",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "displayName": "Agent bootstrap"
+      },
+      "properties": {
+        "publisher": "Microsoft.Compute",
+        "type": "CustomScriptExtension",
+        "typeHandlerVersion": "1.10",
+        "autoUpgradeMinorVersion": true,
+        "settings": {
+          "fileUris": [ "[variables('fileUris')]" ]
+        },
+        "protectedSettings": {
+          "commandToExecute": "[variables('arguments')]"
+        }
+      }
+    }
+  ],
+  "outputs": {}
+}

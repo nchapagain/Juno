@@ -1,0 +1,36 @@
+{
+  "StorageSettings": {
+    "CosmosEndpointUri": "https://localhost:8081/",
+    "CosmosAccountKey": "",
+    "StorageUri": "https://not.sure.needs.emulator.uri",
+    "StorageAccount": "not.sure.needs.emulator.account",
+    "StorageAccountKey": "not.sure.needs.emulator.account.key"
+  },
+  "ArmSettings": {
+    "TenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+    "ClientId": "3077f71c-6a27-4a9f-8b71-5f8df5461d35",
+    "ServicePrincipalName": "crc-dev01-principal",
+    "BootStrapSettings": {
+      "AuthorityUri": "https://login.windows.net/72f988bf-86f1-41af-91ab-2d7cd011db47",
+      "KeyVaultBaseUri": "https://junodev01vault.vault.azure.net/",
+      "ClientId": "7e0937b2-bfb5-48d5-9855-bebfea398c0e",
+      "ResourceId": "https://vault.azure.net",
+      "CertificateThumbprint": "6B6001918BE6C89FB94E0FD44549CC487C0C3050",
+      "BootStrapScriptLocation": "https://crcdev01schedulerstorage.blob.core.windows.net/bootstrap-script/Bootstrap-Agent.ps1"
+    },
+    "SubscriptionId": "94f4f5c5-3526-4f0d-83e5-2e7946a41b75",
+    "CertificateThumbprint": "03505FD57F9F288D2B4AE54C25488589266D249A"
+  },
+  "TipSettings": {
+    "AadPrincipals": [
+      {
+        "Id": "Default",
+        "AuthorityUri": "https://login.windows.net/mockAuthority",
+        "TenantId": "00000000-0000-0000-0000-000000000000",
+        "PrincipalId": "00000000-0000-0000-0000-000000000000",
+        "PrincipalName": "mock-principal",
+        "PrincipalCertificateThumbprint": "0000000000000000000000000000000000000000"
+      }
+    ]
+  }
+}
