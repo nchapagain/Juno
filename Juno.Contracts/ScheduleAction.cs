@@ -2,11 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Linq;
-    using Microsoft.Azure.CRC.Contracts;
-    using Microsoft.Azure.CRC.Extensions;
-    using Newtonsoft.Json;
-    using Newtonsoft.Json.Serialization;
 
     /// <summary>
     /// Describe Actions Scheduler can take

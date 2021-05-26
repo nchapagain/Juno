@@ -1,8 +1,6 @@
 ﻿namespace Juno.Providers
 {
     using System;
-    using System.Collections.Generic;
-    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using AutoFixture;
@@ -34,44 +32,12 @@
         }
 
         [Test]
-        public async Task ScheduleActionProviderReturnsTheExpectedResult()
+        public void ScheduleActionProviderReturnsTheExpectedExecutionResultWhenExceptionOccurs()
         {
-            ExecutionResult expectedResult = new ExecutionResult(ExecutionStatus.InProgress);
-            this.provider.OnExecuteAsync = (component, telemetryContext, token) => expectedResult;
-
-            ExecutionResult actualResult = await this.provider.ExecuteActionAsync(this.mockFixture.ScheduleActionComponent, this.mockContext, CancellationToken.None);
-
-            Assert.IsNotNull(actualResult);
-            Assert.IsNull(actualResult.Error);
-            Assert.AreEqual(expectedResult.Status, actualResult.Status);
-        }
-
-        [Test]
-        public async Task ScheduleActionProviderReturnsTheExpectedExecutionResultWhenCancelled()
-        {
-            using (CancellationTokenSource tokenSource = new CancellationTokenSource())
-            {
-                tokenSource.Cancel();
-                ExecutionResult actualResult = await this.provider.ExecuteActionAsync(this.mockFixture.ScheduleActionComponent, this.mockContext, tokenSource.Token);
-
-                Assert.IsNotNull(actualResult);
-                Assert.IsNull(actualResult.Error);
-                Assert.IsTrue(actualResult.Status == ExecutionStatus.Cancelled);
-            }
-        }
-
-        [Test]
-        public async Task ScheduleActionProviderReturnsTheExpectedExecutionResultWhenExceptionOccurs()
-        {
-            ProviderException expectedException = new ProviderException(ErrorReason.ProviderDefinitionInvalid);
+            SchedulerException expectedException = new SchedulerException();
             this.provider.OnExecuteAsync = (component, telemetryContext, token) => throw expectedException;
 
-            ExecutionResult actualResult = await this.provider.ExecuteActionAsync(this.mockFixture.ScheduleActionComponent, this.mockContext, CancellationToken.None);
-
-            Assert.IsNotNull(actualResult);
-            Assert.IsNotNull(actualResult.Error);
-            Assert.IsTrue(object.ReferenceEquals(expectedException, actualResult.Error));
-            Assert.IsTrue(actualResult.Status == ExecutionStatus.Failed);
+            Assert.ThrowsAsync<SchedulerException>(() => this.provider.ExecuteActionAsync(this.mockFixture.ScheduleActionComponent, this.mockContext, CancellationToken.None));
         }
 
         private class TestScheduleActionProvider : ScheduleActionProvider

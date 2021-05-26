@@ -241,9 +241,17 @@ namespace Juno.Execution.Client
                         Assert.IsTrue(uri.PathAndQuery.Equals($"/api/executionGoals/{templateId}?teamName={teamName}"));
                     })
                     .Returns(Task.FromResult(response));
-                
+
                 ExecutionGoalSummary executionGoalMetadata = this.mockFixture.Create<ExecutionGoalSummary>();
-                ExecutionGoalParameter executionGoalParameters = new ExecutionGoalParameter(templateId, executionGoal.ExperimentName, executionGoalMetadata.ParameterNames.Owner, executionGoal.Enabled, executionGoalMetadata.ParameterNames.TargetGoals, executionGoal.Parameters);
+                ExecutionGoalParameter executionGoalParameters =
+                    new ExecutionGoalParameter(
+                        templateId,
+                        executionGoal.ExperimentName,
+                        executionGoal.TeamName,
+                        executionGoal.Owner,
+                        executionGoal.Enabled,
+                        executionGoalMetadata.ParameterNames.TargetGoals,
+                        executionGoal.Parameters);
                 this.executionClient.CreateExecutionGoalFromTemplateAsync(executionGoalParameters, templateId, executionGoal.TeamName, CancellationToken.None)
                     .GetAwaiter().GetResult();
             }
@@ -268,7 +276,15 @@ namespace Juno.Execution.Client
                     .Returns(Task.FromResult(response));
 
                 ExecutionGoalSummary executionGoalMetadata = this.mockFixture.Create<ExecutionGoalSummary>();
-                ExecutionGoalParameter executionGoalParameters = new ExecutionGoalParameter(templateId, executionGoal.ExperimentName, executionGoalMetadata.ParameterNames.Owner, executionGoal.Enabled, executionGoalMetadata.ParameterNames.TargetGoals, executionGoal.Parameters);
+                ExecutionGoalParameter executionGoalParameters =
+                    new ExecutionGoalParameter(
+                        templateId,
+                        executionGoal.ExperimentName,
+                        executionGoalMetadata.ParameterNames.TeamName,
+                        executionGoal.Owner,
+                        executionGoal.Enabled,
+                        executionGoalMetadata.ParameterNames.TargetGoals,
+                        executionGoal.Parameters);
                 this.executionClient.UpdateExecutionGoalFromTemplateAsync(executionGoalParameters, templateId, executionGoal.TeamName, CancellationToken.None)
                     .GetAwaiter().GetResult();
             }

@@ -2,8 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Linq;
-    using System.Text;
     using AutoFixture;
     using Microsoft.Azure.CRC;
     using Microsoft.Azure.CRC.Contracts;
@@ -24,6 +22,7 @@
         }
 
         /* Tests for Preconditions */
+
         [Test]
         public void PreconditionIsJsonSerializableByDefault()
         {
@@ -52,6 +51,7 @@
         }
 
         /* Tests for Schedule Actions */
+
         [Test]
         public void SheduleActionIsJsonSerializableByDefault()
         {
@@ -70,7 +70,7 @@
         [TestCase(null)]
         [TestCase("")]
         [TestCase(" ")]
-        public void ScheduleActionConstructorValidatesRequiredParameters(string invalidParam)
+        public void ScheduleActionConstructorValidatesRequiredParameter(string invalidParam)
         {
             ScheduleAction validComponent = this.mockFixture.Create<ScheduleAction>();
             Assert.Throws<ArgumentException>(() => new ScheduleAction(
@@ -79,6 +79,7 @@
         }
 
         /* Tests for Goal */
+
         [Test]
         public void GoalIsJsonSerializableByDefault()
         {
@@ -114,7 +115,7 @@
         [TestCase(null)]
         [TestCase("")]
         [TestCase(" ")]
-        public void GoalConstructorValidatesRequiredStringParamater(string invalidParam)
+        public void GoalConstructorValidatesRequiredStringParameter(string invalidParam)
         {
             Goal validComponent = this.mockFixture.Create<Goal>();
 
@@ -125,6 +126,7 @@
         }
 
         /* Test for Goal Based Schedule */
+
         [Test]
         public void GoalBasedScheduleIsJsonSerializable()
         {
@@ -228,7 +230,7 @@
 
         [Test]
         [TestCase(null)]
-        public void GoalBasedSchedulerConstructorValidatesBoolParameter(bool? invalidParameter)
+        public void GoalBasedSchedulerConstructorValidatesBoolParameters(bool? invalidParameter)
         {
             GoalBasedSchedule validComponent = this.mockFixture.Create<GoalBasedSchedule>();
 

@@ -37,7 +37,7 @@
             this.TeamName = teamName;
 
             this.ParameterNames = parameterNames;
-            
+
             this.Metadata = metadata == null
                 ? new Dictionary<string, IConvertible>()
                 : new Dictionary<string, IConvertible>(metadata);
@@ -50,26 +50,26 @@
         public string Id { get; }
 
         /// <summary>
-        /// Description of the Execution Goal Template 
+        /// Description of the Execution Goal Template
         /// </summary>
         [JsonProperty(PropertyName = "teamName", Required = Required.Always, Order = 2)]
         public string TeamName { get; }
 
         /// <summary>
-        /// Description of the Execution Goal Template 
+        /// Description of the Execution Goal Template
         /// </summary>
         [JsonProperty(PropertyName = "description", Required = Required.Always, Order = 3)]
         public string Description { get; }
 
         /// <summary>
-        /// List of metadata paramaters in the execution goal template i.e: Owner, ExperimentIntent, ExperimentCategory
+        /// List of metadata parameters in the execution goal template i.e: Owner, ExperimentIntent, ExperimentCategory
         /// </summary>
         [JsonConverter(typeof(ParameterDictionaryJsonConverter))]
         [JsonProperty(PropertyName = "metadata", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore, Order = 4)]
         public IDictionary<string, IConvertible> Metadata { get; }
 
         /// <summary>
-        /// List of any paramaters in the execution goal template (only applicable to templates)
+        /// List of any parameters in the execution goal template (only applicable to templates)
         /// </summary>
         [JsonProperty(PropertyName = "parameterNames", Required = Required.Always, NullValueHandling = NullValueHandling.Ignore, Order = 5)]
         public ExecutionGoalParameter ParameterNames { get; }
@@ -85,7 +85,7 @@
         {
             if (object.ReferenceEquals(this, obj))
             {
-                return true;            
+                return true;
             }
 
             ExecutionGoalSummary itemDescription = obj as ExecutionGoalSummary;

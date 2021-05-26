@@ -28,7 +28,6 @@
         {
             services.ThrowIfNull(nameof(services));
             this.Services = services;
-            this.ProviderContext = new Dictionary<string, object>();
         }
 
         /// <summary>
@@ -48,11 +47,6 @@
         /// Gets the service provider/locator for the Precondition Provider
         /// </summary>
         protected IServiceCollection Services { get; }
-
-        /// <summary>
-        /// Contains provider specific execution results
-        /// </summary>
-        protected IDictionary<string, object> ProviderContext { get; }
 
         /// <inheritdoc/>
         public virtual Task ConfigureServicesAsync(GoalComponent component, ScheduleContext scheduleContext)

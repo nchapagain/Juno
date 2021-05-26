@@ -17,10 +17,9 @@
     /// <summary>
     /// Provider who evaluates whether a Target Goal exceeded the FailureRate
     /// This is designed to be used in a control goal Precondition.
-    //// CONDITION: Failure rate threshold < Acutal failure rate 
     /// </summary>
-    [SupportedParameter(Name = Parameters.MinimumRuns, Type = typeof(int), Required = true)]
-    [SupportedParameter(Name = Parameters.FailureRate, Type = typeof(int), Required = false)]
+    [SupportedParameter(Name = Parameters.MinimumExperimentInstance, Type = typeof(int), Required = true)]
+    [SupportedParameter(Name = Parameters.TargetFailureRate, Type = typeof(int), Required = false)]
     [SupportedParameter(Name = Parameters.DaysAgo, Type = typeof(int), Required = false)]
     public class FailureRatePreconditionProvider : PreconditionProvider
     {
@@ -39,19 +38,10 @@
             this.Query = query;
         }
 
-        private string Query { get; set; }
-
-        private void ReplaceQueryParameters(ScheduleContext scheduleContext, Precondition component, string environment)
-        {
-            string targetGoalFilter = scheduleContext.TargetGoalTrigger.TargetGoal;
-            int daysAgo = component.Parameters.GetValue<int>(Parameters.DaysAgo, this.defaultDaysAgo);
-            int minimumExperimentInstance = component.Parameters.GetValue<int>(Parameters.MinimumRuns);
-
-            this.Query = this.Query.Replace(Constants.MinimumRuns, $"{minimumExperimentInstance}", StringComparison.Ordinal);
-            this.Query = this.Query.Replace(Constants.StartTime, $"now(-{daysAgo}d)", StringComparison.Ordinal);
-            this.Query = this.Query.Replace(Constants.Environment, environment, StringComparison.Ordinal);
-            this.Query = this.Query.Replace(Constants.TargetGoal, targetGoalFilter, StringComparison.Ordinal);
-        }
+        /// <summary>
+        /// Query which supplies the target goal failure rate.
+        /// </summary>
+        protected string Query { get; }
 
         /// <inheritdoc/>
         public override Task ConfigureServicesAsync(GoalComponent component, ScheduleContext scheduleContext)
@@ -71,17 +61,12 @@
         }
 
         /// <summary>
-        /// Determines if the given control goal has exceeded Failure Rate.
+        /// Returns true/false if the target goal has exceeded its failure rate.
+        /// Condition:
+        ///     False if the failure rate is sctrictly greater than the given threshold.
+        ///     True if the failure rate is less than or equal to the given threshold.
         /// </summary>
-        /// <param name="component"><see cref="Precondition"/></param>
-        /// <param name="scheduleContext"><see cref="ScheduleContext"/></param>
-        /// <param name="telemetryContext"><see cref="EventContext"/></param>
-        /// <param name="cancellationToken"><see cref="CancellationToken"/></param>
-        /// <returns>
-        /// A <see cref="PreconditionResult"/> where the condition is satisfied if the experiment Failure Rate
-        /// is less than the target failure Rate.
-        /// </returns>
-        protected override async Task<PreconditionResult> IsConditionSatisfiedAsync(Precondition component, ScheduleContext scheduleContext, EventContext telemetryContext, CancellationToken cancellationToken)
+        protected override async Task<bool> IsConditionSatisfiedAsync(Precondition component, ScheduleContext scheduleContext, EventContext telemetryContext, CancellationToken cancellationToken)
         {
             component.ThrowIfNull(nameof(component));
             scheduleContext.ThrowIfNull(nameof(scheduleContext));
@@ -90,70 +75,65 @@
             bool conditionSatisfied = false;
             if (!cancellationToken.IsCancellationRequested)
             {
-                int targetFailureRate = component.Parameters.GetValue<int>(Parameters.FailureRate, this.defaultRailureRate);
+                int targetFailureRate = component.Parameters.GetValue<int>(Parameters.TargetFailureRate, this.defaultRailureRate);
 
                 IKustoManager kustoManager = this.Services.GetService<IKustoManager>();
-                kustoManager.ThrowIfNull(nameof(kustoManager));
+                EnvironmentSettings settings = EnvironmentSettings.Initialize(scheduleContext.Configuration);
+                KustoSettings kustoSettings = settings.KustoSettings.Get(Setting.AzureCM);
 
-                try
+                string resolvedQuery = this.ReplaceQueryParameters(scheduleContext, component, settings.Environment);
+
+                DataTable response = await kustoManager.GetKustoResponseAsync(
+                    string.Concat(CacheKeys.FailureRate, scheduleContext.TargetGoalTrigger.TargetGoal),
+                    kustoSettings,
+                    resolvedQuery).ConfigureDefaults();
+
+                if (response.Rows.Count != 0)
                 {
-                    EnvironmentSettings settings = EnvironmentSettings.Initialize(scheduleContext.Configuration);
-                    settings.ThrowIfNull(nameof(settings));
+                    int failureRate = response.ParseSingleRowSingleKustoColumn(KustoColumn.FailureRate);
+                    conditionSatisfied = failureRate > targetFailureRate;
 
-                    KustoSettings kustoSettings = settings.KustoSettings.Get(Setting.AzureCM);
-                    kustoSettings.ThrowIfNull(nameof(kustoSettings));
-
-                    this.ReplaceQueryParameters(scheduleContext, component, settings.Environment);
-                    this.ProviderContext.Add(SchedulerEventProperty.KustoQuery, this.Query);
-
-                    DataTable response = await kustoManager.GetKustoResponseAsync(
-                        string.Concat(CacheKeys.FailureRate, scheduleContext.TargetGoalTrigger.TargetGoal),
-                        kustoSettings,
-                        this.Query).ConfigureDefaults();
-
-                    if (response.Rows.Count != 0)
-                    {
-                        int failureRate = response.ParseSingleRowSingleKustoColumn(KustoColumn.FailureRate);
-                        conditionSatisfied = failureRate > targetFailureRate;
-
-                        this.ProviderContext.Add(SchedulerEventProperty.FailureRate, failureRate);
-                        this.ProviderContext.Add(EventProperty.Count, failureRate);
-                        this.ProviderContext.Add(SchedulerEventProperty.Threshold, targetFailureRate);
-                    }
-                    else
-                    {
-                        this.ProviderContext.Add(EventProperty.Response, "No Experiments Failed yet");
-                    }
-                }
-                catch (Exception exc)
-                {
-                    telemetryContext.AddError(exc, true);
-                    return new PreconditionResult(ExecutionStatus.Failed, false);
+                    telemetryContext.AddContext(SchedulerEventProperty.FailureRate, failureRate);
+                    telemetryContext.AddContext(EventProperty.Count, failureRate);
+                    telemetryContext.AddContext(SchedulerEventProperty.Threshold, targetFailureRate);
                 }
             }
 
-            return new PreconditionResult(ExecutionStatus.Succeeded, conditionSatisfied);
+            return conditionSatisfied;
+        }
+
+        private string ReplaceQueryParameters(ScheduleContext scheduleContext, Precondition component, string environment)
+        {
+            string targetGoalFilter = scheduleContext.TargetGoalTrigger.TargetGoal;
+            int daysAgo = component.Parameters.GetValue<int>(Parameters.DaysAgo, this.defaultDaysAgo);
+            int minimumExperimentInstance = component.Parameters.GetValue<int>(Parameters.MinimumExperimentInstance);
+
+            string resolvedQuery = string.Copy(this.Query);
+
+            resolvedQuery = resolvedQuery.Replace(Constants.MinimumRuns, $"{minimumExperimentInstance}", StringComparison.Ordinal);
+            resolvedQuery = resolvedQuery.Replace(Constants.StartTime, $"now(-{daysAgo}d)", StringComparison.Ordinal);
+            resolvedQuery = resolvedQuery.Replace(Constants.Environment, environment, StringComparison.Ordinal);
+            resolvedQuery = resolvedQuery.Replace(Constants.TargetGoal, targetGoalFilter, StringComparison.Ordinal);
+
+            return resolvedQuery;
         }
 
         /// <summary>
         /// Supported parameter string literals
         /// </summary>
-        internal class Parameters
+        private class Parameters
         {
-            internal const string MinimumRuns = "minimumExperimentInstance";
-            internal const string FailureRate = "targetFailureRate";
-            internal const string DaysAgo = "daysAgo";
+            public const string MinimumExperimentInstance = nameof(Parameters.MinimumExperimentInstance);
+            public const string TargetFailureRate = nameof(Parameters.TargetFailureRate);
+            public const string DaysAgo = nameof(Parameters.DaysAgo);
         }
 
-        /// <summary>
-        /// Constant string literals for query replacement
-        /// </summary>
-        internal class Constants
+        private class Constants
         {
-            internal const string MinimumRuns = "$minimumRuns$";
-            internal const string Environment = "$environment$";
-            internal const string TargetGoal = "$targetGoal$";
-            internal const string StartTime = "$startTime$";
+            public const string MinimumRuns = "$minimumRuns$";
+            public const string Environment = "$environment$";
+            public const string TargetGoal = "$targetGoal$";
+            public const string StartTime = "$startTime$";
         }
     }
 }

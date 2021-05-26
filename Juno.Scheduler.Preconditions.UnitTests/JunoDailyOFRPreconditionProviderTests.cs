@@ -10,6 +10,7 @@
     using Juno.Contracts.Configuration;
     using Juno.Providers;
     using Juno.Scheduler.Preconditions.Manager;
+    using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Moq;
@@ -61,8 +62,7 @@
 
             var response = provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
 
-            Assert.IsFalse(response.Satisfied);
-            Assert.AreEqual(response.Status, ExecutionStatus.Succeeded);
+            Assert.IsFalse(response);
         }
 
         [Test]
@@ -80,9 +80,7 @@
             PreconditionProvider provider = new JunoDailyOFRPreconditionProvider(this.services);
 
             var response = provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
-
-            Assert.AreEqual(response.Status, ExecutionStatus.Succeeded);
-            Assert.IsTrue(response.Satisfied);
+            Assert.IsTrue(response);
         }
 
         [Test]
@@ -99,8 +97,7 @@
             PreconditionProvider provider = new JunoDailyOFRPreconditionProvider(this.services);
             var response = provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
 
-            Assert.AreEqual(response.Status, ExecutionStatus.Succeeded);
-            Assert.IsFalse(response.Satisfied);
+            Assert.IsFalse(response);
         }
 
         [Test]
@@ -115,10 +112,7 @@
             this.kustoMgr.Setup(x => x.GetKustoResponseAsync(It.IsAny<string>(), It.IsAny<KustoSettings>(), It.IsAny<string>(), It.IsAny<double?>())).ReturnsAsync(this.kustoDataTable);
 
             PreconditionProvider provider = new JunoDailyOFRPreconditionProvider(this.services);
-            var response = provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
-
-            Assert.AreEqual(response.Status, ExecutionStatus.Failed);
-            Assert.IsFalse(response.Satisfied);
+            Assert.ThrowsAsync<FormatException>(() => provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None));
         }
 
         [Test]
@@ -135,10 +129,7 @@
 
             PreconditionProvider provider = new JunoDailyOFRPreconditionProvider(this.services);
 
-            var response = provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
-
-            Assert.AreEqual(response.Status, ExecutionStatus.Failed);
-            Assert.IsFalse(response.Satisfied);
+            Assert.ThrowsAsync<ArgumentException>(() => provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None));
         }
 
         private static DataTable GetValidDataTable()

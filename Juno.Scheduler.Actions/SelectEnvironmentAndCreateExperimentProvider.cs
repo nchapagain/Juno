@@ -34,12 +34,7 @@
         /// Retrieves an eligible envrionment to be used for an experiment. And then 
         /// executes an experiment.
         /// </summary>
-        /// <param name="scheduleAction">The action component to execute</param>
-        /// <param name="scheduleContext">Context in which the provider is executing in</param>
-        /// <param name="telemetryContext">Event context object used for capturing telemetry</param>
-        /// <param name="cancellationToken"><see cref="CancellationToken"/></param>
-        /// <returns></returns>
-        protected async override Task<ExecutionResult> ExecuteActionAsync(ScheduleAction scheduleAction, ScheduleContext scheduleContext, EventContext telemetryContext, CancellationToken cancellationToken)
+        protected async override Task ExecuteActionAsync(ScheduleAction scheduleAction, ScheduleContext scheduleContext, EventContext telemetryContext, CancellationToken cancellationToken)
         {
             // Do the environment selection and add to the parameters. 
             scheduleAction.ThrowIfNull(nameof(scheduleAction));
@@ -53,7 +48,7 @@
 
                 scheduleAction.Parameters.Remove(Constants.EnvironmentQuery);
 
-                this.ProviderContext.Add(nameof(query), query.Name);
+                telemetryContext.AddContext(nameof(query), query.Name);
 
                 // Allow the parameterization of the values in the query.
                 this.OverwriteQueryparameters(query, scheduleAction.Parameters);
@@ -95,11 +90,9 @@
                     scheduleAction.Parameters.Add(Constants.VmSku, string.Join(",", vmSkus));
                 }
 
-                return await base.ExecuteActionAsync(scheduleAction, scheduleContext, telemetryContext, cancellationToken)
+                await base.ExecuteActionAsync(scheduleAction, scheduleContext, telemetryContext, cancellationToken)
                     .ConfigureDefaults();
             }
-
-            return new ExecutionResult(ExecutionStatus.Cancelled);
         }
 
         private void OverwriteQueryparameters(EnvironmentQuery query, IDictionary<string, IConvertible> parameters)

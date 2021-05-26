@@ -2,9 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Linq;
     using System.Net.Http;
-    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using AutoFixture;
@@ -47,7 +45,7 @@
             this.mockExecutionGoalStatus = new List<ExperimentInstanceStatus>() { this.mockFixture.Create<ExperimentInstanceStatus>() };
 
             string cronExpression = "* * * * *";
-            
+
             this.mockTargetGoal = new Goal(
                 name: "TargetGoal",
                 preconditions: new List<Precondition>()
@@ -92,7 +90,7 @@
         }
 
         [Test]
-        public void COntrollerConstructorsValidateParameters()
+        public void ControllerConstructorsValidateParameters()
         {
             Assert.Throws<ArgumentException>(() => new ExecutionGoalsController(null, this.mockDependencies.Configuration));
             Assert.Throws<ArgumentException>(() => new ExecutionGoalsController(this.mockExecutionClient, null));
@@ -151,9 +149,10 @@
             ExecutionGoalParameter templateExecutionGoalMetadata = this.mockFixture.Create<ExecutionGoalSummary>().ParameterNames;
 
             ExecutionGoalParameter executionGoalMetadata = new ExecutionGoalParameter(
-                this.mockExecutionGoal.ExecutionGoalId, 
+                this.mockExecutionGoal.ExecutionGoalId,
                 this.mockExecutionGoal.ExperimentName,
                 this.mockExecutionGoal.TeamName,
+                templateExecutionGoalMetadata.Owner,
                 this.mockExecutionGoal.Enabled,
                 templateExecutionGoalMetadata.TargetGoals,
                 this.mockExecutionGoal.Parameters);
@@ -173,7 +172,7 @@
 
             this.mockDependencies.RestClient.SetupPutExecutionGoalFromTemplate(this.mockExecutionGoal.ExecutionGoalId, this.mockExecutionGoal.TeamName)
                 .Returns(Task.FromResult(this.mockExecutionGoalItem.ToHttpResponse()));
-                        
+
             ObjectResult result = await this.controller.UpdateExecutionGoalFromTemplateAsync(executionGoalParameter.ExecutionGoalId, this.mockExecutionGoal.TeamName, executionGoalParameter, CancellationToken.None)
                 as ObjectResult;
 

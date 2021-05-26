@@ -80,11 +80,10 @@
                 .Returns(Task.FromResult(FailureRatePreconditionProviderTests.GetValidKustoResponse(21)));
 
             PreconditionProvider provider = new FailureRatePreconditionProvider(this.mockServices);
-            PreconditionResult result = provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None).GetAwaiter().GetResult();
+            bool result = provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None).GetAwaiter().GetResult();
 
             Assert.IsNotNull(result);
-            Assert.AreEqual(ExecutionStatus.Succeeded, result.Status);
-            Assert.IsTrue(result.Satisfied);
+            Assert.IsTrue(result);
         }
 
         [Test]
@@ -101,11 +100,10 @@
                 .Returns(Task.FromResult(FailureRatePreconditionProviderTests.GetValidKustoResponse(targetFailureRate + 1)));
 
             PreconditionProvider provider = new FailureRatePreconditionProvider(this.mockServices);
-            PreconditionResult result = provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None).GetAwaiter().GetResult();
+            bool result = provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None).GetAwaiter().GetResult();
 
             Assert.IsNotNull(result);
-            Assert.AreEqual(ExecutionStatus.Succeeded, result.Status);
-            Assert.IsTrue(result.Satisfied);
+            Assert.IsTrue(result);
         }
 
         [Test]
@@ -119,11 +117,10 @@
                 .Returns(Task.FromResult(FailureRatePreconditionProviderTests.GetValidKustoResponse(19)));
 
             PreconditionProvider provider = new FailureRatePreconditionProvider(this.mockServices);
-            PreconditionResult result = provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None).GetAwaiter().GetResult();
+            bool result = provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None).GetAwaiter().GetResult();
 
             Assert.IsNotNull(result);
-            Assert.AreEqual(ExecutionStatus.Succeeded, result.Status);
-            Assert.IsFalse(result.Satisfied);
+            Assert.IsFalse(result);
         }
 
         [Test]
@@ -140,11 +137,10 @@
                 .Returns(Task.FromResult(FailureRatePreconditionProviderTests.GetValidKustoResponse(targetFailureRate - 1)));
 
             PreconditionProvider provider = new FailureRatePreconditionProvider(this.mockServices);
-            PreconditionResult result = provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None).GetAwaiter().GetResult();
+            bool result = provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None).GetAwaiter().GetResult();
 
             Assert.IsNotNull(result);
-            Assert.AreEqual(ExecutionStatus.Succeeded, result.Status);
-            Assert.IsFalse(result.Satisfied);
+            Assert.IsFalse(result);
         }
 
         [Test]
@@ -158,11 +154,7 @@
                 .Throws(new Exception());
 
             PreconditionProvider provider = new FailureRatePreconditionProvider(this.mockServices);
-            PreconditionResult result = provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None).GetAwaiter().GetResult();
-
-            Assert.IsNotNull(result);
-            Assert.AreEqual(ExecutionStatus.Failed, result.Status);
-            Assert.IsFalse(result.Satisfied);
+            Assert.ThrowsAsync<Exception>(() => provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None));
         }
 
         [Test]
@@ -181,11 +173,10 @@
                 .Returns(Task.FromResult(FailureRatePreconditionProviderTests.GetValidKustoResponse(21)));
 
             PreconditionProvider provider = new FailureRatePreconditionProvider(this.mockServices);
-            PreconditionResult result = provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None).GetAwaiter().GetResult();
+            bool result = provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None).GetAwaiter().GetResult();
 
             Assert.IsNotNull(result);
-            Assert.AreEqual(ExecutionStatus.Succeeded, result.Status);
-            Assert.IsTrue(result.Satisfied);
+            Assert.IsTrue(result);
 
             this.mockKustoManager.Verify(mgr => mgr.GetKustoResponseAsync(
                 It.Is<string>(value => value.Equals(string.Concat("FailureRate", targetGoal.TargetGoal), StringComparison.Ordinal)),

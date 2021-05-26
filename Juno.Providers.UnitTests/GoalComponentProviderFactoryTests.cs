@@ -115,7 +115,7 @@
                 return Task.CompletedTask;
             }
 
-            protected override Task<PreconditionResult> IsConditionSatisfiedAsync(Precondition component, ScheduleContext scheduleContext, EventContext telemetryContext, CancellationToken cancellationToken)
+            protected override Task<bool> IsConditionSatisfiedAsync(Precondition component, ScheduleContext scheduleContext, EventContext telemetryContext, CancellationToken cancellationToken)
             {
                 throw new NotImplementedException();
             }

@@ -2,9 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Linq;
-    using System.Runtime.Serialization;
-    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using AutoFixture;
@@ -14,15 +11,12 @@
     using Microsoft.AspNetCore.Http;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.AspNetCore.Mvc.Infrastructure;
-    using Microsoft.Azure;
     using Microsoft.Azure.Cosmos;
     using Microsoft.Azure.CRC;
     using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Azure.CRC.Repository;
     using Microsoft.Extensions.Logging.Abstractions;
     using Moq;
-    using Newtonsoft.Json.Linq;
-    using NuGet.Protocol.Plugins;
     using NUnit.Framework;
 
     using CosmosTable = Microsoft.Azure.Cosmos.Table;

@@ -88,6 +88,7 @@
 
             ExecutionGoalValidation.Instance.AddRange(new List<IValidationRule<GoalBasedSchedule>>
             {
+                ExperimentOwnerEmailRules.Instance,
                 TargetGoalRules.Instance,
                 TimerTriggerProviderRules.Instance,
                 SuccessfulExperimentsProviderRules.Instance
@@ -95,6 +96,7 @@
 
             ExecutionGoalTemplateValidation.Instance.AddRange(new List<IValidationRule<GoalBasedSchedule>>
             {
+                ExperimentOwnerEmailRules.Instance,
                 TargetGoalRules.Instance,
                 TimerTriggerProviderRules.Instance
             });

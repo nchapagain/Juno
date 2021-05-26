@@ -68,11 +68,9 @@
             this.mockExperimentDataManager.Setup(mgr => mgr.QueryExperimentsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(queryResult));
 
-            PreconditionResult result = await provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None);
+            bool result = await provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None);
 
-            Assert.IsNotNull(result);
-            Assert.AreEqual(ExecutionStatus.Succeeded, result.Status);
-            Assert.IsTrue(result.Satisfied);
+            Assert.IsTrue(result);
         }
 
         [Test]
@@ -90,15 +88,13 @@
             this.mockExperimentDataManager.Setup(mgr => mgr.QueryExperimentsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(queryResult));
 
-            PreconditionResult result = await provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None);
+            bool result = await provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None);
 
-            Assert.IsNotNull(result);
-            Assert.AreEqual(ExecutionStatus.Succeeded, result.Status);
-            Assert.IsFalse(result.Satisfied);
+            Assert.IsFalse(result);
         }
 
         [Test]
-        public async Task IsConditionSatisfiedAsyncReturnsExpectedResultWhenAnExceptionOccurs()
+        public void IsConditionSatisfiedAsyncReturnsExpectedResultWhenAnExceptionOccurs()
         {
             Precondition component = this.mockFixture.Create<Precondition>();
             component.Parameters.Add(OverallTeamInProgressExperimentsProviderTests.TargetExperimentInstances, 5);
@@ -108,11 +104,7 @@
             this.mockExperimentDataManager.Setup(mgr => mgr.QueryExperimentsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Throws(new Exception());
 
-            PreconditionResult result = await provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None);
-
-            Assert.IsNotNull(result);
-            Assert.AreEqual(ExecutionStatus.Failed, result.Status);
-            Assert.IsFalse(result.Satisfied);
+            Assert.ThrowsAsync<Exception>(() => provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None));
         }
     }
 }

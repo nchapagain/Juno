@@ -14,6 +14,7 @@
     public static class GoalBasedScheduleExtensions
     {
         internal const string ParameterReference = "$.parameters";
+        internal const string RuntimeParameterReference = "$.runtime.parameters";
 
         /// <summary>
         /// Extension will create a new <see cref="GoalBasedSchedule"/> with all components
@@ -29,21 +30,29 @@
             executionGoal.ThrowIfNull(nameof(executionGoal));
             executionGoalParameters.ThrowIfNull(nameof(executionGoalParameters));
 
-            // Schedule Metadata will be copied over and owner parameter will be added.
+            // Schedule Metadata will be copied over and owner and monitoring parameters will be added.
             Dictionary<string, IConvertible> scheduleMetadata = new Dictionary<string, IConvertible>(executionGoal.ScheduleMetadata, StringComparer.OrdinalIgnoreCase);
-            if (scheduleMetadata.ContainsKey(ImportantKeys.Owner))
+            if (scheduleMetadata.ContainsKey(ExecutionGoalMetadata.Owner))
             {
-                scheduleMetadata.Remove(ImportantKeys.Owner);
+                scheduleMetadata.Remove(ExecutionGoalMetadata.Owner);
             }
 
-            scheduleMetadata.Add(ImportantKeys.Owner, executionGoalParameters.Owner);
+            scheduleMetadata.Add(ExecutionGoalMetadata.Owner, executionGoalParameters.Owner);
+
+            if (scheduleMetadata.ContainsKey(ExecutionGoalMetadata.MonitoringEnabled))
+            {
+                scheduleMetadata.Remove(ExecutionGoalMetadata.MonitoringEnabled);
+            }
+
+            scheduleMetadata.Add(ExecutionGoalMetadata.MonitoringEnabled, executionGoalParameters.MonitoringEnabled);
+
             // Shared parameters will be be copied over to each Target Goal Parameter
             foreach (TargetGoalParameter targetGoalParameter in executionGoalParameters.TargetGoals)
             {
                 GoalBasedScheduleExtensions.MergeSharedParameters(targetGoalParameter.Parameters, executionGoalParameters.SharedParameters);
             }
 
-            // TargetGoal Verification: Allows only targetgoal which have matching workloadType and parameters to be passed 
+            // TargetGoal Verification: Allows only targetgoal which have matching workloadType and parameters to be passed
             List<Goal> inlinedTargetGoalList = new List<Goal>();
             StringBuilder errorList = new StringBuilder();
             foreach (Goal targetGoal in executionGoal.TargetGoals)
@@ -88,18 +97,18 @@
             }
 
             GoalBasedSchedule inlinedExecutionGoal = new GoalBasedSchedule(
-                executionGoalParameters.ExperimentName,
-                executionGoalParameters.ExecutionGoalId,
-                executionGoal.Name,
-                executionGoal.TeamName,
-                executionGoal.Description,
-                scheduleMetadata,
-                executionGoalParameters.Enabled,
-                executionGoal.Version,
-                executionGoal.Experiment,
-                inlinedTargetGoalList,
-                executionGoal.ControlGoals,
-                null);
+               executionGoalParameters.ExperimentName,
+               executionGoalParameters.ExecutionGoalId,
+               executionGoal.Name,
+               executionGoal.TeamName,
+               executionGoal.Description,
+               scheduleMetadata,
+               executionGoalParameters.Enabled,
+               executionGoal.Version,
+               executionGoal.Experiment,
+               inlinedTargetGoalList,
+               executionGoal.ControlGoals,
+               null);
 
             return inlinedExecutionGoal;
         }
@@ -140,15 +149,17 @@
         }
 
         /// <summary>
-        /// Determines if the precondtions are satisfied.
+        /// Determines if the goal is a target goal in the given execution goal.
         /// </summary>
-        /// <param name="precondtionResults">The list of preconditions.</param>
-        /// <returns>True/False if the preconditions are satisfied.</returns>
-        public static bool ArePreconditionsSatisfied(this IEnumerable<PreconditionResult> precondtionResults)
+        /// <param name="goal">The goal to determine if is (not) a target goal.</param>
+        /// <param name="executionGoal">The execution goal in which to search for the target goal.</param>
+        /// <returns>True/False if the goal is a target goal in the given execution goal.</returns>
+        public static bool IsTargetGoal(this Goal goal, GoalBasedSchedule executionGoal)
         {
-            precondtionResults.ThrowIfNull(nameof(precondtionResults));
+            executionGoal.ThrowIfNull(nameof(executionGoal));
+            goal.ThrowIfNull(nameof(goal));
 
-            return !precondtionResults.Any() || precondtionResults.All(entity => entity.Status == ExecutionStatus.Succeeded && entity.Satisfied == true);
+            return executionGoal.TargetGoals.Select(tg => tg.Name).Any(name => name.Equals(goal.Name, StringComparison.OrdinalIgnoreCase));
         }
 
         /// <summary>
@@ -187,6 +198,7 @@
                 executionGoalTemplate.ExecutionGoalId,
                 executionGoalTemplate.ExperimentName,
                 executionGoalTemplate.TeamName,
+                executionGoalTemplate.Owner,
                 executionGoalTemplate.Enabled,
                 targetGoals,
                 sharedParameters);
@@ -411,7 +423,6 @@
             internal const string PayloadPFVersionKey = "metadata.payloadPFVersion";
             internal const string GuestAgentPlatform = "guestAgentPlatform";
             internal const string Experiment = "experiment";
-            internal const string Owner = "owner";
         }
     }
 }

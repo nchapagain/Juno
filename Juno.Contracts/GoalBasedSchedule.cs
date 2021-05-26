@@ -26,7 +26,7 @@
         /// <param name="name">Name of Schedule</param>
         /// <param name="teamName">Name of the Team that owns the Execution Goal</param>
         /// <param name="description">Description of Schedule</param>
-        /// <param name="metaData">Meta Data about Scheudle. (i.e. Teamname, etc)</param>
+        /// <param name="metadata">Metadata about schedule. (i.e. Teamname, etc)</param>
         /// <param name="enabled">True if this schedule is to be exectuted</param>
         /// <param name="version">The version of the schedule (Version is Date version was established)</param>
         /// <param name="experiment">Represents an experiment definition</param>
@@ -40,7 +40,7 @@
             string name,
             string teamName,
             string description,
-            Dictionary<string, IConvertible> metaData,
+            Dictionary<string, IConvertible> metadata,
             bool? enabled,
             string version,
             Experiment experiment,
@@ -65,7 +65,7 @@
                 $"Version provided: {version} Supported versions: {ContractExtension.SupportedExecutionGoalVersions}");
 
             experiment.ThrowIfInvalid(
-                nameof(experiment),                    
+                nameof(experiment),
                 (exp) =>
                 {
                     if (GoalBasedScheduleExtensions.IsExecutionGoalVersion20200727(version))
@@ -103,9 +103,9 @@
                 this.Parameters = new Dictionary<string, IConvertible>(StringComparer.OrdinalIgnoreCase);
             }
 
-            if (metaData?.Any() == true)
+            if (metadata?.Any() == true)
             {
-                this.ScheduleMetadata = new Dictionary<string, IConvertible>(metaData, StringComparer.OrdinalIgnoreCase);
+                this.ScheduleMetadata = new Dictionary<string, IConvertible>(metadata, StringComparer.OrdinalIgnoreCase);
             }
             else
             {
@@ -114,7 +114,7 @@
         }
 
         /// <summary>
-        /// Copy Constructor for Goal Based Scheduler 
+        /// Copy Constructor for Goal Based Scheduler
         /// </summary>
         /// <param name="other">
         /// GoalBasedSchedule to copy into this instance.
@@ -210,6 +210,18 @@
         [JsonProperty(PropertyName = "parameters", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
         public Dictionary<string, IConvertible> Parameters { get; }
 
+        /// <summary>
+        /// Experiment owner of the execution goal
+        /// </summary>
+        [JsonIgnore]
+        public string Owner
+        {
+            get
+            {
+                return this.ScheduleMetadata.GetValue<string>(ExecutionGoalMetadata.Owner, string.Empty);
+            }
+        }
+
         /// <inheritdoc/>
         public override bool Equals(object obj)
         {
@@ -219,7 +231,7 @@
             {
                 areEqual = true;
             }
-            else 
+            else
             {
                 GoalBasedSchedule itemDescription = obj as GoalBasedSchedule;
                 if (itemDescription != null)
@@ -245,9 +257,9 @@
         /// Override method returns a unique integer hash code
         /// Calls the base class for now to suppress warnings
         /// </summary>
-        /// <returns> 
+        /// <returns>
         /// Type: System.Int32
-        /// A unique identifier for the class instance.   
+        /// A unique identifier for the class instance.
         /// </returns>
         public override int GetHashCode()
         {

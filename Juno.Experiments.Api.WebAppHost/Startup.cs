@@ -9,7 +9,6 @@
     using Juno.Contracts;
     using Juno.Contracts.Configuration;
     using Juno.Contracts.Validation;
-    using Juno.Execution;
     using Juno.Execution.Providers.Environment;
     using Juno.Extensions.AspNetCore;
     using Juno.Extensions.AspNetCore.Swagger;
@@ -21,7 +20,6 @@
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Azure.CRC.Extensions;
     using Microsoft.Azure.CRC.Repository.KeyVault;
-    using Microsoft.Extensions.Azure;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
@@ -29,7 +27,7 @@
     using Swashbuckle.AspNetCore.SwaggerUI;
 
     /// <summary>
-    /// Defines startup settings and requirements for the Juno Experiments API using 
+    /// Defines startup settings and requirements for the Juno Experiments API using
     /// ASP.NET Core middleware components.
     /// </summary>
     public class Startup
@@ -74,7 +72,7 @@
             // in order to get a JWT/token that can be used to authenticate with the Execution API.
             AadPrincipalSettings experimentApiPrincipal = settings.ExecutionSettings.AadPrincipals.Get(Setting.ExperimentsApi);
             AadPrincipalSettings executionApiPrincipal = settings.ExecutionSettings.AadPrincipals.Get(Setting.ExecutionApi);
-            AadPrincipalSettings environmentApiPrincipal = settings.ExecutionSettings.AadPrincipals.Get(Setting.EnvironmentsApi); 
+            AadPrincipalSettings environmentApiPrincipal = settings.ExecutionSettings.AadPrincipals.Get(Setting.EnvironmentsApi);
 
             IAzureKeyVault keyVaultClient = HostDependencies.CreateKeyVaultClient(experimentApiPrincipal, settings.KeyVaultSettings.Get(Setting.Default));
             ExecutionClient executionClient = HostDependencies.CreateExecutionApiClient(
@@ -101,6 +99,7 @@
 
             ExecutionGoalValidation.Instance.AddRange(new List<IValidationRule<GoalBasedSchedule>>
             {
+                ExperimentOwnerEmailRules.Instance,
                 TargetGoalRules.Instance,
                 TimerTriggerProviderRules.Instance,
                 SuccessfulExperimentsProviderRules.Instance
@@ -108,6 +107,7 @@
 
             ExecutionGoalTemplateValidation.Instance.AddRange(new List<IValidationRule<GoalBasedSchedule>>
             {
+                ExperimentOwnerEmailRules.Instance,
                 TargetGoalRules.Instance,
                 TimerTriggerProviderRules.Instance
             });
@@ -154,7 +154,7 @@
                 // ASP.NET Core  3.0 introduced a change to the way it handles 'Async' suffixes when using
                 // CreatedAtAction() and CreatedAtRoute() methods.
                 // https://github.com/microsoft/aspnet-api-versioning/issues/558
-                options.SuppressAsyncSuffixInActionNames = false; 
+                options.SuppressAsyncSuffixInActionNames = false;
             })
             .SetCompatibilityVersion(CompatibilityVersion.Version_3_0)
             .AddNewtonsoftJson();

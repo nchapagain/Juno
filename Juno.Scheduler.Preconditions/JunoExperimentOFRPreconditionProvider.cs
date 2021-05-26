@@ -18,7 +18,8 @@
     using Microsoft.Extensions.DependencyInjection;
 
     /// <summary>
-    /// Class to manage Control Goal: Juno.Scheduler.Goals.Control.TargetGoalOFR
+    /// A <see cref="PreconditionProvider"/> that evaluates if an experiment
+    /// has reached a maximum number of OFRs.
     /// </summary>
     [SupportedParameter(Name = Parameters.ExperimentOFRThreshold, Type = typeof(int), Required = true)]
     public class JunoExperimentGoalOFRPreconditionProvider : PreconditionProvider
@@ -28,6 +29,7 @@
         /// <summary>
         /// Initializes a new instance of the<see cref="JunoExperimentGoalOFRPreconditionProvider" />
         /// </summary>
+        /// <param name="services">A list of services that can be used for dependency injection.</param>
         public JunoExperimentGoalOFRPreconditionProvider(IServiceCollection services)
             : base(services)
         {
@@ -36,15 +38,7 @@
             this.Query = query;
         }
 
-        private string Query { get; set; }
-
-        private void ReplaceQueryParameters(ScheduleContext scheduleContext, string experimentNames)
-        { 
-            string environment = EnvironmentSettings.Initialize(scheduleContext.Configuration).Environment;
-            this.Query = this.Query.Replace(Constants.QueryStartTime, $"now({this.startDateExperimentGoalJunoOFR}d)", StringComparison.Ordinal);
-            this.Query = this.Query.Replace(Constants.ExperimentNameForQuery, $"{experimentNames}", StringComparison.Ordinal);
-            this.Query = this.Query.Replace(Constants.Environment, environment, StringComparison.Ordinal);
-        }
+        private string Query { get; }
 
         /// <inheritdoc/>
         public override Task ConfigureServicesAsync(GoalComponent component, ScheduleContext scheduleContext)
@@ -62,112 +56,80 @@
         }
 
         /// <summary>
-        /// Determines if the number of Experiment OFRs exceeds OFR Threshold
+        /// Evaluates whether the number of OFRs caused by the schedule contexts experiment is greather than the given threshold.
+        /// Condition:
+        ///     False if the number of actual OFRs is less than the given threshold.
+        ///     True if the number of actual OFRs is greather than or equal to the given threshold.
         /// </summary>
-        /// <param name="component"> Describe Preconditions Scheduler can take, in this case OverallOFRThreshold</param>
-        /// <param name="scheduleContext"><see cref="ScheduleContext"/></param>
-        /// <param name="telemetryContext"> Describes the telemetry context this provider is running on, for logging</param>
-        /// <param name="cancellationToken"> Propagates notification that operations should be canceled.</param>
-        /// <returns> Execution Status and Condition Status <see cref="PreconditionResult"/></returns>
-        protected override async Task<PreconditionResult> IsConditionSatisfiedAsync(Precondition component, ScheduleContext scheduleContext, EventContext telemetryContext, CancellationToken cancellationToken)
+        protected override async Task<bool> IsConditionSatisfiedAsync(Precondition component, ScheduleContext scheduleContext, EventContext telemetryContext, CancellationToken cancellationToken)
         {
             component.ThrowIfNull(nameof(component));
-            scheduleContext.ThrowIfNull(nameof(scheduleContext));
-            scheduleContext.ThrowIfInvalid(nameof(scheduleContext), (sc) =>
-            {
-                if (sc.ExecutionGoal == null)
-                {
-                    return false;
-                }
-
-                return !string.IsNullOrEmpty(sc.ExecutionGoal.ExperimentName);
-            });
+            scheduleContext.ThrowIfNull(nameof(scheduleContext));            
             telemetryContext.ThrowIfNull(nameof(telemetryContext));
 
-            ExecutionStatus executionStatus = ExecutionStatus.InProgress;
             bool conditionSatisfied = false;
-
-            string experimentNames = this.GetExperimentNames(scheduleContext);
-            this.ReplaceQueryParameters(scheduleContext, experimentNames);
 
             if (!cancellationToken.IsCancellationRequested)
             {
+                string experimentNames = this.GetExperimentNames(scheduleContext);
                 int ofrThreshold = component.Parameters.GetValue<int>(Parameters.ExperimentOFRThreshold);
+                string resolvedQuery = this.ReplaceQueryParameters(scheduleContext, experimentNames);
 
                 IKustoManager kustoManager = this.Services.GetService<IKustoManager>();
-                kustoManager.ThrowIfNull(nameof(kustoManager));
 
-                List<JunoOFRNode> junoOfrs;
-                List<string> tipList = new List<string>();
+                EnvironmentSettings settings = EnvironmentSettings.Initialize(scheduleContext.Configuration);
+                KustoSettings kustoSettings = settings.KustoSettings.Get(Setting.AzureCM);
 
-                try
-                {
-                    EnvironmentSettings settings = EnvironmentSettings.Initialize(scheduleContext.Configuration);
-                    settings.ThrowIfNull(nameof(settings));
+                DataTable response = await kustoManager.GetKustoResponseAsync(CacheKeys.ExperimentOFR + experimentNames, kustoSettings, resolvedQuery)
+                    .ConfigureDefaults();
 
-                    KustoSettings kustoSettings = settings.KustoSettings.Get(Setting.AzureCM);
-                    kustoSettings.ThrowIfNull(nameof(kustoSettings));
-                    this.ProviderContext.Add(SchedulerEventProperty.KustoQuery, this.Query);
+                List<JunoOFRNode> junoOfrs = response.ParseOFRNodes();
+                IEnumerable<string> tipList = junoOfrs.Select(ofr => ofr.TipSessionId);
+                conditionSatisfied = junoOfrs.Count >= ofrThreshold;
 
-                    DataTable response = await kustoManager.GetKustoResponseAsync(CacheKeys.ExperimentOFR + experimentNames, kustoSettings, this.Query)
-                        .ConfigureDefaults();
-
-                    junoOfrs = response.ParseOFRNodes();
-                    junoOfrs.ForEach(node => tipList.Add(node.TipSessionId));
-
-                    if (junoOfrs.Count >= ofrThreshold)
-                    {
-                        conditionSatisfied = true;
-                    }
-
-                    this.ProviderContext.Add(EventProperty.Count, junoOfrs.Count);
-                    this.ProviderContext.Add(SchedulerEventProperty.Threshold, ofrThreshold);
-                    this.ProviderContext.Add(SchedulerEventProperty.OffendingTipSessions, tipList);
-                    this.ProviderContext.Add(SchedulerEventProperty.JunoOfrs, junoOfrs);
-                    telemetryContext.AddContext(SchedulerEventProperty.JunoOfrs, junoOfrs);
-
-                    executionStatus = ExecutionStatus.Succeeded;
-                }
-                catch (Exception exc)
-                {
-                    telemetryContext.AddError(exc, true);
-                    executionStatus = ExecutionStatus.Failed;
-                    conditionSatisfied = false;
-                }
+                telemetryContext.AddContext(EventProperty.Count, junoOfrs.Count);
+                telemetryContext.AddContext(SchedulerEventProperty.Threshold, ofrThreshold);
+                telemetryContext.AddContext(SchedulerEventProperty.OffendingTipSessions, tipList);
+                telemetryContext.AddContext(SchedulerEventProperty.JunoOfrs, junoOfrs);
             }
 
-            return new PreconditionResult(executionStatus, conditionSatisfied);
+            return conditionSatisfied;
+        }
+
+        private string ReplaceQueryParameters(ScheduleContext scheduleContext, string experimentNames)
+        {
+            string environment = EnvironmentSettings.Initialize(scheduleContext.Configuration).Environment;
+            string resolvedQuery = string.Copy(this.Query);
+            resolvedQuery = resolvedQuery.Replace(Constants.QueryStartTime, $"now({this.startDateExperimentGoalJunoOFR}d)", StringComparison.Ordinal);
+            resolvedQuery = resolvedQuery.Replace(Constants.ExperimentNameForQuery, $"{experimentNames}", StringComparison.Ordinal);
+            resolvedQuery = resolvedQuery.Replace(Constants.Environment, environment, StringComparison.Ordinal);
+
+            return resolvedQuery;
         }
 
         private string GetExperimentNames(ScheduleContext scheduleContext)
         {
-            string parameterkey = "experiment.name";
-            string targetGoalName = scheduleContext.TargetGoalTrigger.TargetGoal;
-            // trimming "-teamName" from targetGoal to match it with what is there in execution goal.
-            targetGoalName = targetGoalName.Replace(string.Concat("-", scheduleContext.TargetGoalTrigger.TeamName), string.Empty, StringComparison.Ordinal);
-
-            List<string> experimentNames = new List<string>();
-            List<KeyValuePair<string, IConvertible>> targetGoalExperimentNames = new List<KeyValuePair<string, IConvertible>>();
-
-            // getting all parameters from execution goal
-            Goal targetGoal = scheduleContext.ExecutionGoal.TargetGoals.Where(targetGoals => targetGoals.Name == targetGoalName).FirstOrDefault();
-            targetGoal?.Actions.ForEach(scheduleAction => scheduleAction.Parameters.ForEach(parameters => targetGoalExperimentNames.Add(parameters)));
-
-            experimentNames = targetGoalExperimentNames.Where(x => x.Key == parameterkey).Select(y => y.Value.ToString()).ToList();
+            string experimentNameKey = "experiment.name";
+            Goal targetGoal = scheduleContext.ExecutionGoal.GetGoal(scheduleContext.TargetGoalTrigger.TargetGoal);
+            HashSet<string> experimentNames = targetGoal.Actions
+                .SelectMany(action => action.Parameters)
+                .Where(param => param.Key.ToString().Equals(experimentNameKey, StringComparison.OrdinalIgnoreCase))
+                .Select(param => param.Value.ToString()).ToHashSet();
+            
             experimentNames.Add(scheduleContext.ExecutionGoal.ExperimentName);
-            return string.Join(",", experimentNames.Distinct().Select(x => x.DoubleQuote()));
+            return string.Join(",", experimentNames.Select(name => name.DoubleQuote()));
         }
 
         private class Parameters
         {
-            internal const string ExperimentOFRThreshold = "experimentOFRThreshold";
+            public const string ExperimentOFRThreshold = nameof(Parameters.ExperimentOFRThreshold);
         }
 
-        internal class Constants
+        private class Constants
         {
-            internal const string Environment = "$environmentSetting$";
-            internal const string QueryStartTime = "$startTime$";
-            internal const string ExperimentNameForQuery = "$JunoExperimentName$";
+            public const string Environment = "$environmentSetting$";
+            public const string QueryStartTime = "$startTime$";
+            public const string ExperimentNameForQuery = "$JunoExperimentName$";
         }
     }
 }

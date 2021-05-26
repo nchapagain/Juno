@@ -365,7 +365,7 @@
                 new TargetGoalParameter("2", "WorkloadA", new Dictionary<string, IConvertible>() { ["targetGoal2"] = Guid.NewGuid().ToString() })
             };
 
-            return new ExecutionGoalParameter(executionGoal, "ExperimentName", "joe@microsoft.com", true, targetGoalPram);
+            return new ExecutionGoalParameter(executionGoal, "ExperimentName", "TeamName", "joe@microsoft.com", true, targetGoalPram);
         }
 
         /// <summary>
@@ -492,7 +492,7 @@
         /// <param name="name">Execution Goal Name</param>
         /// <param name="teamName">Name of team whom owns the execution goal</param>
         /// <param name="description">description of the execution goal</param>
-        /// <param name="metaData">meta data of the execution goal</param>
+        /// <param name="metadata">meta data of the execution goal</param>
         /// <param name="enabled">wheter or not the execution goal is enabled</param>
         /// <param name="version">version of execution goal</param>
         /// <param name="experiment">experiment item</param>
@@ -505,7 +505,7 @@
             string name = null,
             string teamName = null,
             string description = null,
-            Dictionary<string, IConvertible> metaData = null,
+            Dictionary<string, IConvertible> metadata = null,
             bool? enabled = null,
             string version = null,
             Experiment experiment = null,
@@ -531,7 +531,7 @@
                 name: name ?? template.Name,
                 teamName: teamName ?? template.TeamName,
                 description: description ?? template.Description,
-                metaData: metaData ?? template.ScheduleMetadata,
+                metadata: metadata ?? template.ScheduleMetadata,
                 enabled: enabled ?? template.Enabled,
                 version: version ?? template.Version,
                 experiment: experiment ?? template.Experiment,
@@ -556,7 +556,10 @@
                 name: "ExecutionGoalTemplate",
                 teamName: "teamName",
                 description: "description",
-                metaData: new Dictionary<string, IConvertible>() { ["owner"] = "$.parameter.owner" },
+                metadata: new Dictionary<string, IConvertible>() 
+                { 
+                    ["owner"] = "experiment_Owner@microsoft.com, experiment-Owner2@MICROSOFT.COM" 
+                },
                 enabled: true,
                 version: "2021-01-01",
                 experiment: FixtureExtensions.CreateExperiment(ExperimentType.AB, experimentSetup),
@@ -655,9 +658,10 @@
                 name: "Mock Schedule",
                 teamName: "TeamName",
                 description: "A Schedule, but for testing",
-                metaData: new Dictionary<string, IConvertible>
+                metadata: new Dictionary<string, IConvertible>
                 {
-                    ["Parmaeter1"] = "value1",
+                    ["owner"] = "experiment_Owner@microsoft.com; experiment-Owner2@MICROSOFT.COM",
+                    ["Parameter1"] = "value1",
                     ["Parameter2"] = "value2",
                     ["Parameter3"] = "value3",
                     ["Parameter4"] = false

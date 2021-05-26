@@ -139,4 +139,21 @@
         /// </summary>
         public const string Default = "junovmadmin";
     }
+
+    /// <summary>
+    /// Constants that represent the required executionGoalMetadata 
+    /// attributes shared between execution goals and templates
+    /// </summary>
+    public static class ExecutionGoalMetadata
+    {
+        /// <summary>
+        /// Name of the attribute containing the email monitoring attribute
+        /// </summary>
+        public const string MonitoringEnabled = "monitoringEnabled";
+
+        /// <summary>
+        /// Name of the attribute containing the email address of the experiment owner
+        /// </summary>
+        public const string Owner = "owner";
+    }
 }

@@ -20,7 +20,6 @@
     public class JunoExperimentOFRPreconditionProviderTests
     {
         private static string ofrThreholdKey = "experimentOFRThreshold";
-        private static string experimentNameKey = "experimentName";
         private Mock<IKustoManager> kustoMgr;
         private IConfiguration configuration;
         private DataTable kustoDataTable;
@@ -42,18 +41,17 @@
                  @"Configuration"))
                 .AddJsonFile($"juno-dev01.environmentsettings.json")
                 .Build();
-
-            this.mockContext = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), this.mockFixture.Create<TargetGoalTrigger>(), this.configuration);
+            GoalBasedSchedule mockSchedule = this.mockFixture.Create<GoalBasedSchedule>();
+            TargetGoalTrigger mockTrigger = new ("id", mockSchedule.Name, mockSchedule.TargetGoals[0].Name, "* * * * *", true, mockSchedule.ExperimentName, mockSchedule.TeamName, mockSchedule.Version, DateTime.UtcNow, DateTime.UtcNow);
+            this.mockContext = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), mockTrigger, this.configuration);
         }
 
         [Test]
         public void ProviderReturnsTheExpectedResponseWhenTheOFRThresholdPreconditionIsMet()
         {
             int experimentOFRThreshold = 3;
-            string experimentName = "MCU2019.2 Perf/CPU Patrol Scrubber";
             Precondition component = this.mockFixture.Create<Precondition>();
             component.Parameters.Add(JunoExperimentOFRPreconditionProviderTests.ofrThreholdKey, experimentOFRThreshold);
-            component.Parameters.Add(JunoExperimentOFRPreconditionProviderTests.experimentNameKey, experimentName);
 
             // creating Datatable with 3 overall ofr nodes
             this.kustoDataTable = JunoExperimentOFRPreconditionProviderTests.GetValidDataTable();
@@ -62,18 +60,15 @@
             PreconditionProvider provider = new JunoExperimentGoalOFRPreconditionProvider(this.services);
             var response = provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
 
-            Assert.AreEqual(response.Status, ExecutionStatus.Succeeded);
-            Assert.IsTrue(response.Satisfied);
+            Assert.IsTrue(response);
         }
 
         [Test]
         public void ProviderReturnsTheExpectedResponseWhenTheOFRThresholdPreconditionIsNotMet()
         {
             int experimentOFRThreshold = 5;
-            string experimentName = "MCU2019.2 Perf/CPU Patrol Scrubber";
             Precondition component = this.mockFixture.Create<Precondition>();
             component.Parameters.Add(JunoExperimentOFRPreconditionProviderTests.ofrThreholdKey, experimentOFRThreshold);
-            component.Parameters.Add(JunoExperimentOFRPreconditionProviderTests.experimentNameKey, experimentName);
 
             // creating Datatable with 3 overall ofr nodes for one experimentId
             this.kustoDataTable = JunoExperimentOFRPreconditionProviderTests.GetValidDataTable();
@@ -82,18 +77,15 @@
             PreconditionProvider provider = new JunoExperimentGoalOFRPreconditionProvider(this.services);
             var response = provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
 
-            Assert.AreEqual(response.Status, ExecutionStatus.Succeeded);
-            Assert.IsFalse(response.Satisfied);
+            Assert.IsFalse(response);
         }
 
         [Test]
         public void ProviderReturnsTheExpectedResponseWhenResultSetsAreEmpty()
         {
             int experimentOFRThreshold = 3;
-            string experimentName = "MCU2019.2 Perf/CPU Patrol Scrubber";
             Precondition component = this.mockFixture.Create<Precondition>();
             component.Parameters.Add(JunoExperimentOFRPreconditionProviderTests.ofrThreholdKey, experimentOFRThreshold);
-            component.Parameters.Add(JunoExperimentOFRPreconditionProviderTests.experimentNameKey, experimentName);
 
             // Kusto Manager will return empty result set
             DataTable emptyKustoDataTable = null;
@@ -102,48 +94,37 @@
             PreconditionProvider provider = new JunoExperimentGoalOFRPreconditionProvider(this.services);
             var response = provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
 
-            Assert.AreEqual(response.Status, ExecutionStatus.Succeeded);
-            Assert.IsFalse(response.Satisfied);
+            Assert.IsFalse(response);
         }
 
         [Test]
         public void ProviderReturnsTheExpectedResponseWhenComponentsDateTimeFieldIsInvalid()
         {
             int experimentOFRThreshold = 2;
-            string experimentName = "MCU2019.2 Perf/CPU Patrol Scrubber";
             Precondition component = this.mockFixture.Create<Precondition>();
             component.Parameters.Add(JunoExperimentOFRPreconditionProviderTests.ofrThreholdKey, experimentOFRThreshold);
-            component.Parameters.Add(JunoExperimentOFRPreconditionProviderTests.experimentNameKey, experimentName);
 
             // creating Datatable with 2 ofr nodes
             this.kustoDataTable = JunoOverallOFRPreconditionProviderTests.GetDataTableWithInvalidDateTimeField();
             this.kustoMgr.Setup(x => x.GetKustoResponseAsync(It.IsAny<string>(), It.IsAny<KustoSettings>(), It.IsAny<string>(), It.IsAny<double?>())).ReturnsAsync(this.kustoDataTable);
 
             PreconditionProvider provider = new JunoExperimentGoalOFRPreconditionProvider(this.services);
-            var response = provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
-
-            Assert.AreEqual(response.Status, ExecutionStatus.Failed);
-            Assert.IsFalse(response.Satisfied);
+            Assert.ThrowsAsync<FormatException>(() => provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None));
         }
 
         [Test]
         public void ProviderReturnsTheExpectedResponseWhenComponentSchemaIsInvalid()
         {
             int experimentOFRThreshold = 2;
-            string experimentName = "MCU2019.2 Perf/CPU Patrol Scrubber";
             Precondition component = this.mockFixture.Create<Precondition>();
             component.Parameters.Add(JunoExperimentOFRPreconditionProviderTests.ofrThreholdKey, experimentOFRThreshold);
-            component.Parameters.Add(JunoExperimentOFRPreconditionProviderTests.experimentNameKey, experimentName);
 
             // creating Datatable with 2 ofr nodes
             this.kustoDataTable = JunoOverallOFRPreconditionProviderTests.GetInvalidDataTable();
             this.kustoMgr.Setup(x => x.GetKustoResponseAsync(It.IsAny<string>(), It.IsAny<KustoSettings>(), It.IsAny<string>(), It.IsAny<double?>())).ReturnsAsync(this.kustoDataTable);
 
             PreconditionProvider provider = new JunoExperimentGoalOFRPreconditionProvider(this.services);
-            var response = provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
-
-            Assert.AreEqual(response.Status, ExecutionStatus.Failed);
-            Assert.IsFalse(response.Satisfied);
+            Assert.ThrowsAsync<ArgumentException>(() => provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None));
         }
 
         private static DataTable GetValidDataTable()

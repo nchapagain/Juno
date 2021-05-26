@@ -4,6 +4,7 @@
     using System.Net;
     using System.Net.Http;
     using System.Threading;
+    using System.Threading.Tasks;
     using AutoFixture;
     using Juno.Api.Client;
     using Juno.Contracts;
@@ -61,7 +62,7 @@
         }
 
         [Test]
-        public void ProviderReturnsTheExpectedResponseWhenAnExperimentIsSuccessfullyCreated()
+        public async Task ProviderReturnsTheExpectedResponseWhenAnExperimentIsSuccessfullyCreated()
         {
             string executionGoalName = "TargetGoal";
             string experimentTemplateFile = "Any_Experiment_Template.json";
@@ -83,14 +84,14 @@
                 });
 
             ScheduleActionProvider provider = new CreateExperimentProvider(this.services);
-            provider.ConfigureServicesAsync(component, this.mockContext);
-            var response = provider.ExecuteActionAsync(component, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
+            await provider.ConfigureServicesAsync(component, this.mockContext);
+            await provider.ExecuteActionAsync(component, this.mockContext, CancellationToken.None);
 
-            Assert.AreEqual(ExecutionStatus.Succeeded, response.Status);
+            this.experimentClient.Verify(x => x.CreateExperimentFromTemplateAsync(It.IsAny<ExperimentTemplate>(), this.cancellationToken, It.IsAny<string>()), Times.Once());
         }
 
         [Test]
-        public void ProviderReturnsTheExpectedResponseWhenWorkQueueIsProvided()
+        public async Task ProviderReturnsTheExpectedResponseWhenWorkQueueIsProvided()
         {
             string executionGoalName = "TargetGoal";
             string experimentTemplateFile = "Any_Experiment_Template.json";
@@ -117,10 +118,10 @@
                 });
 
             ScheduleActionProvider provider = new CreateExperimentProvider(this.services);
-            provider.ConfigureServicesAsync(component, this.mockContext);
-            var response = provider.ExecuteActionAsync(component, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
+            await provider.ConfigureServicesAsync(component, this.mockContext);
+            await provider.ExecuteActionAsync(component, this.mockContext, CancellationToken.None);
 
-            Assert.AreEqual(ExecutionStatus.Succeeded, response.Status);
+            this.experimentClient.Verify(x => x.CreateExperimentFromTemplateAsync(It.IsAny<ExperimentTemplate>(), this.cancellationToken, It.IsAny<string>()), Times.Once());
         }
 
         [Test]
@@ -141,29 +142,11 @@
 
             ScheduleActionProvider provider = new CreateExperimentProvider(this.services);
 
-            var response = provider.ExecuteActionAsync(component, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
-            provider.ConfigureServicesAsync(component, this.mockContext);
-
-            Assert.AreEqual(response.Status, ExecutionStatus.Failed);
+            Assert.ThrowsAsync<SchedulerException>(() => provider.ExecuteActionAsync(component, this.mockContext, CancellationToken.None));
         }
 
         [Test]
-        public void ProviderReturnsExpectedResponseIfAnExceptionIsThrownWhenGettingAnExecutionGoalTimerTrigger()
-        {
-            string executionGoalName = "ScheduleName";
-            ScheduleAction component = this.mockFixtureGBS.Create<ScheduleAction>();
-            component.Parameters.Add(CreateExperimentProviderTests.executionGoalName, executionGoalName);
-
-            this.timerDataManager.Setup(x => x.GetTargetGoalTriggerAsync(It.IsAny<string>(), It.IsAny<string>(), this.cancellationToken)).ThrowsAsync(new DataStoreException("Moq failure"));
-            ScheduleActionProvider provider = new CreateExperimentProvider(this.services);
-
-            var response = provider.ExecuteActionAsync(component, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
-
-            Assert.AreEqual(response.Status, ExecutionStatus.Failed);
-        }
-
-        [Test]
-        public void ProviderReturnsFailedExecutionResultStatusIfExceptionIsThrownAtGetExperimentTemplateDefinitionAsync()
+        public void ExecuteActionsThrowsExceptionWhenGetExperimentTemplateThrowsException()
         {
             string executionGoalName = "ScheduleName";
             ScheduleAction component = this.mockFixtureGBS.Create<ScheduleAction>();
@@ -175,9 +158,7 @@
             this.experimentTemplateDataManager.Setup(x => x.GetExperimentTemplateAsync(It.IsAny<string>(), It.IsAny<string>(), this.cancellationToken, It.IsAny<string>())).
                 ThrowsAsync(new ArgumentException("Moq failure"));
 
-            var response = provider.ExecuteActionAsync(component, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
-
-            Assert.AreEqual(response.Status, ExecutionStatus.Failed);
+            Assert.ThrowsAsync<ArgumentException>(() => provider.ExecuteActionAsync(component, this.mockContext, CancellationToken.None));
         }
 
         [Test]
@@ -185,21 +166,6 @@
         {
             ScheduleActionProvider provider = new CreateExperimentProvider(this.services);
             Assert.Throws<ArgumentException>(() => provider.ExecuteActionAsync(null, this.mockContext, CancellationToken.None).GetAwaiter().GetResult());
-        }
-
-        [Test]
-        public void ProviderValidatesRequiredServiceDependenciesAreProvided()
-        {
-            IServiceCollection serviceToValidate = new ServiceCollection();
-            ScheduleActionProvider provider = new CreateExperimentProvider(serviceToValidate);
-
-            string executionGoalName = "ScheduleName";
-            ScheduleAction component = this.mockFixtureGBS.Create<ScheduleAction>();
-            component.Parameters.Add(CreateExperimentProviderTests.executionGoalName, executionGoalName);
-
-            var response = provider.ExecuteActionAsync(component, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
-
-            Assert.AreEqual(response.Status, ExecutionStatus.Failed);
         }
 
         public HttpResponseMessage GetHttpResponse(HttpStatusCode statusCode)

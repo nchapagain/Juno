@@ -5378,16 +5378,11 @@
         "type": "project",
         "framework": ".NETStandard,Version=v2.1",
         "dependencies": {
-          "Juno.Contracts": "1.0.0",
           "Juno.DataManagement": "1.0.0",
           "Juno.Execution.AspNetCore": "1.0.0",
           "Juno.Providers": "1.0.0",
-          "Microsoft.Azure.CRC.Common": "1.2.0",
-          "Microsoft.Azure.CRC.Contracts": "0.0.1",
           "Microsoft.Azure.CRC.Kusto": "1.0.0",
-          "Microsoft.Azure.CRC.Rest": "0.0.1",
           "Microsoft.Azure.CRC.Subscriptions": "1.0.0",
-          "Microsoft.Azure.CRC.Telemetry": "1.9.0",
           "System.Text.Encodings.Web": "5.0.1",
           "ncrontab.signed": "3.3.2"
         },

@@ -88,6 +88,14 @@
             Assert.IsFalse(executedTargetGoal);
         }
 
+        [Test]
+        public void ExecuteScheduleAsyncDoesNotThrowExceptionWhenGoalExecutionFails()
+        {
+            this.mockGoalExecution.OnExecuteGoalAsync = (goal, context, token) => throw new Exception();
+
+            Assert.DoesNotThrowAsync(() => this.executionGoalExecution.ExecuteExecutionGoalAsync(this.mockExecutionGoal, this.mockContext, CancellationToken.None));
+        }
+
         private class TestGoalExecution : GoalHandler
         {
             public TestGoalExecution(IServiceCollection services)

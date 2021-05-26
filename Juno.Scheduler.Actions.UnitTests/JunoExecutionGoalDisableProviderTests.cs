@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Data;
     using System.Threading;
+    using System.Threading.Tasks;
     using AutoFixture;
     using Juno.Contracts;
     using Juno.DataManagement;
@@ -40,7 +41,7 @@
         }
 
         [Test]
-        public void ProviderReturnsTheExpectedResponseWhenExecutionGoalDisableIsCalled()
+        public async Task ProviderReturnsTheExpectedResponseWhenExecutionGoalDisableIsCalled()
         {
             string executionGoalName = "ScheduleName";
             ScheduleAction component = this.mockFixture.Create<ScheduleAction>();
@@ -62,9 +63,9 @@
 
             ScheduleActionProvider provider = new JunoExecutionGoalDisableProvider(this.services);
 
-            var response = provider.ExecuteActionAsync(component, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
+            await provider.ExecuteActionAsync(component, this.mockContext, CancellationToken.None);
 
-            Assert.AreEqual(response.Status, ExecutionStatus.Succeeded);
+            this.scheduleDataMgr.Verify(x => x.UpdateTargetGoalTriggerAsync(this.gbScheduleTrigger, this.cancellationToken), Times.Once());
         }
     }
 }

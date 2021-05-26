@@ -17,7 +17,7 @@
         /// <param name="component">The Schedule Action component that describes the runtime requirements </param>
         /// <param name="scheduleContext"></param>
         /// <param name="cancellationToken">A token that can be used to request the provider to cancel its operations</param>
-        /// <returns></returns>
-        Task<ExecutionResult> ExecuteActionAsync(ScheduleAction component, ScheduleContext scheduleContext, CancellationToken cancellationToken);
+        /// <returns>An awaitable task.</returns>
+        Task ExecuteActionAsync(ScheduleAction component, ScheduleContext scheduleContext, CancellationToken cancellationToken);
     }
 }

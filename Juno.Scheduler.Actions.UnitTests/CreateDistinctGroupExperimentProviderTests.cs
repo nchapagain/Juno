@@ -9,6 +9,7 @@
     using AutoFixture;
     using Juno.Api.Client;
     using Juno.Contracts;
+    using Juno.DataManagement;
     using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
@@ -24,6 +25,7 @@
         private EnvironmentQuery containerTwo;
         private Fixture mockFixture;
         private Mock<IExperimentClient> mockClient;
+        private Mock<IExperimentTemplateDataManager> mockDataManager;
         private ServiceCollection mockServices;
         private CreateDistinctGroupExperimentProvider provider;
         private ScheduleAction mockComponent;
@@ -36,14 +38,19 @@
             this.mockFixture.SetupEnvironmentSelectionMocks();
             this.mockFixture.SetUpGoalBasedScheduleMocks();
             this.mockClient = new Mock<IExperimentClient>();
+            this.mockDataManager = new Mock<IExperimentTemplateDataManager>();
             this.mockServices = new ServiceCollection();
             this.mockServices.AddSingleton<IExperimentClient>(this.mockClient.Object);
+            this.mockServices.AddSingleton<IExperimentTemplateDataManager>(this.mockDataManager.Object);
             this.provider = new CreateDistinctGroupExperimentProvider(this.mockServices);
             this.containerOne = this.mockFixture.Create<EnvironmentQuery>();
             this.containerTwo = this.mockFixture.Create<EnvironmentQuery>();
             this.mockComponent = this.mockFixture.Create<ScheduleAction>();
             this.mockComponent.Parameters.Add("experimentTemplateFile", "file");
             this.mockContext = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), this.mockFixture.Create<TargetGoalTrigger>(), new Mock<IConfiguration>().Object);
+
+            this.mockClient.Setup(client => client.CreateExperimentFromTemplateAsync(It.IsAny<ExperimentTemplate>(), It.IsAny<CancellationToken>(), It.IsAny<string>()))
+                .ReturnsAsync(this.CreateResponseMessage(HttpStatusCode.OK, this.mockFixture.Create<ExperimentItem>()));
         }
 
         [Test]
@@ -54,7 +61,7 @@
         }
 
         [Test]
-        public void ExecuteAsyncPostsCorrectQueriesToExperimentClient()
+        public async Task ExecuteAsyncPostsCorrectQueriesToExperimentClient()
         {
             this.mockComponent.Parameters.Add("nodeListA", new JunoParameter(typeof(EnvironmentQuery).FullName, this.containerOne));
             this.mockComponent.Parameters.Add("nodeListB", new JunoParameter(typeof(EnvironmentQuery).FullName, this.containerOne));
@@ -64,15 +71,15 @@
                 {
                     Assert.IsTrue(this.containerOne.Equals(query) || this.containerTwo.Equals(query));
                 })
-                .Returns(Task.FromResult(this.GenerateHttpResponse()));
+                .Returns(Task.FromResult(this.CreateResponseMessage(HttpStatusCode.OK)));
 
-            _ = this.provider.ExecuteActionAsync(this.mockComponent, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
+            await this.provider.ExecuteActionAsync(this.mockComponent, this.mockContext, CancellationToken.None);
 
             this.mockClient.Verify(client => client.ReserveEnvironmentsAsync(It.IsAny<EnvironmentQuery>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
         }
 
         [Test]
-        public void ExecuteAsyncThrowsExceptionWhenAnyRequestIsNotSuccessStatusCode()
+        public async Task ExecuteAsyncThrowsExceptionWhenAnyRequestIsNotSuccessStatusCode()
         {
             this.mockComponent.Parameters.Add("nodeListA", new JunoParameter(typeof(EnvironmentQuery).FullName, this.containerOne));
             this.mockComponent.Parameters.Add("nodeListB", new JunoParameter(typeof(EnvironmentQuery).FullName, this.containerOne));
@@ -80,21 +87,19 @@
             this.mockClient.Setup(client => client.ReserveEnvironmentsAsync(It.IsAny<EnvironmentQuery>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)));
 
-            ExecutionResult result = this.provider.ExecuteActionAsync(this.mockComponent, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
-            Assert.AreEqual(result.Status, ExecutionStatus.Failed);
-            Assert.IsInstanceOf(typeof(SchedulerException), result.Error);
+            Assert.ThrowsAsync<SchedulerException>(() => this.provider.ExecuteActionAsync(this.mockComponent, this.mockContext, CancellationToken.None));
         }
 
         [Test]
-        public void ExecuteAsyncCreatesCorrectParameterKeysForExperimentTemplate()
+        public async Task ExecuteAsyncCreatesCorrectParameterKeysForExperimentTemplate()
         {
             this.mockComponent.Parameters.Add("nodeListA", new JunoParameter(typeof(EnvironmentQuery).FullName, this.containerOne));
             this.mockComponent.Parameters.Add("nodeListB", new JunoParameter(typeof(EnvironmentQuery).FullName, this.containerOne));
 
             this.mockClient.Setup(client => client.ReserveEnvironmentsAsync(It.IsAny<EnvironmentQuery>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(this.GenerateHttpResponse()));
+                .Returns(Task.FromResult(this.CreateResponseMessage(HttpStatusCode.OK)));
 
-            _ = this.provider.ExecuteActionAsync(this.mockComponent, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
+            await this.provider.ExecuteActionAsync(this.mockComponent, this.mockContext, CancellationToken.None);
 
             Assert.IsTrue(this.mockComponent.Parameters.ContainsKey("nodeListA"));
             Assert.IsTrue(this.mockComponent.Parameters.ContainsKey("nodeListB"));
@@ -103,15 +108,15 @@
         }
 
         [Test]
-        public void ExecuteAsyncCreatesCorrectParmaeterValeusForExperimentTemplate()
+        public async Task ExecuteAsyncCreatesCorrectParmaeterValeusForExperimentTemplate()
         {
             this.mockComponent.Parameters.Add("nodeListA", new JunoParameter(typeof(EnvironmentQuery).FullName, this.containerOne));
             this.mockComponent.Parameters.Add("nodeListB", new JunoParameter(typeof(EnvironmentQuery).FullName, this.containerOne));
 
             this.mockClient.Setup(client => client.ReserveEnvironmentsAsync(It.IsAny<EnvironmentQuery>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(this.GenerateHttpResponse()));
+                .Returns(Task.FromResult(this.CreateResponseMessage(HttpStatusCode.OK)));
 
-            _ = this.provider.ExecuteActionAsync(this.mockComponent, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
+            await this.provider.ExecuteActionAsync(this.mockComponent, this.mockContext, CancellationToken.None);
 
             IDictionary<string, IConvertible> dict = this.mockComponent.Parameters;
             Assert.AreEqual(dict["nodeListA"], "node1,node2");
@@ -121,63 +126,38 @@
         }
 
         [Test]
-        public void ExecuteAsyncReturnsExpectedResultWhenNoNodesSupportSameVm()
+        public void ValidateParameterThrowsExceptionWhenComponentDoesNotHaveCorrectParameters()
         {
-            IEnumerable<EnvironmentCandidate> candidates = new List<EnvironmentCandidate>()
-            {
-                new EnvironmentCandidate("sub1", vmSku: new List<string>() { "vm1", "vm2" }, node: "node1"),
-                new EnvironmentCandidate("sub1", vmSku: new List<string>() { "vm3", "vm4" }, node: "node2")
-            };
-
-            this.mockComponent.Parameters.Add("nodeListA", new JunoParameter(typeof(EnvironmentQuery).FullName, this.containerOne));
-            this.mockComponent.Parameters.Add("nodeListB", new JunoParameter(typeof(EnvironmentQuery).FullName, this.containerOne));
-
-            this.mockClient.Setup(client => client.ReserveEnvironmentsAsync(It.IsAny<EnvironmentQuery>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(this.GenerateHttpResponse(candidates)));
-
-            ExecutionResult result = this.provider.ExecuteActionAsync(this.mockComponent, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
-
-            Assert.AreEqual(ExecutionStatus.Failed, result.Status);
-            Assert.IsInstanceOf(typeof(SchedulerException), result.Error);
+            Assert.ThrowsAsync<SchemaException>(() => this.provider.ExecuteActionAsync(this.mockComponent, this.mockContext, CancellationToken.None));
         }
 
         [Test]
-        public void ValidateParametersThrowsExceptionWhenComponentDoesNotHaveCorrectParameters()
-        {
-            ExecutionResult result = this.provider.ExecuteActionAsync(this.mockComponent, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
-            Assert.AreEqual(ExecutionStatus.Failed, result.Status);
-            Assert.IsInstanceOf<SchemaException>(result.Error);
-        }
-
-        [Test]
-        public void ValidateParametersThrowsExceptionWhenJunoParameterIsWrongType()
+        public void ValidateParametersDoesThrowsExceptionWhenJunoParameterIsWrongType()
         {
             JunoParameter invalidParameter = new JunoParameter(typeof(string).FullName, "not an Environment Query :(");
             this.mockComponent.Parameters.Add("nodeListA", invalidParameter);
 
-            ExecutionResult result = this.provider.ExecuteActionAsync(this.mockComponent, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
-            Assert.AreEqual(ExecutionStatus.Failed, result.Status);
-            Assert.IsInstanceOf<SchemaException>(result.Error);
+            Assert.ThrowsAsync<SchemaException>(() => this.provider.ExecuteActionAsync(this.mockComponent, this.mockContext, CancellationToken.None));
         }
 
         [Test]
-        public void ExecuteActionAsyncCopiesNodeListWhenRequested()
+        public async Task ExecuteActionAsyncCopiesNodeListWhenRequested()
         {
             this.mockComponent.Parameters.Add("nodeListA", new JunoParameter(typeof(EnvironmentQuery).FullName, this.containerOne));
             this.mockComponent.Parameters.Add("nodeListB", new JunoParameter(typeof(EnvironmentQuery).FullName, this.containerOne));
             this.mockComponent.Parameters.Add("mergeLists", true);
 
             this.mockClient.Setup(client => client.ReserveEnvironmentsAsync(It.IsAny<EnvironmentQuery>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.FromResult(this.GenerateHttpResponse()));
+                .Returns(Task.FromResult(this.CreateResponseMessage(HttpStatusCode.OK)));
 
-            _ = this.provider.ExecuteActionAsync(this.mockComponent, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
+            await this.provider.ExecuteActionAsync(this.mockComponent, this.mockContext, CancellationToken.None);
 
             IDictionary<string, IConvertible> dict = this.mockComponent.Parameters;
             Assert.IsTrue(dict.ContainsKey("nodeList"));
-            Assert.AreEqual("node1,node2,node1,node2", dict["nodeList"]);
+            Assert.AreEqual("node1,node2", dict["nodeList"]);
         }
 
-        private HttpResponseMessage GenerateHttpResponse(IEnumerable<EnvironmentCandidate> candidates = null)
+        private HttpResponseMessage CreateResponseMessage(HttpStatusCode code, object candidates = null)
         {
             candidates = candidates ?? new List<EnvironmentCandidate>() 
             { 
@@ -185,7 +165,7 @@
                 new EnvironmentCandidate("sub1", vmSku: new List<string>() { "vm1", "vm2" }, node: "node2")
             };
 
-            return new HttpResponseMessage(HttpStatusCode.OK)
+            return new HttpResponseMessage(code)
             { Content = new StringContent(JsonConvert.SerializeObject(candidates)) };
         }
     }

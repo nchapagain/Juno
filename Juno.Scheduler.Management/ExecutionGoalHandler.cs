@@ -71,14 +71,22 @@
             {
                 telemetryContext.AddContext(nameof(executionGoal), executionGoal.Name);
 
-                bool controlGoalsSatisfied = await this.ExecuteControlGoalsAsync(executionGoal.ControlGoals, scheduleContext, telemetryContext, token)
-                    .ConfigureDefaults();
-
-                if (!controlGoalsSatisfied)
+                try
                 {
-                    Goal targetGoal = executionGoal.GetGoal(scheduleContext.TargetGoalTrigger.TargetGoal);
-                    await this.GoalHandler.ExecuteGoalAsync(targetGoal, scheduleContext, token).ConfigureDefaults();
+                    bool controlGoalsSatisfied = await this.ExecuteControlGoalsAsync(executionGoal.ControlGoals, scheduleContext, telemetryContext, token)
+                        .ConfigureDefaults();
+
+                    if (!controlGoalsSatisfied)
+                    {
+                        Goal targetGoal = executionGoal.GetGoal(scheduleContext.TargetGoalTrigger.TargetGoal);
+                        await this.GoalHandler.ExecuteGoalAsync(targetGoal, scheduleContext, token).ConfigureDefaults();
+                    }
                 }
+                catch (Exception exc)
+                {
+                    telemetryContext.AddError(exc);
+                }
+
             }).ConfigureDefaults();
         }
 

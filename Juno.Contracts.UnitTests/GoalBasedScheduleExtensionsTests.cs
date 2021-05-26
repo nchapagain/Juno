@@ -3,9 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using System.Text;
     using Microsoft.Azure.CRC.Contracts;
-    using NuGet.ContentModel;
     using NUnit.Framework;
 
     [TestFixture]
@@ -41,27 +39,29 @@
 
             Dictionary<string, IConvertible> executionGoalMetadata = new Dictionary<string, IConvertible>()
             {
-                { "owner", owner },
-                { "newMetadataPram", "newMetadataValue" }
+                { ExecutionGoalMetadata.Owner, owner },
+                { "newMetadataParam", "newMetadataValue" },
+                { ExecutionGoalMetadata.MonitoringEnabled, true }
             };
 
             ExecutionGoalParameter executionGoalParameter = new ExecutionGoalParameter(
                 "IdFromParameters",
                 "ExperimentName",
+                executionGoalTemplate.TeamName,
                 owner,
                 true,
                 targetGoals);
 
-            executionGoalTemplate.ScheduleMetadata.Add("newMetadataPram", "newMetadataValue");
+            executionGoalTemplate.ScheduleMetadata.Add("newMetadataParam", "newMetadataValue");
             GoalBasedSchedule actualResult = executionGoalTemplate.Inlined(executionGoalParameter);
 
             GoalBasedSchedule expectedResult = new GoalBasedSchedule(
                 experimentName: "ExperimentName",
                 executionGoalId: "IdFromParameters",
                 name: "ExecutionGoalTemplate",
-                teamName: "teamName",
+                teamName: executionGoalTemplate.TeamName,
                 description: "description",
-                metaData: executionGoalMetadata,
+                metadata: executionGoalMetadata,
                 enabled: true,
                 version: "2021-01-01",
                 experiment: actualResult.Experiment,
@@ -70,7 +70,8 @@
                     FixtureExtensions.CreateTargetGoal("targetGoalOneParam", targetGoalIdA),
                     FixtureExtensions.CreateTargetGoal("targetGoalTwoParam", targetGoalIdB)
                 },
-                controlGoals: actualResult.ControlGoals);
+                controlGoals: actualResult.ControlGoals,
+                parameters: null);
 
             Assert.IsNotNull(actualResult);
             Assert.AreEqual(expectedResult, actualResult);
@@ -114,6 +115,7 @@
             ExecutionGoalParameter executionGoalParameter = new ExecutionGoalParameter(
                 expectedExecutionGoal,
                 experimentNameInExecutionGoal,
+                "TeamName",
                 expectedOwner,
                 false,
                 targetGoals,
@@ -124,12 +126,13 @@
             Assert.IsNotNull(actualResult);
             Assert.AreEqual(actualResult.ExecutionGoalId, expectedExecutionGoal);
             Assert.AreEqual(actualResult.ExperimentName, experimentNameInExecutionGoal);
-            Assert.IsTrue(actualResult.ScheduleMetadata.ContainsKey("owner"));
-            Assert.AreEqual(actualResult.ScheduleMetadata["owner"], expectedOwner);
+            Assert.AreEqual(actualResult.TeamName, executionGoalParameter.TeamName);
+            Assert.IsTrue(actualResult.ScheduleMetadata.ContainsKey(ExecutionGoalMetadata.Owner));
+            Assert.AreEqual(actualResult.Owner, expectedOwner);
             Assert.IsFalse(actualResult.Enabled);
             Assert.IsNotEmpty(actualResult.TargetGoals);
             Assert.AreEqual(actualResult.TargetGoals.Count, targetGoals.Count);
-
+            Assert.IsTrue(actualResult.ScheduleMetadata.ContainsKey(ExecutionGoalMetadata.MonitoringEnabled));
             foreach (Goal targetGoal in actualResult.TargetGoals)
             {
                 Assert.AreEqual(targetGoal.Name, expectedTargetGoalName);
@@ -206,6 +209,7 @@
             ExecutionGoalParameter executionGoalParameter = new ExecutionGoalParameter(
                 expectedExecutionGoal,
                 experimentNameInExecutionGoal,
+                "TeamName",
                 expectedOwner,
                 true,
                 targetGoals,
@@ -271,14 +275,21 @@
                 new TargetGoalParameter(targetGoalId, "WorkloadA", new Dictionary<string, IConvertible>() { { "targetGoal5", "IAmTargetGoalC" } })
             };
 
-            Dictionary<string, IConvertible> executionGoalMetadata = new Dictionary<string, IConvertible>() { { "owner", owner } };
+            Dictionary<string, IConvertible> executionGoalMetadata = new Dictionary<string, IConvertible>() 
+            { 
+                { ExecutionGoalMetadata.Owner, owner },
+                { ExecutionGoalMetadata.MonitoringEnabled, false }
+            };
 
             ExecutionGoalParameter executionGoalParameter = new ExecutionGoalParameter(
                 "ThisIsNewExecutionGoalId",
                 "ThisIsNewExperimentName",
+                "ThisIsNewTeamName",
                 owner,
                 true,
-                targetGoals);
+                targetGoals,
+                null,
+                false);
 
             GoalBasedSchedule actualResult = executionGoalTemplate.Inlined(executionGoalParameter);
 
@@ -288,7 +299,7 @@
                 name: "ExecutionGoalTemplate",
                 teamName: "teamName",
                 description: "description",
-                metaData: executionGoalMetadata,
+                metadata: executionGoalMetadata,
                 enabled: true,
                 version: "2021-01-01",
                 experiment: actualResult.Experiment,
@@ -296,7 +307,8 @@
                 {
                     FixtureExtensions.CreateTargetGoal("IAmTargetGoalA")
                 },
-                controlGoals: actualResult.ControlGoals);
+                controlGoals: actualResult.ControlGoals,
+                parameters: null);
 
             Assert.IsNotNull(actualResult);
             Assert.AreEqual(expectedResult, actualResult);
@@ -313,6 +325,7 @@
                 "$.parameters.executionGoalId",
                 "ExperimentName",
                 executionGoalTemplate.TeamName,
+                executionGoalTemplate.Owner,
                 executionGoalTemplate.Enabled,
                 new List<TargetGoalParameter>()
                 {
@@ -334,6 +347,7 @@
                 "MockExecutionGoal.json",
                 "MockExperiment",
                 template.TeamName,
+                template.Owner,
                 template.Enabled,
                 new List<TargetGoalParameter>()
                 {
@@ -384,7 +398,7 @@
             executionGoalParameter.SharedParameters.Add("targetInstances", "10");
             executionGoalParameter.SharedParameters.Add("experiment.name", Guid.NewGuid().ToString());
             executionGoalParameter.SharedParameters.Add("intelCpuId", Guid.NewGuid().ToString());
-            executionGoalParameter.SharedParameters.Add("vmSku", Guid.NewGuid().ToString());            
+            executionGoalParameter.SharedParameters.Add("vmSku", Guid.NewGuid().ToString());
             // Missing generation parameter
 
             executionGoalParameter.TargetGoals.FirstOrDefault().Parameters.Clear();
@@ -487,65 +501,6 @@
             GoalBasedSchedule executionGoal = FixtureExtensions.CreateExecutionGoalFromTemplate();
 
             Assert.Throws<SchedulerException>(() => executionGoal.GetGoal(goalName));
-        }
-
-        [Test]
-        public void ArePreconditionsSatisfiedValidatesParameters()
-        {
-            List<PreconditionResult> results = null;
-            Assert.Throws<ArgumentException>(() => results.ArePreconditionsSatisfied());
-        }
-
-        [Test]
-        public void ArePreconditionsSatisfiedReturnsExpectedResultIfListIsEmpty()
-        {
-            List<PreconditionResult> results = new List<PreconditionResult>();
-            bool result = results.ArePreconditionsSatisfied();
-
-            Assert.IsTrue(result);
-        }
-
-        [Test]
-        public void ArePreconditionsSatisfiedReturnsExpectedResultIfAllResultsAreSatisfiedAndSucceededExecution()
-        {
-            PreconditionResult successfulInstance = new PreconditionResult(ExecutionStatus.Succeeded, true);
-            List<PreconditionResult> results = new List<PreconditionResult>() { successfulInstance, successfulInstance, successfulInstance };
-
-            bool result = results.ArePreconditionsSatisfied();
-            Assert.IsTrue(result);
-        }
-
-        [Test]
-        public void ArePrecondtionsSatsifedReturnsExpectedResultIfSomeResultsAreNotSatisfied()
-        {
-            PreconditionResult failedInstance = new PreconditionResult(ExecutionStatus.Succeeded, false);
-            PreconditionResult successfulInstance = new PreconditionResult(ExecutionStatus.Succeeded, true);
-            List<PreconditionResult> results = new List<PreconditionResult>() { failedInstance, successfulInstance, failedInstance };
-
-            bool result = results.ArePreconditionsSatisfied();
-            Assert.IsFalse(result);
-        }
-
-        [Test]
-        public void ArePreconditionSatsifedReturnsExpectedResultIfSomeResultsFailedExecution()
-        {
-            PreconditionResult failedInstance = new PreconditionResult(ExecutionStatus.Failed, true);
-            PreconditionResult successfulInstance = new PreconditionResult(ExecutionStatus.Succeeded, true);
-            List<PreconditionResult> results = new List<PreconditionResult>() { failedInstance, successfulInstance, failedInstance };
-
-            bool result = results.ArePreconditionsSatisfied();
-            Assert.IsFalse(result);
-        }
-
-        [Test]
-        public void ArePreconditionSatisfiedReturnsExpectedResultIfSomeResultsFailedExecutionAndAreNotSatisfied()
-        {
-            PreconditionResult failedInstance = new PreconditionResult(ExecutionStatus.Failed, false);
-            PreconditionResult successfulInstance = new PreconditionResult(ExecutionStatus.Succeeded, true);
-            List<PreconditionResult> results = new List<PreconditionResult>() { failedInstance, successfulInstance, failedInstance };
-
-            bool result = results.ArePreconditionsSatisfied();
-            Assert.IsFalse(result);
         }
 
         private static GoalBasedSchedule GetExecutionGoalTemplateWithFiveWorkLoad()

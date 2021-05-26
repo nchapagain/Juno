@@ -9,7 +9,6 @@
     using System.Net.Http;
     using System.Threading;
     using System.Threading.Tasks;
-    using Juno.Api.Client;
     using Juno.Contracts;
     using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Azure.CRC.Extensions;
@@ -19,7 +18,7 @@
     using Polly;
 
     /// <summary>
-    /// Powershell Module to Start an Experiment given Template JSON string/file path,  optional Overwrite JSON string/file path, 
+    /// Powershell Module to Start an Experiment given Template JSON string/file path,  optional Overwrite JSON string/file path,
     /// Target End Point and optional Work Queue
     /// </summary>
     [Cmdlet(VerbsCommon.New, "ExecutionGoal")]
@@ -177,6 +176,7 @@
             ExecutionGoalParameter parameters = new ExecutionGoalParameter(
                 string.Concat(this.ExperimentName.Replace(" ", string.Empty, StringComparison.InvariantCultureIgnoreCase), "_", Guid.NewGuid()),
                 this.ExperimentName,
+                this.TeamName,
                 GetAccessToken.Username,
                 ////this.IsEnabled,
                 false,

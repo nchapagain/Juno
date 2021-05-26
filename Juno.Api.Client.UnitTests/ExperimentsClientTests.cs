@@ -156,7 +156,7 @@
 
             dynamic targetGoal = new List<TargetGoalParameter>();
             targetGoal.Add(new TargetGoalParameter(executionGoalTemplateId, "workload", null));
-            dynamic experimentParameters = new ExecutionGoalParameter(executionGoalTemplateId, "experimentName", "owner", true, targetGoal);
+            dynamic experimentParameters = new ExecutionGoalParameter(executionGoalTemplateId, "experimentName", "owner", "user@microsoft.com", true, targetGoal);
             _ = await this.experimentsClient.CreateExecutionGoalFromTemplateAsync(experimentParameters, executionGoalTemplateId, teamName, CancellationToken.None);
         }
 

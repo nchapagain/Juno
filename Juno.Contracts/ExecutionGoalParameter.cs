@@ -2,7 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Linq;
     using System.Text;
     using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Azure.CRC.Extensions;
@@ -21,26 +20,32 @@
         /// Json constructor for <see cref="ExecutionGoalParameter"/>
         /// </summary>
         /// <param name="experimentName">The name of the experiment</param>
+        /// <param name="teamName">Name of the Team that owns the Execution Goal</param>
         /// <param name="executionGoalId">Unique ID for the execution goal</param>
-        /// <param name="owner">Owner of the execution goal</param>
+        /// <param name="owner">Email of the experiment owner for email monitoring</param>
         /// <param name="enabled">True if this execution goal is to be exectuted</param>
-        /// <param name="sharedParameters">shared parameters between target goal parameters</param>
         /// <param name="targetGoals">Parameters required inside TargetGoals <see cref="TargetGoalParameter"/></param>
+        /// <param name="sharedParameters">shared parameters between target goal parameters</param>
+        /// <param name="monitoringEnabled">Feature flag to enable automated email monitoring</param>
         [JsonConstructor]
-        public ExecutionGoalParameter(string executionGoalId, string experimentName, string owner, bool? enabled, IEnumerable<TargetGoalParameter> targetGoals, IDictionary<string, IConvertible> sharedParameters = null)
-        { 
+        public ExecutionGoalParameter(string executionGoalId, string experimentName, string teamName, string owner, bool? enabled, IEnumerable<TargetGoalParameter> targetGoals, IDictionary<string, IConvertible> sharedParameters = null, bool? monitoringEnabled = true)
+        {
             executionGoalId.ThrowIfNullOrWhiteSpace(nameof(executionGoalId));
             experimentName.ThrowIfNullOrWhiteSpace(nameof(experimentName));
+            teamName.ThrowIfNullOrWhiteSpace(nameof(teamName));
             targetGoals.ThrowIfNullOrEmpty(nameof(targetGoals));
             owner.ThrowIfNullOrWhiteSpace(nameof(owner));
             enabled.ThrowIfNull(nameof(enabled));
 
             this.ExecutionGoalId = executionGoalId;
             this.ExperimentName = experimentName;
+            this.TeamName = teamName;
             this.Owner = owner;
             this.TargetGoals = new List<TargetGoalParameter>(targetGoals);
             this.Enabled = (bool)enabled;
-            
+
+            this.MonitoringEnabled = (bool)(monitoringEnabled == null ? true : monitoringEnabled);
+
             this.SharedParameters = sharedParameters == null
                 ? new Dictionary<string, IConvertible>()
                 : new Dictionary<string, IConvertible>(sharedParameters);
@@ -62,27 +67,39 @@
         /// <summary>
         /// Execution Goal Owner
         /// </summary>
-        [JsonProperty(PropertyName = "owner", Required = Required.Always, Order = 3)]
+        [JsonProperty(PropertyName = "teamName", Required = Required.Always, Order = 3)]
+        public string TeamName { get; }
+
+        /// <summary>
+        /// Execution Goal Owner
+        /// </summary>
+        [JsonProperty(PropertyName = "owner", Required = Required.Always, Order = 4)]
         public string Owner { get; }
 
         /// <summary>
         /// Indicates whether an execution goal is enabled
         /// </summary>
-        [JsonProperty(PropertyName = "enabled", Required = Required.Always, Order = 4)]
+        [JsonProperty(PropertyName = "enabled", Required = Required.Always, Order = 5)]
         public bool Enabled { get; }
 
         /// <summary>
         /// List of parameters shared by ALL targetGoals
         /// </summary>
         [JsonConverter(typeof(ParameterDictionaryJsonConverter))]
-        [JsonProperty(PropertyName = "sharedParameters", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore, Order = 5)]
+        [JsonProperty(PropertyName = "sharedParameters", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore, Order = 6)]
         public IDictionary<string, IConvertible> SharedParameters { get; }
 
         /// <summary>
         /// List of any paramaters in the execution goal template (only applicable to templates)
         /// </summary>
-        [JsonProperty(PropertyName = "targetGoals", Required = Required.Always, Order = 6)]
+        [JsonProperty(PropertyName = "targetGoals", Required = Required.Always, Order = 7)]
         public IEnumerable<TargetGoalParameter> TargetGoals { get; }
+
+        /// <summary>
+        /// Indicates whether a schedule has monitoring enabled
+        /// </summary>
+        [JsonProperty(PropertyName = "monitoringEnabled", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
+        public bool MonitoringEnabled { get; }
 
         /// <inheritdoc />/>
         public bool Equals(ExecutionGoalParameter other)

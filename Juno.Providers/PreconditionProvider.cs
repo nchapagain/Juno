@@ -9,7 +9,6 @@
     using Microsoft.Azure.CRC.Telemetry;
     using Microsoft.Azure.CRC.Telemetry.Logging;
     using Microsoft.Extensions.DependencyInjection;
-    using Microsoft.Extensions.Logging;
 
     /// <summary>
     /// Provides a base implementation for an <see cref="IPreconditionProvider"/>
@@ -26,52 +25,31 @@
         {
         }
 
-        /// <summary>
-        /// <see cref="IPreconditionProvider.IsConditionSatisfiedAsync"/>
-        /// </summary>
-        public async Task<PreconditionResult> IsConditionSatisfiedAsync(Precondition component, ScheduleContext scheduleContext, CancellationToken cancellationToken)
+        /// <inheritdoc/>
+        public async Task<bool> IsConditionSatisfiedAsync(Precondition component, ScheduleContext scheduleContext, CancellationToken cancellationToken)
         {
             component.ThrowIfNull(nameof(component));
             scheduleContext.ThrowIfNull(nameof(scheduleContext));
 
-            PreconditionResult preconditionResult = new PreconditionResult(ExecutionStatus.Pending);
-
-            // Persist the activity ID so that it can be used down the callstack.
             EventContext telemetryContext = EventContext.Persisted();
             telemetryContext.AddContext(scheduleContext, component);
 
-            try
+            if (!cancellationToken.IsCancellationRequested)
             {
-                if (!cancellationToken.IsCancellationRequested)
+                return await this.Logger.LogTelemetryAsync($"Precondition.{this.GetType().Name}.Execute", telemetryContext, async () =>
                 {
-                    preconditionResult = await this.Logger.LogTelemetryAsync($"Precondition.{this.GetType().Name}.Execute", telemetryContext, async () =>
-                    {
-                        this.ValidateParameters(component);
-                        await this.ConfigureServicesAsync(component, scheduleContext).ConfigureDefaults();
-                        return await this.IsConditionSatisfiedAsync(component, scheduleContext, telemetryContext, cancellationToken)
-                            .ConfigureDefaults();
+                    this.ValidateParameters(component);
+                    await this.ConfigureServicesAsync(component, scheduleContext).ConfigureDefaults();
+                    bool result = await this.IsConditionSatisfiedAsync(component, scheduleContext, telemetryContext, cancellationToken)
+                        .ConfigureDefaults();
 
-                    }).ConfigureDefaults();
-                }
-            }
-            catch (TaskCanceledException)
-            {
-                preconditionResult = new PreconditionResult(ExecutionStatus.Cancelled);
-            }
-            catch (Exception exc)
-            {
-                preconditionResult = new PreconditionResult(ExecutionStatus.Failed, error: exc);
+                    telemetryContext.AddContext(nameof(result), result);
+
+                    return result;
+                }).ConfigureDefaults();
             }
 
-            telemetryContext.AddContext(SchedulerEventProperty.PreconditionResult, preconditionResult);
-            telemetryContext.AddContext(EventProperty.MetaData, this.ProviderContext);
-            telemetryContext.AddContext(this.ProviderContext); // remove this in future
-            telemetryContext.AddContext(SchedulerEventProperty.ScheduleContext, component);
-            this.Logger.LogTelemetry($"Precondition.{this.GetType().Name}.Result", LogLevel.Information, telemetryContext);
-
-            return cancellationToken.IsCancellationRequested 
-                ? new PreconditionResult(ExecutionStatus.Cancelled)
-                : preconditionResult;
+            return false;
         }
 
         /// <summary>
@@ -83,7 +61,7 @@
         /// <param name="scheduleContext">Allows provider to understand the context in which the provider is being executed</param>
         /// <param name="telemetryContext">Logging context</param>
         /// <param name="cancellationToken">Token used to cancel execution</param>
-        /// <returns></returns>
-        protected abstract Task<PreconditionResult> IsConditionSatisfiedAsync(Precondition component, ScheduleContext scheduleContext, EventContext telemetryContext, CancellationToken cancellationToken);
+        /// <returns>An awaitable task that returns True/False if the condition is satisfied.</returns>
+        protected abstract Task<bool> IsConditionSatisfiedAsync(Precondition component, ScheduleContext scheduleContext, EventContext telemetryContext, CancellationToken cancellationToken);
     }
 }

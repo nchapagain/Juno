@@ -2,7 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using AutoFixture;
@@ -46,16 +45,13 @@
                 type: typeof(TimerTriggerProvider).FullName,
                 parameters: new Dictionary<string, IConvertible>()
                 {
-                    ["startTime"] = DateTime.UtcNow,
-                    ["endTime"] = DateTime.UtcNow.Add(this.mockInterval),
                     ["cronExpression"] = "*/1 * * * *"
                 });
             var provider = new TimerTriggerProvider(this.mockServices);
-            PreconditionResult result = await provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None)
+            bool result = await provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None)
                 .ConfigureAwait(false);
 
-            Assert.AreEqual(ExecutionStatus.Succeeded, result.Status);
-            Assert.IsTrue(result.Satisfied);
+            Assert.IsTrue(result);
         }
 
         [Test]
@@ -70,11 +66,10 @@
                     ["cronExpression"] = "0 0 31 2 0" // February 31st which should never occur
                 });
             var provider = new TimerTriggerProvider(this.mockServices);
-            PreconditionResult result = await provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None)
+            bool result = await provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None)
                 .ConfigureAwait(false);
 
-            Assert.AreEqual(ExecutionStatus.Failed, result.Status);
-            Assert.IsFalse(result.Satisfied);
+            Assert.IsFalse(result);
         }
 
         [Test]
@@ -83,23 +78,16 @@
         [TestCase("* * 32 * *")]
         [TestCase("* * * 13 *")]
         [TestCase("* * * * 7")]
-        public async Task ProviderReturnsFailedWhenGivenIncorrectlyFormattedCron(string invalidCronExpression)
+        public void ProviderReturnsFailedWhenGivenIncorrectlyFormattedCron(string invalidCronExpression)
         {
             Precondition component = new Precondition(
                 type: typeof(TimerTriggerProvider).FullName,
                 parameters: new Dictionary<string, IConvertible>()
                 { 
-                    ["startTime"] = DateTime.UtcNow,
-                    ["endTime"] = DateTime.UtcNow,
                     ["cronExpression"] = invalidCronExpression
                 });
             var provider = new TimerTriggerProvider(this.mockServices);
-            PreconditionResult expectedResult = new PreconditionResult(ExecutionStatus.Failed, error: new CrontabException());
-            PreconditionResult actualResult = await provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None)
-                .ConfigureAwait(false);
-
-            Assert.AreEqual(expectedResult.Status, actualResult.Status);
-            Assert.AreEqual(expectedResult.Error.GetType(), actualResult.Error.GetType());
+            Assert.ThrowsAsync<CrontabException>(() => provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None));
         }
     }
 }

@@ -35,14 +35,12 @@
         public async Task PreconditionProviderReturnsTheExpectedResult()
         {
             PreconditionResult expectedResult = new PreconditionResult(ExecutionStatus.InProgress);
-            this.provider.OnExecuteAsync = (component, telemetryContext, token) => expectedResult;
+            this.provider.OnExecuteAsync = (component, telemetryContext, token) => true;
 
-            PreconditionResult actualResult = await this.provider.IsConditionSatisfiedAsync(this.mockFixture.PreconditionComponent, this.mockContext, CancellationToken.None);
+            bool actualResult = await this.provider.IsConditionSatisfiedAsync(this.mockFixture.PreconditionComponent, this.mockContext, CancellationToken.None);
 
             Assert.IsNotNull(actualResult);
-            Assert.IsNull(actualResult.Error);
-            Assert.IsNull(actualResult.Satisfied);
-            Assert.AreEqual(expectedResult.Status, actualResult.Status);
+            Assert.IsTrue(actualResult);
         }
 
         [Test]
@@ -51,27 +49,19 @@
             using (CancellationTokenSource tokenSource = new CancellationTokenSource())
             {
                 tokenSource.Cancel();
-                PreconditionResult actualResult = await this.provider.IsConditionSatisfiedAsync(this.mockFixture.PreconditionComponent, this.mockContext, tokenSource.Token);
+                bool actualResult = await this.provider.IsConditionSatisfiedAsync(this.mockFixture.PreconditionComponent, this.mockContext, tokenSource.Token);
 
                 Assert.IsNotNull(actualResult);
-                Assert.IsNull(actualResult.Error);
-                Assert.IsNull(actualResult.Satisfied);
-                Assert.IsTrue(actualResult.Status == ExecutionStatus.Cancelled);
+                Assert.IsFalse(actualResult);
             }
         }
 
         [Test]
-        public async Task PreconditionproviderReturnsTheExpectedPreconditionResultWhenExceptionOccurs()
+        public void PreconditionproviderReturnsTheExpectedPreconditionResultWhenExceptionOccurs()
         {
-            ProviderException expectedError = new ProviderException(ErrorReason.ProviderDefinitionInvalid);
-            this.provider.OnExecuteAsync = (component, telemetryContext, token) => throw expectedError;
+            this.provider.OnExecuteAsync = (component, telemetryContext, token) => throw new Exception();
 
-            PreconditionResult actualResult = await this.provider.IsConditionSatisfiedAsync(this.mockFixture.PreconditionComponent, this.mockContext, CancellationToken.None);
-
-            Assert.IsNotNull(actualResult);
-            Assert.IsNotNull(actualResult.Error);
-            Assert.IsTrue(object.ReferenceEquals(expectedError, actualResult.Error));
-            Assert.IsTrue(actualResult.Status == ExecutionStatus.Failed);
+            Assert.ThrowsAsync<Exception>(() => this.provider.IsConditionSatisfiedAsync(this.mockFixture.PreconditionComponent, this.mockContext, CancellationToken.None));
         }
 
         private class TestPreconditionProvider : PreconditionProvider
@@ -81,18 +71,18 @@
             { 
             }
 
-            public Func<Precondition, EventContext, CancellationToken, PreconditionResult> OnExecuteAsync { get; set; }
+            public Func<Precondition, EventContext, CancellationToken, bool> OnExecuteAsync { get; set; }
 
             public override Task ConfigureServicesAsync(GoalComponent component, ScheduleContext context)
             {
                 return Task.CompletedTask;
             }
 
-            protected override Task<PreconditionResult> IsConditionSatisfiedAsync(Precondition component, ScheduleContext scheduleContext, EventContext telemetryContext, CancellationToken cancellationToken)
+            protected override Task<bool> IsConditionSatisfiedAsync(Precondition component, ScheduleContext scheduleContext, EventContext telemetryContext, CancellationToken cancellationToken)
             {
                 return this.OnExecuteAsync != null
                     ? Task.FromResult(this.OnExecuteAsync.Invoke(component, telemetryContext, cancellationToken))
-                    : Task.FromResult(new PreconditionResult(ExecutionStatus.Succeeded, false));
+                    : Task.FromResult(false);
             }
         }
     }

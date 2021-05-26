@@ -56,42 +56,45 @@
             EventContext telemetryContext = EventContext.Persisted();
             return await this.Logger.LogTelemetryAsync($"{typeof(GoalHandler).Name}.ExecuteGoal", telemetryContext, async () =>
             {
-                bool conditionSatisfied = await this.EvaluatePreconditionsAsync(goal.Preconditions, scheduleContext, telemetryContext, token).ConfigureDefaults();
+                bool conditionSatisfied = await this.EvaluatePreconditionsAsync(goal, scheduleContext, telemetryContext, token).ConfigureDefaults();
                 telemetryContext.AddContext(nameof(conditionSatisfied), conditionSatisfied);
 
                 if (conditionSatisfied)
                 {
-                    await this.ExecuteActionsAsync(goal.Actions, scheduleContext, telemetryContext, token).ConfigureDefaults();
+                    await this.ExecuteActionsAsync(goal, scheduleContext, telemetryContext, token).ConfigureDefaults();
                 }
 
                 return conditionSatisfied;
             }).ConfigureDefaults();
         }
 
-        private async Task<bool> EvaluatePreconditionsAsync(IEnumerable<Precondition> preconditions, ScheduleContext scheduleContext, EventContext telemetryContext, CancellationToken token)
+        private async Task<bool> EvaluatePreconditionsAsync(Goal goal, ScheduleContext scheduleContext, EventContext telemetryContext, CancellationToken token)
         {
             return await this.Logger.LogTelemetryAsync($"{typeof(GoalHandler).Name}.EvaluatePrecondition", telemetryContext, async () =>
             {
-                List<Task<PreconditionResult>> preconditionTasks = new List<Task<PreconditionResult>>();
-                foreach (Precondition precondition in preconditions)
+                List<Task<bool>> preconditionTasks = new List<Task<bool>>();
+                
+                bool isTargetGoal = goal.IsTargetGoal(scheduleContext.ExecutionGoal);
+                foreach (Precondition precondition in goal.Preconditions)
                 {
-                    if (!precondition.Type.Equals(typeof(TimerTriggerProvider).FullName, StringComparison.OrdinalIgnoreCase))
+                    // Timer logic is handled by GoalbasedScheulerExecution for target goals. Although control goals may still have this and need to be executed.
+                    if (!precondition.Type.Equals(typeof(TimerTriggerProvider).FullName, StringComparison.OrdinalIgnoreCase) || !isTargetGoal)
                     {
                         IPreconditionProvider preconditionProvider = GoalComponentProviderFactory.CreatePreconditionProvider(precondition, this.Services);
                         preconditionTasks.Add(preconditionProvider.IsConditionSatisfiedAsync(precondition, scheduleContext, token));
                     }
                 }
 
-                IEnumerable<PreconditionResult> results = await Task.WhenAll(preconditionTasks).ConfigureDefaults();
-                return results.ArePreconditionsSatisfied();
+                IEnumerable<bool> results = await Task.WhenAll(preconditionTasks).ConfigureDefaults();
+                return !results?.Any() == true || results?.All(result => result) == true;
             }).ConfigureDefaults();
         }
 
-        private async Task ExecuteActionsAsync(IEnumerable<ScheduleAction> actions, ScheduleContext scheduleContext, EventContext telemetryContext, CancellationToken token)
+        private async Task ExecuteActionsAsync(Goal goal, ScheduleContext scheduleContext, EventContext telemetryContext, CancellationToken token)
         {
             await this.Logger.LogTelemetryAsync($"{typeof(GoalHandler).Name}.ExecuteScheduleAction", telemetryContext, async () =>
             {
-                foreach (ScheduleAction action in actions)
+                foreach (ScheduleAction action in goal.Actions)
                 {
                     IScheduleActionProvider actionProvider = GoalComponentProviderFactory.CreateScheduleActionProvider(action, this.Services);
                     await actionProvider.ExecuteActionAsync(action, scheduleContext, token).ConfigureDefaults();

@@ -1,12 +1,10 @@
 ﻿namespace Juno.Scheduler.Preconditions
 {
     using System;
-    using System.Collections.Generic;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using Juno.Contracts;
-    using Juno.Extensions.Telemetry;
     using Juno.Providers;
     using Microsoft.Azure.CRC.Extensions;
     using Microsoft.Azure.CRC.Telemetry;
@@ -14,74 +12,46 @@
     using NCrontab;
 
     /// <summary>
-    /// Evaluates whether the Cron Expression is Satisfied or not
+    /// A <see cref="PreconditionProvider"/> that evaluates if a cron expression'
+    /// has an occurence in the next minute.
     /// </summary>
     [SupportedParameter(Name = Parameters.CronExpression, Type = typeof(string), Required = true)]
-    [SupportedParameter(Name = Parameters.StartTime, Type = typeof(DateTime), Required = true)]
-    [SupportedParameter(Name = Parameters.EndTime, Type = typeof(DateTime), Required = true)]
     public class TimerTriggerProvider : PreconditionProvider
     {
+        private const int GracePeriodSeconds = 10;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="TimerTriggerProvider"/> class.
         /// </summary>
-        /// <param name="services"></param>
+        /// <param name="services">A list of services that can be used for dependency injection.</param>
         public TimerTriggerProvider(IServiceCollection services)
             : base(services)
         {
         }
 
         /// <summary>
-        /// Evaluates whether the Cron Expression is Satisfied or not
+        /// Evaluates whether the cron expression given has any occurences in the next minute.
+        /// Conditon:
+        ///     true if there is an occurence in the next minute. (+- some grace period)
+        ///     false if there is no occurence in the next minute. (+- some grace period)
         /// </summary>
-        /// <param name="component"><see cref="Precondition"/></param>
-        /// <param name="scheduleContext"><see cref="ScheduleContext"/></param>
-        /// <param name="telemetryContext"><see cref="EventContext"/></param>
-        /// <param name="token"><see cref="CancellationToken"/></param>
-        /// <returns><see cref="PreconditionResult"/></returns>
-        protected async override Task<PreconditionResult> IsConditionSatisfiedAsync(Precondition component, ScheduleContext scheduleContext, EventContext telemetryContext, CancellationToken token)
+        protected override Task<bool> IsConditionSatisfiedAsync(Precondition component, ScheduleContext scheduleContext, EventContext telemetryContext, CancellationToken token)
         {
             component.ThrowIfNull(nameof(component));
+            scheduleContext.ThrowIfNull(nameof(scheduleContext));
             telemetryContext.ThrowIfNull(nameof(telemetryContext));
-            token.ThrowIfNull(nameof(token));
 
-            if (!token.IsCancellationRequested)
-            {
-                DateTime startTime = component.Parameters.GetValue<DateTime>(Parameters.StartTime);
-                DateTime endTime = component.Parameters.GetValue<DateTime>(Parameters.EndTime);
-                string cronExpression = component.Parameters.GetValue<string>(Parameters.CronExpression);
-                try
-                {
-                    var parseOptions = new CrontabSchedule.ParseOptions()
-                    {
-                        IncludingSeconds = cronExpression.Trim().Count(char.IsWhiteSpace) == 4 ? false : true
-                    };
-                    CrontabSchedule crontabSchedule = CrontabSchedule.Parse(cronExpression, parseOptions);
-                    IEnumerable<DateTime> nextOccurence = crontabSchedule.GetNextOccurrences(startTime, endTime);
+            DateTime startTime = DateTime.UtcNow.AddSeconds(-TimerTriggerProvider.GracePeriodSeconds);
+            DateTime endTime = DateTime.UtcNow.AddMinutes(1).AddSeconds(TimerTriggerProvider.GracePeriodSeconds);
 
-                    this.ProviderContext.Add(SchedulerEventProperty.CronExpression, cronExpression);
-                    this.ProviderContext.Add(EventProperty.StartTime, startTime);
-                    this.ProviderContext.Add(EventProperty.EndTime, endTime);
-                    this.ProviderContext.Add(SchedulerEventProperty.NextOccurence, nextOccurence);
-
-                    bool conditionSatisfied = nextOccurence.Any();
-
-                    return new PreconditionResult(conditionSatisfied ? ExecutionStatus.Succeeded : ExecutionStatus.Failed, conditionSatisfied);
-                }
-                catch (CrontabException exc)
-                {
-                    telemetryContext.AddError(exc, true);
-                    return new PreconditionResult(ExecutionStatus.Failed, error: exc);
-                }            
-            }
-
-            return new PreconditionResult(ExecutionStatus.Cancelled);
+            string cronExpression = component.Parameters.GetValue<string>(Parameters.CronExpression);
+            CrontabSchedule schedule = CrontabSchedule.Parse(cronExpression);
+            return Task.FromResult(schedule.GetNextOccurrences(startTime, endTime).Any());
         }
 
-        internal class Parameters
+        private class Parameters
         {
-            internal const string StartTime = "startTime";
-            internal const string EndTime = "endTime";
-            internal const string CronExpression = "cronExpression";
+            public const string CronExpression = nameof(Parameters.CronExpression);
         }
     }
 }

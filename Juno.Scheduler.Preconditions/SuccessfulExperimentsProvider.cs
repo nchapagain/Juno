@@ -18,7 +18,7 @@
     /// Provider who evaluates whether a Target Goal 
     /// has executed a given amount of successful experiments
     /// This is designed to be used in a target goal Precondition.
-    /// CONDITION: Target # of successful experiments < Acutal # of successful experiments
+    /// CONDITION: Target # of successful experiments less than Acutal # of successful experiments
     /// </summary>
     [SupportedParameter(Name = Parameters.TargetExperiments, Type = typeof(int), Required = true)]
     [SupportedParameter(Name = Parameters.DaysAgo, Type = typeof(int), Required = false)]
@@ -29,7 +29,7 @@
         /// <summary>
         /// Creates an instance of <see cref="SuccessfulExperimentsProvider"/>
         /// </summary>
-        /// <param name="services"></param>
+        /// <param name="services">A list of services that can be used for dependency injection.</param>
         public SuccessfulExperimentsProvider(IServiceCollection services)
             : base(services)
         {
@@ -38,16 +38,11 @@
             this.Query = query;
         }
 
-        private string Query { get; set; }
-
-        private void ReplaceQueryParameters(ScheduleContext scheduleContext, Precondition component, string environment)
-        {
-            int daysAgo = component.Parameters.GetValue<int>(Parameters.DaysAgo, SuccessfulExperimentsProvider.DefaultDaysAgo);
-
-            this.Query = this.Query.Replace(Constants.StartTime, $"now(-{daysAgo}d)", StringComparison.Ordinal);
-            this.Query = this.Query.Replace(Constants.Environment, environment, StringComparison.Ordinal);
-            this.Query = this.Query.Replace(Constants.TargetGoal, scheduleContext.TargetGoalTrigger.TargetGoal, StringComparison.Ordinal);
-        }
+        /// <summary>
+        /// Get the query that can be used to discover the number of successful experiments
+        /// have been launched for a target goal.
+        /// </summary>
+        protected string Query { get; }
 
         /// <inheritdoc/>
         public override Task ConfigureServicesAsync(GoalComponent component, ScheduleContext scheduleContext)
@@ -69,16 +64,11 @@
         /// <summary>
         /// Determines if the given target goal has reached the number of successful completed 
         /// experiments.
+        /// Condition:
+        ///     False if the number of successful experiments is equal to or exceeds the given threshold.
+        ///     True if the number of succssful experiments is less than to the given threshold.
         /// </summary>
-        /// <param name="component">Precondition contract with valid parameters</param>
-        /// <param name="scheduleContext">Context in which the provider is executing</param>
-        /// <param name="telemetryContext"><see cref="EventContext"/></param>
-        /// <param name="cancellationToken"><see cref="CancellationToken"/></param>
-        /// <returns>
-        /// A <see cref="PreconditionResult"/> where the condition is satisfied if the actual number
-        /// of successful experiments is less than the target number of successful experiments
-        /// </returns>
-        protected override async Task<PreconditionResult> IsConditionSatisfiedAsync(Precondition component, ScheduleContext scheduleContext, EventContext telemetryContext, CancellationToken cancellationToken)
+        protected override async Task<bool> IsConditionSatisfiedAsync(Precondition component, ScheduleContext scheduleContext, EventContext telemetryContext, CancellationToken cancellationToken)
         {
             component.ThrowIfNull(nameof(component));
             scheduleContext.ThrowIfNull(nameof(scheduleContext));
@@ -90,67 +80,66 @@
                 int targetExperiments = component.Parameters.GetValue<int>(Parameters.TargetExperiments);
 
                 IKustoManager kustoManager = this.Services.GetService<IKustoManager>();
-                kustoManager.ThrowIfNull(nameof(kustoManager));
 
-                try
+                EnvironmentSettings settings = EnvironmentSettings.Initialize(scheduleContext.Configuration);
+                settings.ThrowIfNull(nameof(settings));
+
+                KustoSettings kustoSettings = settings.KustoSettings.Get(Setting.AzureCM);
+                kustoSettings.ThrowIfNull(nameof(kustoSettings));
+
+                string resolvedQuery = this.ReplaceQueryParameters(scheduleContext, component, settings.Environment);
+                telemetryContext.AddContext(SchedulerEventProperty.KustoQuery, resolvedQuery);
+
+                DataTable response = await kustoManager.GetKustoResponseAsync(
+                    string.Concat(CacheKeys.SuccssfulExperiments, scheduleContext.TargetGoalTrigger.TargetGoal),
+                    kustoSettings, 
+                    resolvedQuery).ConfigureDefaults();
+
+                if (response.Rows.Count != 0)
                 {
-                    EnvironmentSettings settings = EnvironmentSettings.Initialize(scheduleContext.Configuration);
-                    settings.ThrowIfNull(nameof(settings));
+                    int successfulExperiments = response.ParseSingleRowSingleKustoColumn(KustoColumn.ExperimentCount);
 
-                    KustoSettings kustoSettings = settings.KustoSettings.Get(Setting.AzureCM);
-                    kustoSettings.ThrowIfNull(nameof(kustoSettings));
+                    conditionSatisfied = successfulExperiments < targetExperiments;
 
-                    this.ReplaceQueryParameters(scheduleContext, component, settings.Environment);
-                    this.ProviderContext.Add(SchedulerEventProperty.KustoQuery, this.Query);
-
-                    DataTable response = await kustoManager.GetKustoResponseAsync(
-                        string.Concat(CacheKeys.SuccssfulExperiments, scheduleContext.TargetGoalTrigger.TargetGoal),
-                        kustoSettings, 
-                        this.Query).ConfigureDefaults();
-
-                    if (response.Rows.Count != 0)
-                    {
-                        int successfulExperiments = response.ParseSingleRowSingleKustoColumn(KustoColumn.ExperimentCount);
-
-                        conditionSatisfied = successfulExperiments < targetExperiments;
-
-                        this.ProviderContext.Add(SchedulerEventProperty.TargetExperiments, targetExperiments);
-                        this.ProviderContext.Add(SchedulerEventProperty.SuccessfulExperimentsCount, successfulExperiments);
-                        this.ProviderContext.Add(EventProperty.Count, successfulExperiments);
-                        this.ProviderContext.Add(SchedulerEventProperty.Threshold, targetExperiments);
-                    }
-                    else
-                    {
-                        this.ProviderContext.Add(EventProperty.Response, "No Experiments Succeeded yet");
-                    }
-                }
-                catch (Exception exc)
-                {
-                    telemetryContext.AddError(exc, true);
-                    return new PreconditionResult(ExecutionStatus.Failed, false);
+                    telemetryContext.AddContext(SchedulerEventProperty.TargetExperiments, targetExperiments);
+                    telemetryContext.AddContext(SchedulerEventProperty.SuccessfulExperimentsCount, successfulExperiments);
+                    telemetryContext.AddContext(EventProperty.Count, successfulExperiments);
+                    telemetryContext.AddContext(SchedulerEventProperty.Threshold, targetExperiments);
                 }
             }
 
-            return new PreconditionResult(ExecutionStatus.Succeeded, conditionSatisfied);
+            return conditionSatisfied;
+        }
+
+        private string ReplaceQueryParameters(ScheduleContext scheduleContext, Precondition component, string environment)
+        {
+            int daysAgo = component.Parameters.GetValue<int>(Parameters.DaysAgo, SuccessfulExperimentsProvider.DefaultDaysAgo);
+            string resolvedQuery = string.Copy(this.Query);
+
+            resolvedQuery = resolvedQuery.Replace(Constants.StartTime, $"now(-{daysAgo}d)", StringComparison.Ordinal);
+            resolvedQuery = resolvedQuery.Replace(Constants.Environment, environment, StringComparison.Ordinal);
+            resolvedQuery = resolvedQuery.Replace(Constants.TargetGoal, scheduleContext.TargetGoalTrigger.TargetGoal, StringComparison.Ordinal);
+
+            return resolvedQuery;
         }
 
         /// <summary>
         /// Supported parameter string literals
         /// </summary>
-        internal class Parameters
+        private class Parameters
         {
-            internal const string TargetExperiments = "targetExperimentInstances";
-            internal const string DaysAgo = "daysAgo";
+            public const string TargetExperiments = "targetExperimentInstances";
+            public const string DaysAgo = "daysAgo";
         }
 
         /// <summary>
         /// Constant string literals for query replacement
         /// </summary>
-        internal class Constants
+        private class Constants
         {
-            internal const string Environment = "$environment$";
-            internal const string TargetGoal = "$targetGoal$";
-            internal const string StartTime = "$startTime$";
+            public const string Environment = "$environment$";
+            public const string TargetGoal = "$targetGoal$";
+            public const string StartTime = "$startTime$";
         }
     }
 }

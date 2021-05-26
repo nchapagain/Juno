@@ -809,9 +809,6 @@
           "netstandard2.1": {
             "targetAlias": "netstandard2.1",
             "projectReferences": {
-              "C:\\Users\\PX-01\\source\\repos\\CSI-CRC-AIR\\src\\Juno\\Juno.Contracts\\Juno.Contracts.csproj": {
-                "projectPath": "C:\\Users\\PX-01\\source\\repos\\CSI-CRC-AIR\\src\\Juno\\Juno.Contracts\\Juno.Contracts.csproj"
-              },
               "C:\\Users\\PX-01\\source\\repos\\CSI-CRC-AIR\\src\\Juno\\Juno.DataManagement\\Juno.DataManagement.csproj": {
                 "projectPath": "C:\\Users\\PX-01\\source\\repos\\CSI-CRC-AIR\\src\\Juno\\Juno.DataManagement\\Juno.DataManagement.csproj"
               },
@@ -821,23 +818,11 @@
               "C:\\Users\\PX-01\\source\\repos\\CSI-CRC-AIR\\src\\Juno\\Juno.Providers\\Juno.Providers.csproj": {
                 "projectPath": "C:\\Users\\PX-01\\source\\repos\\CSI-CRC-AIR\\src\\Juno\\Juno.Providers\\Juno.Providers.csproj"
               },
-              "C:\\Users\\PX-01\\source\\repos\\CSI-CRC-AIR\\src\\Microsoft.Azure.CRC\\Microsoft.Azure.CRC.Common\\Microsoft.Azure.CRC.Common.csproj": {
-                "projectPath": "C:\\Users\\PX-01\\source\\repos\\CSI-CRC-AIR\\src\\Microsoft.Azure.CRC\\Microsoft.Azure.CRC.Common\\Microsoft.Azure.CRC.Common.csproj"
-              },
-              "C:\\Users\\PX-01\\source\\repos\\CSI-CRC-AIR\\src\\Microsoft.Azure.CRC\\Microsoft.Azure.CRC.Contracts\\Microsoft.Azure.CRC.Contracts.csproj": {
-                "projectPath": "C:\\Users\\PX-01\\source\\repos\\CSI-CRC-AIR\\src\\Microsoft.Azure.CRC\\Microsoft.Azure.CRC.Contracts\\Microsoft.Azure.CRC.Contracts.csproj"
-              },
               "C:\\Users\\PX-01\\source\\repos\\CSI-CRC-AIR\\src\\Microsoft.Azure.CRC\\Microsoft.Azure.CRC.Kusto\\Microsoft.Azure.CRC.Kusto.csproj": {
                 "projectPath": "C:\\Users\\PX-01\\source\\repos\\CSI-CRC-AIR\\src\\Microsoft.Azure.CRC\\Microsoft.Azure.CRC.Kusto\\Microsoft.Azure.CRC.Kusto.csproj"
               },
-              "C:\\Users\\PX-01\\source\\repos\\CSI-CRC-AIR\\src\\Microsoft.Azure.CRC\\Microsoft.Azure.CRC.Rest\\Microsoft.Azure.CRC.Rest.csproj": {
-                "projectPath": "C:\\Users\\PX-01\\source\\repos\\CSI-CRC-AIR\\src\\Microsoft.Azure.CRC\\Microsoft.Azure.CRC.Rest\\Microsoft.Azure.CRC.Rest.csproj"
-              },
               "C:\\Users\\PX-01\\source\\repos\\CSI-CRC-AIR\\src\\Microsoft.Azure.CRC\\Microsoft.Azure.CRC.Subscriptions\\Microsoft.Azure.CRC.Subscriptions.csproj": {
                 "projectPath": "C:\\Users\\PX-01\\source\\repos\\CSI-CRC-AIR\\src\\Microsoft.Azure.CRC\\Microsoft.Azure.CRC.Subscriptions\\Microsoft.Azure.CRC.Subscriptions.csproj"
-              },
-              "C:\\Users\\PX-01\\source\\repos\\CSI-CRC-AIR\\src\\Microsoft.Azure.CRC\\Microsoft.Azure.CRC.Telemetry\\Microsoft.Azure.CRC.Telemetry.csproj": {
-                "projectPath": "C:\\Users\\PX-01\\source\\repos\\CSI-CRC-AIR\\src\\Microsoft.Azure.CRC\\Microsoft.Azure.CRC.Telemetry\\Microsoft.Azure.CRC.Telemetry.csproj"
               }
             }
           }

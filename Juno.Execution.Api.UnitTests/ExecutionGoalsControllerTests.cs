@@ -2,9 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Linq;
-    using System.Runtime.Serialization;
-    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using AutoFixture;
@@ -14,15 +11,12 @@
     using Microsoft.AspNetCore.Http;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.AspNetCore.Mvc.Infrastructure;
-    using Microsoft.Azure;
     using Microsoft.Azure.Cosmos;
     using Microsoft.Azure.CRC;
     using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Azure.CRC.Repository;
     using Microsoft.Extensions.Logging.Abstractions;
     using Moq;
-    using Newtonsoft.Json.Linq;
-    using NuGet.Protocol.Plugins;
     using NUnit.Framework;
 
     using CosmosTable = Microsoft.Azure.Cosmos.Table;
@@ -244,7 +238,7 @@
             new TargetGoalParameter(validString, validString, new Dictionary<string, IConvertible>())
             };
 
-            ExecutionGoalParameter executionGoalParameter = new ExecutionGoalParameter(validString, validString, validString, true, targetGoalParameter);
+            ExecutionGoalParameter executionGoalParameter = new ExecutionGoalParameter(validString, validString, validString, validString, true, targetGoalParameter);
 
             Assert.ThrowsAsync<ArgumentException>(() => this.controller.CreateExecutionGoalFromTemplateAsync("string", invalidParameter, executionGoalParameter, CancellationToken.None));
             Assert.ThrowsAsync<ArgumentException>(() => this.controller.CreateExecutionGoalFromTemplateAsync(invalidParameter, "string", executionGoalParameter, CancellationToken.None));
@@ -276,7 +270,7 @@
                 name: "MCU2020 Template",
                 teamName: "CRC AIR",
                 description: "New Execution Goal template to schedule the MCU2020.",
-                metaData: metadata,
+                metadata: metadata,
                 enabled: true,
                 version: "2021-01-01",
                 experiment: executionGoalToCopy.Experiment,
@@ -307,9 +301,9 @@
                 })
             };
 
-            template.ScheduleMetadata.Add("owner", "template.TeamName");
+            template.ScheduleMetadata.Add(ExecutionGoalMetadata.Owner, "experimentOwner@microsoft.com");
 
-            ExecutionGoalParameter parameters = new ExecutionGoalParameter("newExecutionGoalName", "newExperimentName", template.TeamName, template.Enabled, targetGoalParamater, template.Parameters);
+            ExecutionGoalParameter parameters = new ExecutionGoalParameter("newExecutionGoalName", "newExperimentName", template.TeamName, "experimentOwner@microsoft.com", template.Enabled, targetGoalParamater, template.Parameters);
 
             Item<GoalBasedSchedule> expectedExecutionGoal = new Item<GoalBasedSchedule>(template.ExecutionGoalId, template.Inlined(parameters));
 
@@ -356,7 +350,7 @@
                 name: "MCU2020 Template",
                 teamName: "CRC AIR",
                 description: "New Execution Goal template to schedule the MCU2020.",
-                metaData: metadata,
+                metadata: metadata,
                 enabled: true,
                 version: "2021-01-01",
                 experiment: executionGoalToCopy.Experiment,
@@ -365,18 +359,18 @@
                 parameters: executionGoalToCopy.Parameters);
 
             Item<GoalBasedSchedule> templateItem = new Item<GoalBasedSchedule>(Guid.NewGuid().ToString(), template);
-            
+
             List<TargetGoalParameter> targetGoalParamater = new List<TargetGoalParameter>()
-            { 
-                new TargetGoalParameter("targetGoalId1", "Workload1", new Dictionary<string, IConvertible>() 
-                { 
+            {
+                new TargetGoalParameter("targetGoalId1", "Workload1", new Dictionary<string, IConvertible>()
+                {
                     { "targetGoalName1", Guid.NewGuid().ToString() },
                     { "targetInstances", 19 },
                     { "nodeCpuId", Guid.NewGuid().ToString() }
                 })
             };
 
-            ExecutionGoalParameter parameters = new ExecutionGoalParameter("newExecutionGoalName", "newExperimentName", template.TeamName, template.Enabled, targetGoalParamater);
+            ExecutionGoalParameter parameters = new ExecutionGoalParameter("newExecutionGoalName", "newExperimentName", template.TeamName, "experiment.owner@Microsoft.CoM", template.Enabled, targetGoalParamater);
 
             Item<GoalBasedSchedule> expectedExecutionGoal = new Item<GoalBasedSchedule>(template.ExecutionGoalId, template.Inlined(parameters));
             expectedExecutionGoal.Definition.ScheduleMetadata.Add("IsThisValidParameter", "1");
@@ -404,7 +398,7 @@
         {
             GoalBasedSchedule template = FixtureExtensions.CreateExecutionGoalTemplate();
             ExecutionGoalSummary executionGoalMetadata = FixtureExtensions.CreateExecutionGoalMetadata();
-            ExecutionGoalParameter parameters = new ExecutionGoalParameter(template.ExecutionGoalId, template.ExperimentName, template.TeamName, template.Enabled, executionGoalMetadata.ParameterNames.TargetGoals, template.Parameters);
+            ExecutionGoalParameter parameters = new ExecutionGoalParameter(template.ExecutionGoalId, template.ExperimentName, template.TeamName, executionGoalMetadata.ParameterNames.Owner, template.Enabled, executionGoalMetadata.ParameterNames.TargetGoals, template.Parameters);
             foreach (var entry in ExecutionGoalsControllerTests.potentialErrors)
             {
                 // Key = Exception

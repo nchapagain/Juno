@@ -15,9 +15,9 @@
         /// <summary>
         /// The context in which to allow context to low level execution of an ExecutionGoal
         /// </summary>
-        /// <param name="executionGoal"><see cref="GoalBasedSchedule"/></param>
-        /// <param name="targetGoal"><see cref="TargetGoalTrigger"/></param>
-        /// <param name="configuration"><see cref="IConfiguration"/></param>
+        /// <param name="executionGoal">A instance of an execution ogal.</param>
+        /// <param name="targetGoal">An instance of a target goal.</param>
+        /// <param name="configuration">Configuration for the current runtime environment.</param>
         public ScheduleContext(GoalBasedSchedule executionGoal, TargetGoalTrigger targetGoal, IConfiguration configuration)
         {
             executionGoal.ThrowIfNull(nameof(executionGoal));
@@ -27,6 +27,7 @@
             this.ExecutionGoal = executionGoal;
             this.TargetGoalTrigger = targetGoal;
             this.Configuration = configuration;
+            this.RuntimeParameters = new Dictionary<string, IConvertible>(StringComparer.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -43,5 +44,10 @@
         /// Current Configuration
         /// </summary>
         public IConfiguration Configuration { get; }
+
+        /// <summary>
+        /// Structure to store runtime parameters.
+        /// </summary>
+        public IDictionary<string, IConvertible> RuntimeParameters { get; }
     }
 }

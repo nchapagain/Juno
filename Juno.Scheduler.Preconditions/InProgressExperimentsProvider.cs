@@ -19,7 +19,7 @@
     /// Provider what evaluates whether a Target Goal 
     /// has executed a given amount of in progress experiments
     /// This is designed to be used in a target goal Precondition.
-    /// CONDITION: Target # of in progress experiments < Actual # of in progress experiments
+    /// CONDITION: Target # of in progress experiments less than Actual # of in progress experiments
     /// </summary>
     [SupportedParameter(Name = Parameters.TargetExperimentsInstances, Type = typeof(int), Required = true)]
     public class InProgressExperimentsProvider : PreconditionProvider
@@ -41,15 +41,7 @@
         /// <summary>
         /// Determines if the given target goal has reached the number of InProgress experiments.
         /// </summary>
-        /// <param name="component">Precondition contract with valid parameters</param>
-        /// <param name="scheduleContext">Context in which the provider is executing</param>
-        /// <param name="telemetryContext"><see cref="EventContext"/></param>
-        /// <param name="cancellationToken"><see cref="CancellationToken"/></param>
-        /// <returns>
-        /// A <see cref="PreconditionResult"/> where the condition is satisfied if the actual number
-        /// of in progress experiments is less than the target number of in progress experiments
-        /// </returns>
-        protected override async Task<PreconditionResult> IsConditionSatisfiedAsync(Precondition component, ScheduleContext scheduleContext, EventContext telemetryContext, CancellationToken cancellationToken)
+        protected override async Task<bool> IsConditionSatisfiedAsync(Precondition component, ScheduleContext scheduleContext, EventContext telemetryContext, CancellationToken cancellationToken)
         {
             component.ThrowIfNull(nameof(component));
             scheduleContext.ThrowIfNull(nameof(scheduleContext));
@@ -59,35 +51,20 @@
 
             if (!cancellationToken.IsCancellationRequested)
             {
-                try
-                {
-                    this.ProviderContext.Add(SchedulerEventProperty.KustoQuery, this.Query);
-                    this.ReplaceQueryParameters(scheduleContext);
+                this.ReplaceQueryParameters(scheduleContext);
+                telemetryContext.AddContext(SchedulerEventProperty.KustoQuery, this.Query);
 
-                    InProgressExperiments inProgressExperiments = await this.InProgressExperimentsAsync(cancellationToken)
-                        .ConfigureDefaults();
+                InProgressExperiments inProgressExperiments = await this.InProgressExperimentsAsync(cancellationToken)
+                    .ConfigureDefaults();
 
-                    if (inProgressExperiments?.Count > 0)
-                    {
-                        int targetExperimentIntances = component.Parameters.GetValue<int>(Parameters.TargetExperimentsInstances);
-                        conditionSatisfied = inProgressExperiments.Count < targetExperimentIntances;
+                int targetExperimentIntances = component.Parameters.GetValue<int>(Parameters.TargetExperimentsInstances);
+                conditionSatisfied = inProgressExperiments == null || inProgressExperiments.Count < targetExperimentIntances;
 
-                        this.ProviderContext.Add(SchedulerEventProperty.TargetExperiments, targetExperimentIntances);
-                        this.ProviderContext.Add(SchedulerEventProperty.InProgressExperimentsCount, inProgressExperiments);
-                    }
-                    else
-                    {
-                        this.ProviderContext.Add(EventProperty.Response, "No Experiments InProgress.");
-                    }
-                }
-                catch (Exception exc)
-                {
-                    telemetryContext.AddError(exc, true);
-                    return new PreconditionResult(ExecutionStatus.Failed, false);
-                }
+                telemetryContext.AddContext(SchedulerEventProperty.TargetExperiments, targetExperimentIntances);
+                telemetryContext.AddContext(SchedulerEventProperty.InProgressExperimentsCount, inProgressExperiments);
             }
 
-            return new PreconditionResult(ExecutionStatus.Succeeded, conditionSatisfied);
+            return conditionSatisfied;
         }
 
         private void ReplaceQueryParameters(ScheduleContext scheduleContext)
@@ -114,21 +91,21 @@
         /// </summary>
         internal class Parameters
         {
-            internal const string TargetExperimentsInstances = "targetExperimentInstances";
-        }
-
-        /// <summary>
-        /// Constant string literals for query replacement
-        /// </summary>
-        internal class Constants
-        {
-            internal const string TargetGoal = "@targetGoal";
+            public const string TargetExperimentsInstances = nameof(Parameters.TargetExperimentsInstances);
         }
 
         internal class InProgressExperiments
         {
             [JsonProperty("Count")]
             public int Count { get; set; }
+        }
+
+        /// <summary>
+        /// Constant string literals for query replacement
+        /// </summary>
+        private class Constants
+        {
+            public const string TargetGoal = "@targetGoal";
         }
     }
 }

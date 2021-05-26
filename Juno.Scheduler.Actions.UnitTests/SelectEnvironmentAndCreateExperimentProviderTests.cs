@@ -5,7 +5,6 @@
     using System.Linq;
     using System.Net;
     using System.Net.Http;
-    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using AutoFixture;
@@ -31,6 +30,7 @@
         private static string vmSku = "vmSku";
 
         private IScheduleActionProvider provider;
+        private Mock<IExperimentTemplateDataManager> mockDataManager;
         private Mock<IExperimentClient> mockClient;
         private IServiceCollection mockServices;
         private Fixture mockFixture;
@@ -42,13 +42,16 @@
         public void SetupTests()
         {
             this.mockClient = new Mock<IExperimentClient>();
+            this.mockDataManager = new Mock<IExperimentTemplateDataManager>();
             this.mockServices = new ServiceCollection();
             this.mockServices.AddSingleton(this.mockClient.Object);
+            this.mockServices.AddSingleton(this.mockDataManager.Object);
             this.provider = new SelectEnvironmentAndCreateExperimentProvider(this.mockServices);
 
             this.mockFixture = new Fixture();
             this.mockFixture.SetUpGoalBasedScheduleMocks();
             this.mockFixture.SetupEnvironmentSelectionMocks();
+            this.mockFixture.SetupExperimentMocks();
 
             this.mockContext = new ScheduleContext(
                 this.mockFixture.Create<GoalBasedSchedule>(), 
@@ -63,6 +66,9 @@
                 [SelectEnvironmentAndCreateExperimentProviderTests.experimentTemplateFile] = "experimentTemplateFile",
                 [SelectEnvironmentAndCreateExperimentProviderTests.vmSku] = "Standard_A3"
             });
+
+            this.mockClient.Setup(client => client.CreateExperimentFromTemplateAsync(It.IsAny<ExperimentTemplate>(), It.IsAny<CancellationToken>(), It.IsAny<string>()))
+                .ReturnsAsync(SelectEnvironmentAndCreateExperimentProviderTests.CreateResponseMessage(HttpStatusCode.OK, this.mockFixture.Create<ExperimentItem>()));
         }
 
         [Test]
@@ -104,7 +110,7 @@
                     })
                     .Returns(Task.FromResult(message));
 
-                ExecutionResult result = this.provider.ExecuteActionAsync(this.mockAction, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
+                this.provider.ExecuteActionAsync(this.mockAction, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
 
                 this.mockClient.Verify(client => client.ReserveEnvironmentsAsync(It.IsAny<EnvironmentQuery>(), It.IsAny<CancellationToken>()), Times.Once());
             }
@@ -124,11 +130,7 @@
                 this.mockClient.Setup(client => client.ReserveEnvironmentsAsync(It.IsAny<EnvironmentQuery>(), It.IsAny<CancellationToken>()))
                     .Returns(Task.FromResult(response));
 
-                ExecutionResult result = this.provider.ExecuteActionAsync(this.mockAction, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
-
-                Assert.IsNotNull(result);
-                Assert.AreEqual(ExecutionStatus.Failed, result.Status);
-                Assert.IsInstanceOf(typeof(SchedulerException), result.Error);
+                Assert.ThrowsAsync<SchedulerException>(() => this.provider.ExecuteActionAsync(this.mockAction, this.mockContext, CancellationToken.None));
             }
         }
 
@@ -148,7 +150,7 @@
                 this.mockClient.Setup(client => client.ReserveEnvironmentsAsync(It.IsAny<EnvironmentQuery>(), It.IsAny<CancellationToken>()))
                     .Returns(Task.FromResult(response));
 
-                ExecutionResult result = this.provider.ExecuteActionAsync(this.mockAction, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
+                this.provider.ExecuteActionAsync(this.mockAction, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
             }
 
             Assert.IsTrue(query.Parameters.ContainsKey("vmSku"));
@@ -175,7 +177,7 @@
                 this.mockClient.Setup(client => client.ReserveEnvironmentsAsync(It.IsAny<EnvironmentQuery>(), It.IsAny<CancellationToken>()))
                     .Returns(Task.FromResult(response));
 
-                ExecutionResult result = this.provider.ExecuteActionAsync(action, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
+                this.provider.ExecuteActionAsync(action, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
             }
 
             Assert.IsTrue(action.Parameters.ContainsKey("vmSku"));
@@ -195,7 +197,7 @@
                 this.mockClient.Setup(client => client.ReserveEnvironmentsAsync(It.IsAny<EnvironmentQuery>(), It.IsAny<CancellationToken>()))
                     .Returns(Task.FromResult(response));
 
-                ExecutionResult result = this.provider.ExecuteActionAsync(this.mockAction, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
+                this.provider.ExecuteActionAsync(this.mockAction, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
             }
 
             foreach (EnvironmentFilter filter in query.Filters)
@@ -221,7 +223,7 @@
                 this.mockClient.Setup(client => client.ReserveEnvironmentsAsync(It.IsAny<EnvironmentQuery>(), It.IsAny<CancellationToken>()))
                     .Returns(Task.FromResult(response));
 
-                ExecutionResult result = this.provider.ExecuteActionAsync(this.mockAction, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
+                this.provider.ExecuteActionAsync(this.mockAction, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
             }
 
             string value = string.Empty;
