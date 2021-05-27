@@ -186,7 +186,7 @@
             vmSku.ThrowIfNullOrWhiteSpace(nameof(vmSku));
 
             string effectiveDiskSku = proposedDiskSku;
-            string premiumDiskSupportingVmSkuExpression = "Standard_[A-M][0-9]+a*(?=s)"; // These VM SKUs support premium disks
+            string premiumDiskSupportingVmSkuExpression = "Standard_[A-Z]+[0-9]+a*(?=s)"; // These VM SKUs support premium disks
             if (!Regex.IsMatch(vmSku, premiumDiskSupportingVmSkuExpression, RegexOptions.IgnoreCase)
                 && !string.Equals(proposedDiskSku, ArmVmProvider.DefaultDiskSku, StringComparison.OrdinalIgnoreCase))
             {
