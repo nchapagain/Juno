@@ -48,7 +48,7 @@
 
         private static TargetGoalTrigger CreateTargetGoalTrigger(string cronExpression)
         {
-            return new TargetGoalTrigger("id", "execGoal", "targetGoal", cronExpression, true, "expName", "teamname", "version", DateTime.UtcNow, DateTime.UtcNow);
+            return new TargetGoalTrigger("id", "execGoal", "targetGoal", cronExpression, true, "teamname", "version", DateTime.UtcNow, DateTime.UtcNow);
         }
     }
 }

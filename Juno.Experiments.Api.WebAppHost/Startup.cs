@@ -102,14 +102,16 @@
                 ExperimentOwnerEmailRules.Instance,
                 TargetGoalRules.Instance,
                 TimerTriggerProviderRules.Instance,
-                SuccessfulExperimentsProviderRules.Instance
+                SuccessfulExperimentsProviderRules.Instance,
+                ExecutionGoalMetadataValidationRules.Instance
             });
 
             ExecutionGoalTemplateValidation.Instance.AddRange(new List<IValidationRule<GoalBasedSchedule>>
             {
                 ExperimentOwnerEmailRules.Instance,
                 TargetGoalRules.Instance,
-                TimerTriggerProviderRules.Instance
+                TimerTriggerProviderRules.Instance,
+                ExecutionGoalMetadataValidationRules.Instance
             });
 
             // Add OpenAPI/Swagger definition.

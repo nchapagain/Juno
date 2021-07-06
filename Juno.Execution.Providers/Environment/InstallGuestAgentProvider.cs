@@ -118,13 +118,13 @@
             return result;
         }
 
-        private static AgentIdentification GetAgentIdentification(VmResourceGroupDefinition resourceGroupDefinition, VmDefinition vmDefinition)
+        private static AgentIdentification GetAgentIdentification(VmDefinition vmDefinition)
         {
             return AgentIdentification.CreateVirtualMachineId(
-                resourceGroupDefinition.ClusterId,
-                resourceGroupDefinition.NodeId,
+                vmDefinition.ClusterId,
+                vmDefinition.NodeId,
                 vmDefinition.Name,
-                resourceGroupDefinition.TipSessionId);
+                vmDefinition.TipSessionId);
         }
 
         private static Uri GetInstallerUri(ExperimentContext context, ExperimentComponent component, EventContext telemetryContext)
@@ -201,7 +201,7 @@
                     IProviderDataClient apiClient = this.Services.GetService<IProviderDataClient>();
                     foreach (var vm in resourceGroupDefinition.VirtualMachines)
                     {
-                        string agentId = InstallGuestAgentProvider.GetAgentIdentification(resourceGroupDefinition, vm).ToString();
+                        string agentId = InstallGuestAgentProvider.GetAgentIdentification(vm).ToString();
                         AgentHeartbeatInstance heartbeat = await apiClient.GetAgentHeartbeatAsync(agentId, cancellationToken).ConfigureDefaults();
                         heartbeatExists = heartbeat != null;
                     }
@@ -238,7 +238,7 @@
                 IProviderDataClient dataClient = this.Services.GetService<IProviderDataClient>();
                 foreach (VmDefinition vmEntity in resourceGroupDefinition.VirtualMachines)
                 {
-                    string agentId = InstallGuestAgentProvider.GetAgentIdentification(resourceGroupDefinition, vmEntity).ToString();
+                    string agentId = InstallGuestAgentProvider.GetAgentIdentification(vmEntity).ToString();
                     EventContext relatedContext = telemetryContext.Clone()
                         .AddContext(nameof(agentId), agentId);
 

@@ -12,7 +12,6 @@
     using Juno.Contracts.Validation;
     using Juno.Extensions.AspNetCore;
     using Juno.Extensions.Telemetry;
-    using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Http;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Azure.CRC.Contracts;
@@ -98,7 +97,7 @@
         /// <param name="executionGoalParameters"><see cref="ExecutionGoalParameter"/> necessary to inline with Execution Goal Template</param>
         /// <param name="templateId">The execution goal template that execution goal will be based on.</param>
         /// <param name="teamName">The name of the team that owns the execution goal template</param>
-        /// <param name="token"><see cref="CancellationToken"/></param>
+        /// <param name="token">A cancellation token that can be used to cancel the current thread of execution.</param>
         [HttpPost("{templateId}")]
         [Consumes("application/json")]
         [Description("Creates a new execution goal from a template in the system.")]
@@ -131,7 +130,7 @@
                 Item<GoalBasedSchedule> executionGoal = await response.Content.ReadAsJsonAsync<Item<GoalBasedSchedule>>()
                     .ConfigureDefaults();
 
-                return this.CreatedAtAction(nameof(this.GetExecutionGoalAsync), new { executionGoalId = executionGoal.Definition.ExecutionGoalId, teamName = executionGoal.Definition.TeamName }, executionGoal);
+                return this.CreatedAtAction(nameof(this.GetExecutionGoalAsync), new { executionGoalId = executionGoal.Id, teamName = executionGoal.Definition.TeamName }, executionGoal);
             }).ConfigureDefaults();
         }
 
@@ -140,6 +139,7 @@
         /// </summary>
         /// <param name="executionGoalParameters"><see cref="ExecutionGoalParameter"/> necessary to inline with Execution Goal Template</param>
         /// <param name="templateId">The execution goal template that execution goal will be based on.</param>
+        /// <param name="executionGoalId">The id of the execution goal to update.</param>
         /// <param name="teamName">The name of the team that owns the execution goal template</param>
         /// <param name="token"><see cref="CancellationToken"/></param>
         [HttpPut("{templateId}")]
@@ -151,7 +151,7 @@
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> UpdateExecutionGoalFromTemplateAsync(string templateId, [FromQuery] string teamName, [FromBody] ExecutionGoalParameter executionGoalParameters, CancellationToken token)
+        public async Task<IActionResult> UpdateExecutionGoalFromTemplateAsync(string templateId, [FromQuery] string executionGoalId, [FromQuery] string teamName, [FromBody] ExecutionGoalParameter executionGoalParameters, CancellationToken token)
         {
             executionGoalParameters.ThrowIfNull(nameof(executionGoalParameters));
             templateId.ThrowIfNullOrWhiteSpace(nameof(templateId));
@@ -159,12 +159,13 @@
 
             EventContext telemetryContext = EventContext.Persist(Guid.NewGuid())
                 .AddContext(nameof(templateId), templateId)
+                .AddContext(nameof(executionGoalId), executionGoalId)
                 .AddContext(nameof(teamName), teamName)
                 .AddContext(nameof(executionGoalParameters), executionGoalParameters);
 
             return await this.ExecuteApiOperationAsync(EventNames.UpdateExecutionGoalFromTemplate, telemetryContext, this.Logger, async () =>
             {
-                HttpResponseMessage response = await this.Client.UpdateExecutionGoalFromTemplateAsync(executionGoalParameters, templateId, teamName, token)
+                HttpResponseMessage response = await this.Client.UpdateExecutionGoalFromTemplateAsync(executionGoalParameters, templateId, executionGoalId, teamName, token)
                     .ConfigureDefaults();
 
                 telemetryContext.AddContext(response);
@@ -236,15 +237,13 @@
         /// Retrieves all execution goals associated with a team name from the system
         /// </summary>
         /// <param name="teamName">The team that owns the execution goal</param>
-        /// <param name="cancellationToken"><see cref="CancellationToken"/></param>
+        /// <param name="cancellationToken">Cancellation token used for cancelling current thread of execution.</param>
         /// <param name="executionGoalId">The id of the execution goal (optional)</param>
         /// <param name= "view">Resource Type of the execution goal (optional)</param>
         [HttpGet]
         [Consumes("application/json")]
         [Description("Gets all execution goals associated with a team name.")]
         [ApiExplorerSettings(GroupName = ExecutionGoalsController.V1)]
-        [ProducesResponseType(typeof(IEnumerable<GoalBasedSchedule>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(Item<GoalBasedSchedule>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> GetExecutionGoalsAsync(CancellationToken cancellationToken, [FromQuery] string teamName = null, [FromQuery] string executionGoalId = null, [FromQuery] ExecutionGoalView view = ExecutionGoalView.Full)
@@ -334,7 +333,7 @@
 
                     Item<GoalBasedSchedule> updatedInstance = await response.Content.ReadAsJsonAsync<Item<GoalBasedSchedule>>().ConfigureDefaults();
 
-                    telemetryContext.AddContext("executionGoalId", executionGoal.Definition.ExecutionGoalId);
+                    telemetryContext.AddContext("executionGoalId", executionGoal.Id);
                     return this.Ok(updatedInstance);
                 }
                 finally
@@ -414,7 +413,7 @@
                 Item<GoalBasedSchedule> createdInstance = await response.Content.ReadAsJsonAsync<Item<GoalBasedSchedule>>()
                     .ConfigureDefaults();
 
-                telemetryContext.AddContext("executionGoalId", executionGoal.Definition.ExecutionGoalId);
+                telemetryContext.AddContext("executionGoalId", executionGoal.Id);
                 return this.CreatedAtAction(nameof(this.GetExecutionGoalAsync), new { executionGoalId = createdInstance.Id, teamName = createdInstance.Definition.TeamName }, createdInstance);
             }).ConfigureDefaults();
         }

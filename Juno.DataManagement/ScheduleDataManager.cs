@@ -124,10 +124,7 @@
                 foreach (var item in items)
                 {
                     GoalBasedSchedule template = item.Definition;
-                    if (!GoalBasedScheduleExtensions.IsExecutionGoalVersion20200727(template.Version))
-                    {
-                        templateList.Add(new ExecutionGoalSummary(item.Id, template.Description, template.TeamName, template.GetParametersFromTemplate(), template.ScheduleMetadata));
-                    }
+                    templateList.Add(new ExecutionGoalSummary(item.Id, template.Description, template.TeamName, template.GetParametersFromTemplate(), template.Metadata));
                 }
 
                 telemetryContext.AddContext(nameof(templateList), templateList);
@@ -285,10 +282,7 @@
                 foreach (var item in items)
                 {
                     GoalBasedSchedule template = item.Definition;
-                    if (!GoalBasedScheduleExtensions.IsExecutionGoalVersion20200727(template.Version))
-                    {
-                        templateList.Add(new ExecutionGoalSummary(item.Id, template.Description, template.TeamName, template.GetParametersFromTemplate(), template.ScheduleMetadata));
-                    }
+                    templateList.Add(new ExecutionGoalSummary(item.Id, template.Description, template.TeamName, template.GetParametersFromTemplate(), template.Metadata));
                 }
 
                 telemetryContext.AddContext(nameof(templateList), templateList);

@@ -173,7 +173,10 @@
             {
                 EventContext.Persist(Guid.NewGuid());
 
+                this.InitializeTelemetry();
+                this.InitializeDebugLogging();
                 this.InitializeLogging();
+
                 this.Logger.LogTelemetry($"{Program.HostName}.CommandLineArguments", LogLevel.Information, EventContext.Persisted()
                     .AddContext(nameof(args), Common.SensitiveData.ObscureSecrets(string.Join(" ", args))));
 
@@ -461,7 +464,7 @@
             }).ConfigureDefaults();
         }
 
-        private void InitializeLogging()
+        private void InitializeTelemetry()
         {
             AgentIdentification agentId = new AgentIdentification(this.AgentId);
             EventContext.PersistentProperties.AddRange(new Dictionary<string, object>
@@ -486,7 +489,22 @@
                     hostingCommon = Assembly.GetAssembly(typeof(HostDependencies)).GetName().Version.ToString()
                 }
             });
+        }
 
+        private void InitializeLogging()
+        {
+            this.Logger = HostDependencies.CreateLogger(
+                Program.HostName,
+                eventHubConnectionString: this.EventHubConnectionString,
+                eventHubName: this.EventHub,
+                enableDiagnostics: true);
+
+            // Set Logger at main entry point.
+            Program.Logger = this.Logger;
+        }
+
+        private void InitializeDebugLogging()
+        {
             AppInsightsSettings appInsightsSettings = null;
             if (!string.IsNullOrWhiteSpace(this.AppInsightsInstrumentationKey))
             {
@@ -497,25 +515,11 @@
                 };
             }
 
-            EventHubSettings eventHubSettings = null;
-            if (!string.IsNullOrWhiteSpace(this.EventHubConnectionString) && !string.IsNullOrWhiteSpace(this.EventHub))
-            {
-                eventHubSettings = new EventHubSettings
-                {
-                    Id = "Telemetry",
-                    ConnectionString = this.EventHubConnectionString,
-                    EventHub = this.EventHub
-                };
-            }
-
             this.Logger = HostDependencies.CreateLogger(
                 Program.HostName,
-                appInsightsInstrumentationKey: this.AppInsightsInstrumentationKey,
-                eventHubConnectionString: this.EventHubConnectionString,
-                eventHubName: this.EventHub,
-                enableDiagnostics: true);
+                appInsightsTelemetrySettings: appInsightsSettings);
 
-            // Enable logging at the entry point level.
+            // Set Logger at main entry point.
             Program.Logger = this.Logger;
         }
     }

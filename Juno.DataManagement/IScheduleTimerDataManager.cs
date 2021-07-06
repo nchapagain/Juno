@@ -4,6 +4,7 @@
     using System.Threading;
     using System.Threading.Tasks;
     using Juno.Contracts;
+    using Microsoft.Azure.CRC.Contracts;
 
     /// <summary>
     /// Provides methods for managing Target Goal operations.
@@ -16,7 +17,7 @@
         /// <param name="executionGoal">The execution goal containing a valid list of target goals</param>
         /// <param name="cancellationToken"><see cref="CancellationToken"/></param>
         /// <returns></returns>
-        Task CreateTargetGoalsAsync(GoalBasedSchedule executionGoal, CancellationToken cancellationToken);
+        Task CreateTargetGoalsAsync(Item<GoalBasedSchedule> executionGoal, CancellationToken cancellationToken);
 
         /// <summary>
         /// Retrieves Target goal triggers from Cosmos
@@ -48,7 +49,7 @@
         /// <param name="executionGoal">The execution which consists the target goals</param>
         /// <param name="token"><see cref="CancellationToken"/></param>
         /// <returns><see cref="Task"/></returns>
-        Task UpdateTargetGoalTriggersAsync(GoalBasedSchedule executionGoal, CancellationToken token);
+        Task UpdateTargetGoalTriggersAsync(Item<GoalBasedSchedule> executionGoal, CancellationToken token);
 
         /// <summary>
         /// Delete all Target Goals assoicated with the given execution goal

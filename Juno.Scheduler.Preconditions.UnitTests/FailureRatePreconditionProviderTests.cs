@@ -11,6 +11,7 @@
     using Juno.Contracts.Configuration;
     using Juno.Providers;
     using Juno.Scheduler.Preconditions.Manager;
+    using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Moq;
@@ -27,6 +28,7 @@
         private IServiceCollection mockServices;
         private IConfiguration mockConfiguration;
         private Mock<IKustoManager> mockKustoManager;
+        private ScheduleContext mockContext;
 
         [SetUp]
         public void SetupTests()
@@ -42,18 +44,17 @@
                 .Build();
 
             this.mockServices.AddSingleton<IKustoManager>(this.mockKustoManager.Object);
+            this.mockContext = new ScheduleContext(new Item<GoalBasedSchedule>("id", this.mockFixture.Create<GoalBasedSchedule>()), this.mockFixture.Create<TargetGoalTrigger>(), this.mockConfiguration);
         }
 
         [Test]
         public void ConfigureServicesValidatesParameters()
         {
             GoalComponent component = this.mockFixture.Create<Precondition>();
-            ScheduleContext context = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), this.mockFixture.Create<TargetGoalTrigger>(), this.mockConfiguration);
-
             FailureRatePreconditionProvider provider = new FailureRatePreconditionProvider(this.mockServices);
 
             Assert.ThrowsAsync<ArgumentException>(() => provider.ConfigureServicesAsync(component, null));
-            Assert.ThrowsAsync<ArgumentException>(() => provider.ConfigureServicesAsync(null, context));
+            Assert.ThrowsAsync<ArgumentException>(() => provider.ConfigureServicesAsync(null, this.mockContext));
         }
 
         [Test]
@@ -61,11 +62,9 @@
         {
             Precondition componenet = this.mockFixture.Create<Precondition>();
             componenet.Parameters.Add(FailureRatePreconditionProviderTests.MinimumRuns, FailureRatePreconditionProviderTests.MinimumExperimentInstance);
-            ScheduleContext context = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), this.mockFixture.Create<TargetGoalTrigger>(), this.mockConfiguration);
-
             PreconditionProvider provider = new FailureRatePreconditionProvider(this.mockServices);
 
-            Assert.ThrowsAsync<ArgumentException>(() => provider.IsConditionSatisfiedAsync(null, context, CancellationToken.None));
+            Assert.ThrowsAsync<ArgumentException>(() => provider.IsConditionSatisfiedAsync(null, this.mockContext, CancellationToken.None));
             Assert.ThrowsAsync<ArgumentException>(() => provider.IsConditionSatisfiedAsync(componenet, null, CancellationToken.None));
         }
 
@@ -74,13 +73,11 @@
         {
             Precondition component = this.mockFixture.Create<Precondition>();
             component.Parameters.Add(FailureRatePreconditionProviderTests.MinimumRuns, FailureRatePreconditionProviderTests.MinimumExperimentInstance);
-            ScheduleContext context = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), this.mockFixture.Create<TargetGoalTrigger>(), this.mockConfiguration);
-
             this.mockKustoManager.Setup(mgr => mgr.GetKustoResponseAsync(It.IsAny<string>(), It.IsAny<KustoSettings>(), It.IsAny<string>(), It.IsAny<double?>()))
                 .Returns(Task.FromResult(FailureRatePreconditionProviderTests.GetValidKustoResponse(21)));
 
             PreconditionProvider provider = new FailureRatePreconditionProvider(this.mockServices);
-            bool result = provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None).GetAwaiter().GetResult();
+            bool result = provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
 
             Assert.IsNotNull(result);
             Assert.IsTrue(result);
@@ -94,13 +91,11 @@
             component.Parameters.Add(FailureRatePreconditionProviderTests.MinimumRuns, FailureRatePreconditionProviderTests.MinimumExperimentInstance);
             component.Parameters.Add(nameof(targetFailureRate), targetFailureRate);
 
-            ScheduleContext context = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), this.mockFixture.Create<TargetGoalTrigger>(), this.mockConfiguration);
-
             this.mockKustoManager.Setup(mgr => mgr.GetKustoResponseAsync(It.IsAny<string>(), It.IsAny<KustoSettings>(), It.IsAny<string>(), It.IsAny<double?>()))
                 .Returns(Task.FromResult(FailureRatePreconditionProviderTests.GetValidKustoResponse(targetFailureRate + 1)));
 
             PreconditionProvider provider = new FailureRatePreconditionProvider(this.mockServices);
-            bool result = provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None).GetAwaiter().GetResult();
+            bool result = provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
 
             Assert.IsNotNull(result);
             Assert.IsTrue(result);
@@ -111,13 +106,12 @@
         {
             Precondition component = this.mockFixture.Create<Precondition>();
             component.Parameters.Add(FailureRatePreconditionProviderTests.MinimumRuns, FailureRatePreconditionProviderTests.MinimumExperimentInstance);
-            ScheduleContext context = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), this.mockFixture.Create<TargetGoalTrigger>(), this.mockConfiguration);
 
             this.mockKustoManager.Setup(mgr => mgr.GetKustoResponseAsync(It.IsAny<string>(), It.IsAny<KustoSettings>(), It.IsAny<string>(), It.IsAny<double?>()))
                 .Returns(Task.FromResult(FailureRatePreconditionProviderTests.GetValidKustoResponse(19)));
 
             PreconditionProvider provider = new FailureRatePreconditionProvider(this.mockServices);
-            bool result = provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None).GetAwaiter().GetResult();
+            bool result = provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
 
             Assert.IsNotNull(result);
             Assert.IsFalse(result);
@@ -131,13 +125,11 @@
             component.Parameters.Add(FailureRatePreconditionProviderTests.MinimumRuns, FailureRatePreconditionProviderTests.MinimumExperimentInstance);
             component.Parameters.Add(nameof(targetFailureRate), targetFailureRate);
 
-            ScheduleContext context = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), this.mockFixture.Create<TargetGoalTrigger>(), this.mockConfiguration);
-
             this.mockKustoManager.Setup(mgr => mgr.GetKustoResponseAsync(It.IsAny<string>(), It.IsAny<KustoSettings>(), It.IsAny<string>(), It.IsAny<double?>()))
                 .Returns(Task.FromResult(FailureRatePreconditionProviderTests.GetValidKustoResponse(targetFailureRate - 1)));
 
             PreconditionProvider provider = new FailureRatePreconditionProvider(this.mockServices);
-            bool result = provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None).GetAwaiter().GetResult();
+            bool result = provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
 
             Assert.IsNotNull(result);
             Assert.IsFalse(result);
@@ -148,13 +140,12 @@
         {
             Precondition component = this.mockFixture.Create<Precondition>();
             component.Parameters.Add(FailureRatePreconditionProviderTests.MinimumRuns, FailureRatePreconditionProviderTests.MinimumExperimentInstance);
-            ScheduleContext context = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), this.mockFixture.Create<TargetGoalTrigger>(), this.mockConfiguration);
 
             this.mockKustoManager.Setup(mgr => mgr.GetKustoResponseAsync(It.IsAny<string>(), It.IsAny<KustoSettings>(), It.IsAny<string>(), It.IsAny<double?>()))
                 .Throws(new Exception());
 
             PreconditionProvider provider = new FailureRatePreconditionProvider(this.mockServices);
-            Assert.ThrowsAsync<Exception>(() => provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None));
+            Assert.ThrowsAsync<Exception>(() => provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None));
         }
 
         [Test]
@@ -163,23 +154,23 @@
             Precondition component = this.mockFixture.Create<Precondition>();
             component.Parameters.Add(FailureRatePreconditionProviderTests.MinimumRuns, FailureRatePreconditionProviderTests.MinimumExperimentInstance);
             TargetGoalTrigger targetGoal = this.mockFixture.Create<TargetGoalTrigger>();
-            ScheduleContext context = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), targetGoal, this.mockConfiguration);
+            ScheduleContext context = new ScheduleContext(this.mockContext.ExecutionGoal, targetGoal, this.mockConfiguration);
 
             this.mockKustoManager.Setup(mgr => mgr.GetKustoResponseAsync(
-                It.Is<string>(value => value.Equals(string.Concat("FailureRate", targetGoal.TargetGoal), StringComparison.Ordinal)),
+                It.Is<string>(value => value.Equals(string.Concat("FailureRate", targetGoal.Name), StringComparison.Ordinal)),
                 It.IsAny<KustoSettings>(),
                 It.IsAny<string>(),
                 It.IsAny<double?>()))
                 .Returns(Task.FromResult(FailureRatePreconditionProviderTests.GetValidKustoResponse(21)));
 
             PreconditionProvider provider = new FailureRatePreconditionProvider(this.mockServices);
-            bool result = provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None).GetAwaiter().GetResult();
+            bool result = provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None).GetAwaiter().GetResult();
 
             Assert.IsNotNull(result);
             Assert.IsTrue(result);
 
             this.mockKustoManager.Verify(mgr => mgr.GetKustoResponseAsync(
-                It.Is<string>(value => value.Equals(string.Concat("FailureRate", targetGoal.TargetGoal), StringComparison.Ordinal)),
+                It.Is<string>(value => value.Equals(string.Concat("FailureRate", targetGoal.Name), StringComparison.Ordinal)),
                 It.IsAny<KustoSettings>(),
                 It.IsAny<string>(),
                 It.IsAny<double?>()),

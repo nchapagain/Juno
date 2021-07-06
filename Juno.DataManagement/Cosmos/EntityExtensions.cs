@@ -238,16 +238,12 @@
             TargetGoalTrigger result = new TargetGoalTrigger(
                 entity.Id,
                 entity.ExecutionGoal,
-                entity.RowKey,
+                entity.Name,
                 entity.CronExpression,
                 entity.Enabled,
-                entity.ExperimentName,
-                entity.TeamName,
                 entity.PartitionKey,
-                // We introduced a 'Created' property after we had experiment step data in the system. In order to support
-                // backwards compatibility, we are setting it to a value that is relevant for that previous data. Cosmos Table
-                // will set the value to DateTime.UtcNow if the data in the table does not include a 'Created' column.
-                created: entity.Created > entity.Timestamp.DateTime ? entity.Timestamp.DateTime : entity.Created,
+                entity.TeamName,
+                entity.Created > entity.Timestamp.DateTime ? entity.Timestamp.DateTime : entity.Created,
                 entity.LastModified);
 
             if (!string.IsNullOrWhiteSpace(entity.ETag))
@@ -270,11 +266,11 @@
             TargetGoalTableEntity entity = new TargetGoalTableEntity()
             { 
                 PartitionKey = trigger.Version,
-                RowKey = trigger.TargetGoal,
+                RowKey = trigger.Id,
+                Name = trigger.Name,
                 CronExpression = trigger.CronExpression,
                 Enabled = trigger.Enabled,
                 ExecutionGoal = trigger.ExecutionGoal,
-                ExperimentName = trigger.ExperimentName,
                 TeamName = trigger.TeamName
             };
 
@@ -287,7 +283,7 @@
             return entity;
         }
 
-        internal static TargetGoalTableEntity ToTableEntity(this Goal targetGoal, GoalBasedSchedule executionGoal)
+        internal static TargetGoalTableEntity ToTableEntity(this TargetGoal targetGoal, Item<GoalBasedSchedule> executionGoal)
         {
             executionGoal.ThrowIfNull(nameof(executionGoal));
 
@@ -296,14 +292,13 @@
 
             return new TargetGoalTableEntity()
             {
-                PartitionKey = executionGoal.Version,
-                RowKey = targetGoal.Name,
-                Id = targetGoal.Name,
+                PartitionKey = executionGoal.Definition.Version,
+                Id = targetGoal.Id,
+                Name = targetGoal.Name,
                 CronExpression = cronExpression,
-                Enabled = executionGoal.Enabled,
-                ExperimentName = executionGoal.ExperimentName,
-                TeamName = executionGoal.TeamName,
-                ExecutionGoal = executionGoal.ExecutionGoalId
+                Enabled = targetGoal.Enabled,
+                ExecutionGoal = executionGoal.Id,
+                TeamName = executionGoal.Definition.TeamName
             };
         }
     }

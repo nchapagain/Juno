@@ -8,6 +8,7 @@
     using Juno.Api.Client;
     using Juno.Contracts;
     using Microsoft.Azure.CRC.Contracts;
+    using Microsoft.Azure.CRC.Rest;
     using Moq;
     using Newtonsoft.Json;
     using NUnit.Framework;
@@ -36,6 +37,7 @@
             this.mockDependencies = new FixtureDependencies();
             this.mockFixture.SetupExperimentMocks();
             this.mockExecutionGoal = new Item<GoalBasedSchedule>("an id", FixtureExtensions.CreateExecutionGoalFromTemplate());
+            this.mockExecutionGoal.SetETag("some value");
             this.mockGetResponse = this.mockFixture.CreateHttpResponse(System.Net.HttpStatusCode.OK, this.mockExecutionGoal);
 
             this.retryPolicy = Policy.Handle<Exception>()
@@ -145,7 +147,11 @@
             Assert.AreEqual(this.expectedExecutionGoalId, this.cmdlet.ExecutionGoalId);
             Assert.IsTrue(this.cmdlet.AsJson);
             Assert.IsTrue(this.cmdlet.IsJsonObject);
-            Assert.AreEqual(this.mockExecutionGoal, this.cmdlet.Results);
+            Assert.IsNull((this.cmdlet.Results as Item<GoalBasedSchedule>).GetETag());
+            Assert.IsNotNull(this.mockExecutionGoal.GetETag());
+            Assert.AreNotEqual(this.mockExecutionGoal, this.cmdlet.Results);
+            this.cmdlet.RemoveTags(this.mockExecutionGoal);
+            Assert.AreEqual(this.mockExecutionGoal.ToJson(), this.cmdlet.Results.ToJson());
         }
 
         private class TestGetExecutionGoalCmdlet : GetExecutionGoalsCmdlet
@@ -162,6 +168,11 @@
             public void ProcessInternal()
             {
                 this.ProcessRecord();
+            }
+
+            public void RemoveTags(ItemBase item)
+            {
+                this.RemoveServerSideDataTags(item);
             }
 
             protected override void WriteResults(object results)

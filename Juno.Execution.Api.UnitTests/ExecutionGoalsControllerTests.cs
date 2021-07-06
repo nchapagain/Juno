@@ -46,7 +46,7 @@
         private Fixture mockFixture;
         private GoalBasedSchedule mockExecutionGoal;
         private Item<GoalBasedSchedule> mockExecutionGoalItem;
-        private Goal mockTargetGoal;
+        private TargetGoal mockTargetGoal;
         private TargetGoalTrigger mockTrigger;
         private TargetGoalTableEntity mockTableEntity;
         private ExperimentInstanceStatus experimentInstanceStatusTemplate;
@@ -67,8 +67,9 @@
 
             string cronExpression = "* * * * *";
 
-            this.mockTargetGoal = new Goal(
+            this.mockTargetGoal = new TargetGoal(
                 name: "TargetGoal",
+                true,
                 preconditions: new List<Precondition>()
                 {
                     new Precondition(
@@ -96,16 +97,13 @@
 
             this.mockExecutionGoal = new GoalBasedSchedule(
                 template.ExperimentName,
-                template.ExecutionGoalId,
-                template.Name,
-                template.TeamName,
                 template.Description,
-                template.ScheduleMetadata,
-                template.Enabled,
-                template.Version,
                 template.Experiment,
-                new List<Goal> { this.mockTargetGoal },
-                template.ControlGoals);
+                new List<TargetGoal> { this.mockTargetGoal },
+                template.ControlGoals,
+                template.Metadata);
+
+            this.mockExecutionGoalItem = new Item<GoalBasedSchedule>(Guid.NewGuid().ToString(), this.mockExecutionGoal);
 
             this.mockTableEntity = new TargetGoalTableEntity()
             {
@@ -113,25 +111,21 @@
                 PartitionKey = this.mockExecutionGoal.Version,
                 RowKey = this.mockTargetGoal.Name,
                 CronExpression = cronExpression,
-                Enabled = this.mockExecutionGoal.Enabled,
+                Enabled = this.mockTargetGoal.Enabled,
                 TeamName = this.mockExecutionGoal.TeamName,
-                ExperimentName = this.mockExecutionGoal.ExperimentName,
-                ExecutionGoal = this.mockExecutionGoal.ExecutionGoalId
+                ExecutionGoal = this.mockExecutionGoalItem.Id
             };
 
             this.mockTrigger = new TargetGoalTrigger(
                 id: this.mockTableEntity.Id,
                 executionGoal: this.mockTableEntity.ExecutionGoal,
-                targetGoal: this.mockTableEntity.RowKey,
+                name: this.mockTableEntity.RowKey,
                 cronExpression: this.mockTableEntity.CronExpression,
                 enabled: this.mockTableEntity.Enabled,
-                experimentName: this.mockTableEntity.ExperimentName,
                 teamName: this.mockTableEntity.TeamName,
                 version: this.mockTableEntity.PartitionKey,
                 created: DateTime.UtcNow,
                 lastModified: DateTime.UtcNow);
-
-            this.mockExecutionGoalItem = new Item<GoalBasedSchedule>(this.mockExecutionGoal.ExecutionGoalId, this.mockExecutionGoal);
 
             this.mockExecutionGoalDataManager = new Mock<IScheduleDataManager>();
             this.mockTargetGoalDataManager = new Mock<IScheduleTimerDataManager>();
@@ -185,7 +179,7 @@
             await this.controller.CreateExecutionGoalAsync(this.mockExecutionGoalItem, CancellationToken.None);
 
             this.mockTargetGoalDataManager.Verify(mgr => mgr.CreateTargetGoalsAsync(
-                It.Is<GoalBasedSchedule>(executionGoal => executionGoal.Equals(this.mockExecutionGoal)), It.IsAny<CancellationToken>()));
+                It.Is<Item<GoalBasedSchedule>>(executionGoal => executionGoal.Equals(this.mockExecutionGoalItem)), It.IsAny<CancellationToken>()));
         }
 
         [Test]
@@ -235,10 +229,10 @@
             string validString = "ThisIsAString";
             var targetGoalParameter = new List<TargetGoalParameter>()
             {
-            new TargetGoalParameter(validString, validString, new Dictionary<string, IConvertible>())
+            new TargetGoalParameter(validString, false, new Dictionary<string, IConvertible>())
             };
 
-            ExecutionGoalParameter executionGoalParameter = new ExecutionGoalParameter(validString, validString, validString, validString, true, targetGoalParameter);
+            ExecutionGoalParameter executionGoalParameter = new ExecutionGoalParameter(targetGoalParameter);
 
             Assert.ThrowsAsync<ArgumentException>(() => this.controller.CreateExecutionGoalFromTemplateAsync("string", invalidParameter, executionGoalParameter, CancellationToken.None));
             Assert.ThrowsAsync<ArgumentException>(() => this.controller.CreateExecutionGoalFromTemplateAsync(invalidParameter, "string", executionGoalParameter, CancellationToken.None));
@@ -249,7 +243,7 @@
         public async Task ControllerCreatesExpectedExecutionGoalFromTemplate()
         {
             var executionGoalToCopy = FixtureExtensions.CreateExecutionGoalTemplate();
-            List<Goal> targetGoals = new List<Goal>()
+            List<TargetGoal> targetGoals = new List<TargetGoal>()
             {
                 ExecutionGoalsControllerTests.CreateValidExecutionGoalTemplateTargetGoal(1),
                 ExecutionGoalsControllerTests.CreateValidExecutionGoalTemplateTargetGoal(2),
@@ -261,51 +255,44 @@
                 ["datecreated"] = "08/9/2020",
                 ["intent"] = "To test the scope of this parameter",
                 ["experimentCategory"] = "A-Z",
-                ["imtestingNewCategory"] = "$.parameters.imtestingNewCategory"
+                ["teamName"] = "CRC AIR",
+                ["imtestingNewCategory"] = "$.parameters.imtestingNewCategory",
+                ["owner"] = "experimentOwner@microsoft.com",
+                ["experiment.name"] = "my experiment"
             };
 
             GoalBasedSchedule template = new GoalBasedSchedule(
-                experimentName: "$.parameters.experiment.name",
-                executionGoalId: "MCU2020.NewExecutionGoalTemplate.v2.json",
-                name: "MCU2020 Template",
-                teamName: "CRC AIR",
-                description: "New Execution Goal template to schedule the MCU2020.",
-                metadata: metadata,
-                enabled: true,
-                version: "2021-01-01",
+                experimentName: "MCU2020 Template",
+                description: "an execution goal",
                 experiment: executionGoalToCopy.Experiment,
                 targetGoals: targetGoals,
-                controlGoals: executionGoalToCopy.ControlGoals);
+                controlGoals: executionGoalToCopy.ControlGoals,
+                metadata: metadata);
 
             Item<GoalBasedSchedule> templateItem = new Item<GoalBasedSchedule>(Guid.NewGuid().ToString(), template);
 
             List<TargetGoalParameter> targetGoalParamater = new List<TargetGoalParameter>()
             {
-                new TargetGoalParameter("targetGoalId1", "Workload1", new Dictionary<string, IConvertible>()
+                new TargetGoalParameter("name1", true, new Dictionary<string, IConvertible>()
                 {
-                    { "targetGoalName1", Guid.NewGuid().ToString() },
                     { "targetInstances", 19 },
                     { "nodeCpuId", Guid.NewGuid().ToString() }
                 }),
-                new TargetGoalParameter("targetGoalId2", "Workload2", new Dictionary<string, IConvertible>()
+                new TargetGoalParameter("name2", false, new Dictionary<string, IConvertible>()
                 {
-                    { "targetGoalName2", Guid.NewGuid().ToString() },
                     { "targetInstances", 12 },
                     { "nodeCpuId", Guid.NewGuid().ToString() }
                 }),
-                new TargetGoalParameter("targetGoalId3", "Workload3", new Dictionary<string, IConvertible>()
+                new TargetGoalParameter("name3", false, new Dictionary<string, IConvertible>()
                 {
-                    { "targetGoalName3", Guid.NewGuid().ToString() },
                     { "targetInstances", "6" },
                     { "nodeCpuId", Guid.NewGuid().ToString() }
                 })
             };
 
-            template.ScheduleMetadata.Add(ExecutionGoalMetadata.Owner, "experimentOwner@microsoft.com");
+            ExecutionGoalParameter parameters = new ExecutionGoalParameter(targetGoalParamater, metadata, template.Parameters);
 
-            ExecutionGoalParameter parameters = new ExecutionGoalParameter("newExecutionGoalName", "newExperimentName", template.TeamName, "experimentOwner@microsoft.com", template.Enabled, targetGoalParamater, template.Parameters);
-
-            Item<GoalBasedSchedule> expectedExecutionGoal = new Item<GoalBasedSchedule>(template.ExecutionGoalId, template.Inlined(parameters));
+            Item<GoalBasedSchedule> expectedExecutionGoal = new Item<GoalBasedSchedule>(Guid.NewGuid().ToString(), template.Inlined(parameters));
 
             this.mockExecutionGoalDataManager.Setup(mgr => mgr.GetExecutionGoalTemplateAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(templateItem));
@@ -316,13 +303,15 @@
             CreatedAtActionResult result = await this.controller.CreateExecutionGoalFromTemplateAsync("template", template.TeamName, parameters, CancellationToken.None)
                 as CreatedAtActionResult;
 
-            this.mockExecutionGoalDataManager.Verify(mgr => mgr.CreateExecutionGoalAsync(
-                It.Is<Item<GoalBasedSchedule>>(executionGoal => !executionGoal.Definition.IsInlined()),
-                It.IsAny<CancellationToken>()));
-
             Assert.IsNotNull(result);
             Assert.AreEqual(StatusCodes.Status201Created, result.StatusCode);
             Assert.AreEqual(result.Value as Item<GoalBasedSchedule>, expectedExecutionGoal);
+
+            this.mockExecutionGoalDataManager.Verify(
+                mgr => mgr.CreateExecutionGoalAsync(
+                It.IsAny<Item<GoalBasedSchedule>>(),
+                It.IsAny<CancellationToken>()),
+                Times.Once());
         }
 
         [Test]
@@ -330,7 +319,7 @@
         {
             var executionGoalToCopy = FixtureExtensions.CreateExecutionGoalTemplate();
 
-            List<Goal> targetGoals = new List<Goal>()
+            List<TargetGoal> targetGoals = new List<TargetGoal>()
             {
                 ExecutionGoalsControllerTests.CreateValidExecutionGoalTemplateTargetGoal(1),
                 ExecutionGoalsControllerTests.CreateValidExecutionGoalTemplateTargetGoal(2),
@@ -341,39 +330,34 @@
             {
                 ["datecreated"] = "08/9/2020",
                 ["intent"] = "To test the scope of this parameter",
-                ["experimentCategory"] = "A-Z"
+                ["experimentCategory"] = "A-Z",
+                ["teamName"] = "CRC AIR",
+                ["experiment.name"] = "my experiment"
             };
 
             GoalBasedSchedule template = new GoalBasedSchedule(
-                experimentName: "$.parameters.experiment.name",
-                executionGoalId: "MCU2020.NewExecutionGoalTemplate.v2.json",
-                name: "MCU2020 Template",
-                teamName: "CRC AIR",
+                experimentName: "MCU2020 Template",
                 description: "New Execution Goal template to schedule the MCU2020.",
-                metadata: metadata,
-                enabled: true,
-                version: "2021-01-01",
                 experiment: executionGoalToCopy.Experiment,
                 targetGoals: targetGoals,
                 controlGoals: executionGoalToCopy.ControlGoals,
-                parameters: executionGoalToCopy.Parameters);
+                parameters: executionGoalToCopy.Parameters,
+                metadata: metadata);
 
             Item<GoalBasedSchedule> templateItem = new Item<GoalBasedSchedule>(Guid.NewGuid().ToString(), template);
 
             List<TargetGoalParameter> targetGoalParamater = new List<TargetGoalParameter>()
             {
-                new TargetGoalParameter("targetGoalId1", "Workload1", new Dictionary<string, IConvertible>()
+                new TargetGoalParameter("name1", true, new Dictionary<string, IConvertible>()
                 {
-                    { "targetGoalName1", Guid.NewGuid().ToString() },
                     { "targetInstances", 19 },
                     { "nodeCpuId", Guid.NewGuid().ToString() }
                 })
             };
 
-            ExecutionGoalParameter parameters = new ExecutionGoalParameter("newExecutionGoalName", "newExperimentName", template.TeamName, "experiment.owner@Microsoft.CoM", template.Enabled, targetGoalParamater);
+            ExecutionGoalParameter parameters = new ExecutionGoalParameter(targetGoalParamater, metadata);
 
-            Item<GoalBasedSchedule> expectedExecutionGoal = new Item<GoalBasedSchedule>(template.ExecutionGoalId, template.Inlined(parameters));
-            expectedExecutionGoal.Definition.ScheduleMetadata.Add("IsThisValidParameter", "1");
+            Item<GoalBasedSchedule> expectedExecutionGoal = new Item<GoalBasedSchedule>(Guid.NewGuid().ToString(), template.Inlined(parameters));
 
             this.mockExecutionGoalDataManager.Setup(mgr => mgr.GetExecutionGoalTemplateAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(templateItem));
@@ -384,13 +368,13 @@
             CreatedAtActionResult result = await this.controller.CreateExecutionGoalFromTemplateAsync("template", template.TeamName, parameters, CancellationToken.None)
                 as CreatedAtActionResult;
 
-            this.mockExecutionGoalDataManager.Verify(mgr => mgr.CreateExecutionGoalAsync(
-                It.Is<Item<GoalBasedSchedule>>(executionGoal => !executionGoal.Definition.IsInlined()),
-                It.IsAny<CancellationToken>()));
-
             Assert.IsNotNull(result);
             Assert.AreEqual(StatusCodes.Status201Created, result.StatusCode);
             Assert.AreEqual(result.Value as Item<GoalBasedSchedule>, expectedExecutionGoal);
+
+            this.mockExecutionGoalDataManager.Verify(mgr => mgr.CreateExecutionGoalAsync(
+                It.IsAny<Item<GoalBasedSchedule>>(),
+                It.IsAny<CancellationToken>()));
         }
 
         [Test]
@@ -398,7 +382,7 @@
         {
             GoalBasedSchedule template = FixtureExtensions.CreateExecutionGoalTemplate();
             ExecutionGoalSummary executionGoalMetadata = FixtureExtensions.CreateExecutionGoalMetadata();
-            ExecutionGoalParameter parameters = new ExecutionGoalParameter(template.ExecutionGoalId, template.ExperimentName, template.TeamName, executionGoalMetadata.ParameterNames.Owner, template.Enabled, executionGoalMetadata.ParameterNames.TargetGoals, template.Parameters);
+            ExecutionGoalParameter parameters = new ExecutionGoalParameter(executionGoalMetadata.ParameterNames.TargetGoals, sharedParameters: template.Parameters);
             foreach (var entry in ExecutionGoalsControllerTests.potentialErrors)
             {
                 // Key = Exception
@@ -576,7 +560,7 @@
         {
             await this.controller.UpdateExecutionGoalAsync(this.mockExecutionGoalItem, CancellationToken.None);
 
-            this.mockTargetGoalDataManager.Verify(mgr => mgr.UpdateTargetGoalTriggersAsync(this.mockExecutionGoal, It.IsAny<CancellationToken>()));
+            this.mockTargetGoalDataManager.Verify(mgr => mgr.UpdateTargetGoalTriggersAsync(this.mockExecutionGoalItem, It.IsAny<CancellationToken>()));
         }
 
         [Test]
@@ -659,10 +643,11 @@
             }
         }
 
-        private static Goal CreateValidExecutionGoalTemplateTargetGoal(int value)
+        private static TargetGoal CreateValidExecutionGoalTemplateTargetGoal(int value)
         {
-            return new Goal(
-                name: $"$.parameters.targetGoalName{value}",
+            return new (
+                name: $"name{value}",
+                true,
                 preconditions: new List<Precondition>()
                 {
                     new Precondition(

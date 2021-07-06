@@ -15,13 +15,13 @@
     public static class ScheduleAddressFactory
     {   
         internal const string ExecutionGoalDatabase = "executionGoalDefinitions";
-        internal const string ExecutionGoalContainerId = "executionGoals";
-        internal const string ExecutionGoalPartitionKeyPath = "/definition/teamName";
+        internal const string ExecutionGoalContainerId = "instances";
+        internal const string ExecutionGoalPartitionKeyPath = "/definition/metadata/teamName";
 
-        internal const string ExecutionGoalTemplateContainerId = "templates";
-        internal const string ExecutionGoalTemplateParitionKeyPath = "/definition/teamName";
+        internal const string ExecutionGoalTemplateContainerId = "executionGoalTemplates";
+        internal const string ExecutionGoalTemplateParitionKeyPath = "/definition/metadata/teamName";
 
-        internal const string ExecutionGoalTriggerTable = "targetGoalTriggers";
+        internal const string ExecutionGoalTriggerTable = "targetGoals";
 
         /// <summary>
         /// Generate a valid <see cref="CosmosAddress"/> that can be used to 

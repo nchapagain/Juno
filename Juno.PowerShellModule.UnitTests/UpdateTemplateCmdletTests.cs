@@ -113,9 +113,9 @@
             this.mockDependencies.ExperimentClient.Setup(m => m.GetTemplatesAsync(It.IsAny<CancellationToken>(), It.IsAny<string>(), It.IsAny<View>(), It.IsAny<string>())).Callback((CancellationToken token, string teamName, View view, string executionId) =>
             {
                 Assert.AreEqual(teamName, this.mockItemFromFile.Definition.TeamName);
-                Assert.AreEqual(executionId, this.mockItemFromFile.Definition.ExecutionGoalId);
+                Assert.AreEqual(executionId, this.mockItemFromFile.Id);
                 Assert.IsFalse(this.cmdlet.AsJson);
-                Assert.AreEqual(view, ExecutionGoalView.Full);
+                Assert.AreEqual(view, View.Full);
             }).ReturnsAsync(this.mockGetResponse);
 
             try
@@ -162,7 +162,7 @@
             this.cmdlet.ProcessInternal();
 
             Assert.NotNull(actualGoalBasedSchedule);
-            ////Assert.AreEqual(actualGoalBasedSchedule.GetETag(), this.mockItemFromServer.GetETag());
+            Assert.AreEqual(actualGoalBasedSchedule.GetETag(), this.mockItemFromServer.GetETag());
             Assert.AreEqual(actualGoalBasedSchedule.Definition.Description, this.mockItemFromFile.Definition.Description);
             Assert.AreEqual(this.expectedFilePath, this.cmdlet.FilePath);
             Assert.IsTrue(this.cmdlet.AsJson);
@@ -170,6 +170,12 @@
             Assert.IsNotNull(this.cmdlet.Results);
             Assert.IsInstanceOf<Item<GoalBasedSchedule>>(this.cmdlet.Results);
             Assert.AreEqual(actualGoalBasedSchedule.Definition, (this.cmdlet.Results as Item<GoalBasedSchedule>).Definition);
+
+            Assert.IsNull((this.cmdlet.Results as Item<GoalBasedSchedule>).GetETag());
+            Assert.IsNotNull(this.mockItemUpdated.GetETag());
+            Assert.AreNotEqual(this.mockItemUpdated.ToJson(), this.cmdlet.Results.ToJson());
+            this.cmdlet.RemoveTags(this.mockItemUpdated);
+            Assert.AreEqual(this.mockItemUpdated.ToJson(), this.cmdlet.Results.ToJson());
         }
 
         private class TestUpdateExecutionGoalTemplateCmdlet : UpdateTemplateCmdlet
@@ -188,6 +194,11 @@
             public void ProcessInternal()
             {
                 this.ProcessRecord();
+            }
+
+            public void RemoveTags(ItemBase item)
+            {
+                this.RemoveServerSideDataTags(item);
             }
 
             protected override Item<GoalBasedSchedule> GetTemplateFromFile(string filePath)

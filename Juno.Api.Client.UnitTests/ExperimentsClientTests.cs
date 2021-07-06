@@ -55,6 +55,13 @@
 
                 this.experimentsClient.CancelExperimentAsync(experimentId, CancellationToken.None)
                     .GetAwaiter().GetResult();
+
+                this.mockRestClient.Verify(
+                    client => client.PutAsync(
+                    It.IsAny<Uri>(),
+                    It.IsAny<HttpContent>(),
+                    It.IsAny<CancellationToken>()),
+                    Times.Once());
             }
         }
 
@@ -75,6 +82,13 @@
 
                 this.experimentsClient.CreateExperimentAsync(this.mockFixture.Create<Experiment>(), CancellationToken.None)
                     .GetAwaiter().GetResult();
+
+                this.mockRestClient.Verify(
+                    client => client.PostAsync(
+                    It.IsAny<Uri>(),
+                    It.IsAny<HttpContent>(),
+                    It.IsAny<CancellationToken>()),
+                    Times.Once());
             }
         }
 
@@ -95,6 +109,13 @@
 
                 this.experimentsClient.CreateExperimentFromTemplateAsync(this.mockFixture.Create<ExperimentTemplate>(), CancellationToken.None)
                     .GetAwaiter().GetResult();
+
+                this.mockRestClient.Verify(
+                    client => client.PostAsync(
+                    It.IsAny<Uri>(),
+                    It.IsAny<HttpContent>(),
+                    It.IsAny<CancellationToken>()),
+                    Times.Once());
             }
         }
 
@@ -117,6 +138,13 @@
 
                 this.experimentsClient.CreateExperimentAsync(this.mockFixture.Create<Experiment>(), CancellationToken.None, workQueue: expectedWorkQueue)
                     .GetAwaiter().GetResult();
+
+                this.mockRestClient.Verify(
+                    client => client.PostAsync(
+                    It.IsAny<Uri>(),
+                    It.IsAny<HttpContent>(),
+                    It.IsAny<CancellationToken>()),
+                    Times.Once());
             }
         }
 
@@ -137,6 +165,13 @@
 
                 this.experimentsClient.ValidateExperimentAsync(this.mockFixture.Create<Experiment>(), CancellationToken.None)
                     .GetAwaiter().GetResult();
+
+                this.mockRestClient.Verify(
+                    client => client.PostAsync(
+                    It.IsAny<Uri>(),
+                    It.IsAny<HttpContent>(),
+                    It.IsAny<CancellationToken>()),
+                    Times.Once());
             }
         }
 
@@ -155,9 +190,16 @@
                 });
 
             dynamic targetGoal = new List<TargetGoalParameter>();
-            targetGoal.Add(new TargetGoalParameter(executionGoalTemplateId, "workload", null));
-            dynamic experimentParameters = new ExecutionGoalParameter(executionGoalTemplateId, "experimentName", "owner", "user@microsoft.com", true, targetGoal);
+            targetGoal.Add(new TargetGoalParameter(executionGoalTemplateId, true, null));
+            dynamic experimentParameters = new ExecutionGoalParameter(targetGoal);
             _ = await this.experimentsClient.CreateExecutionGoalFromTemplateAsync(experimentParameters, executionGoalTemplateId, teamName, CancellationToken.None);
+
+            this.mockRestClient.Verify(
+                client => client.PostAsync(
+                It.IsAny<Uri>(),
+                It.IsAny<HttpContent>(),
+                It.IsAny<CancellationToken>()),
+                Times.Once());
         }
 
         [Test]
@@ -175,6 +217,13 @@
                 });
 
             _ = await this.experimentsClient.GetExecutionGoalsAsync(CancellationToken.None, teamName);
+
+            this.mockRestClient.Verify(
+                client => client.GetAsync(
+                It.IsAny<Uri>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<HttpCompletionOption>()),
+                Times.Once());
         }
 
         [Test]
@@ -193,6 +242,13 @@
                 });
 
             _ = await this.experimentsClient.GetExecutionGoalsAsync(CancellationToken.None, teamName, executionGoalId, view);
+
+            this.mockRestClient.Verify(
+                client => client.GetAsync(
+                It.IsAny<Uri>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<HttpCompletionOption>()),
+                Times.Once());
         }
 
         [Test]
@@ -209,6 +265,13 @@
                 });
 
             _ = await this.experimentsClient.GetTemplatesAsync(CancellationToken.None, teamName, View.Summary);
+
+            this.mockRestClient.Verify(
+                client => client.GetAsync(
+                It.IsAny<Uri>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<HttpCompletionOption>()),
+                Times.Once());
         }
 
         [Test]
@@ -226,6 +289,13 @@
                 });
 
             _ = await this.experimentsClient.GetTemplatesAsync(CancellationToken.None, teamName, View.Summary, id);
+
+            this.mockRestClient.Verify(
+                client => client.GetAsync(
+                It.IsAny<Uri>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<HttpCompletionOption>()),
+                Times.Once());
         }
 
         [Test]
@@ -242,6 +312,13 @@
                 });
 
             _ = await this.experimentsClient.GetTemplatesAsync(CancellationToken.None, teamName);
+
+            this.mockRestClient.Verify(
+                client => client.GetAsync(
+                It.IsAny<Uri>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<HttpCompletionOption>()),
+                Times.Once());
         }
 
         [Test]
@@ -259,6 +336,13 @@
                 });
 
             _ = await this.experimentsClient.GetTemplatesAsync(CancellationToken.None, teamName, templateId: id);
+
+            this.mockRestClient.Verify(
+                client => client.GetAsync(
+                It.IsAny<Uri>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<HttpCompletionOption>()),
+                Times.Once());
         }
 
         [Test]
@@ -275,10 +359,17 @@
                 });
 
             _ = await this.experimentsClient.ReserveEnvironmentsAsync(query, CancellationToken.None);
+
+            this.mockRestClient.Verify(
+                client => client.PostAsync(
+                It.IsAny<Uri>(),
+                It.IsAny<HttpContent>(),
+                It.IsAny<CancellationToken>()),
+                Times.Once());
         }
 
         [Test]
-        public void ExecutionClientCallsTheExpectedApiToGetExperimentStatuses()
+        public void ExperimentsClientCallsTheExpectedApiToGetExperimentStatuses()
         {
             using (HttpResponseMessage response = ExperimentsClientTests.CreateResponseMessage(HttpStatusCode.OK))
             {
@@ -296,6 +387,66 @@
 
                 this.experimentsClient.GetExperimentInstanceStatusesAsync(experimentName, CancellationToken.None)
                     .GetAwaiter().GetResult();
+
+                this.mockRestClient.Verify(
+                    client => client.GetAsync(
+                        It.IsAny<Uri>(),
+                        It.IsAny<CancellationToken>(),
+                        It.IsAny<HttpCompletionOption>()),
+                    Times.Once());
+            }
+        }
+
+        [Test]
+        public async Task UpdateExecutionGoalFromTemplateCallsExpectedApi()
+        {
+            string teamName = "teamName";
+            string templateId = "templateId";
+            string executionGoalId = "executionGoalId";
+            ExecutionGoalParameter executionGoalParameter = GoalBasedScheduleExtensions.GetParametersFromTemplate(FixtureExtensions.CreateExecutionGoalTemplate());
+            this.mockRestClient.Setup(client => client.PutAsync(
+                It.IsAny<Uri>(),
+                It.IsAny<HttpContent>(),
+                It.IsAny<CancellationToken>()))
+                .Callback<Uri, HttpContent, CancellationToken>((uri, content, token) =>
+                {
+                    Assert.IsTrue(uri.PathAndQuery.Equals($"/api/executionGoals/{templateId}?teamName={teamName}&executionGoalId={executionGoalId}"));
+                });
+
+            _ = await this.experimentsClient.UpdateExecutionGoalFromTemplateAsync(executionGoalParameter, templateId, executionGoalId, teamName, CancellationToken.None);
+
+            this.mockRestClient.Verify(
+                client => client.PutAsync(
+                    It.IsAny<Uri>(),
+                    It.IsAny<HttpContent>(),
+                    It.IsAny<CancellationToken>()), 
+                Times.Once());
+        }
+
+        [Test]
+        public void ExperimentsClientCallsTheExpectedApiToGetExperimentSummary()
+        {
+            using (HttpResponseMessage response = ExperimentsClientTests.CreateResponseMessage(HttpStatusCode.OK))
+            {
+                this.mockRestClient.Setup(client => client.GetAsync(
+                        It.IsAny<Uri>(),
+                        It.IsAny<CancellationToken>(),
+                        It.IsAny<HttpCompletionOption>()))
+                    .Callback<Uri, CancellationToken, HttpCompletionOption>((uri, token, option) =>
+                    {
+                        Assert.IsTrue(uri.AbsolutePath.Equals($"/api/experimentSummary/"));
+                    })
+                    .Returns(Task.FromResult(response));
+
+                this.experimentsClient.GetExperimentSummaryAsync(CancellationToken.None)
+                    .GetAwaiter().GetResult();
+
+                this.mockRestClient.Verify(
+                    client => client.GetAsync(
+                        It.IsAny<Uri>(),
+                        It.IsAny<CancellationToken>(),
+                        It.IsAny<HttpCompletionOption>()),
+                    Times.Once());
             }
         }
 

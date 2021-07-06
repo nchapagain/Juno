@@ -32,7 +32,7 @@
         }
 
         /// <summary>
-        /// Setup mock call (HTTP GET) to Execution API to get experiment execution 
+        /// Setup mock call (HTTP GET) to Execution API to get experiment execution
         /// steps
         /// </summary>
         public static ISetup<IRestClient, Task<HttpResponseMessage>> SetupGetExperimentSteps(this Mock<IRestClient> apiRestClient, string experimentId)
@@ -202,7 +202,7 @@
         public static ISetup<IRestClient, Task<HttpResponseMessage>> SetupGetExecutionGoalTemplate(this Mock<IRestClient> apiRestClient, View view = View.Full, string teamName = null, string templateId = null)
         {
             string expectedPath = string.Empty;
-            
+
             if (teamName == null)
             {
                 expectedPath = templateId == null
@@ -294,10 +294,10 @@
                 It.IsAny<CancellationToken>()));
         }
 
-        public static ISetup<IRestClient, Task<HttpResponseMessage>> SetupPutExecutionGoalFromTemplate(this Mock<IRestClient> apiRestClient, string templateId, string teamName)
+        public static ISetup<IRestClient, Task<HttpResponseMessage>> SetupPutExecutionGoalFromTemplate(this Mock<IRestClient> apiRestClient, string templateId, string executionGoalId, string teamName)
         {
             return apiRestClient.Setup(client => client.PutAsync(
-                It.Is<Uri>(uri => uri.PathAndQuery == $"/api/executionGoals/{templateId}?teamName={teamName}"),
+                It.Is<Uri>(uri => uri.PathAndQuery == $"/api/executionGoals/{templateId}?teamName={teamName}&executionGoalId={executionGoalId}"),
                 It.IsAny<HttpContent>(),
                 It.IsAny<CancellationToken>()));
         }
@@ -311,6 +311,18 @@
             {
                 Content = new StringContent(content.ToJson())
             };
+        }
+
+        /// <summary>
+        /// Setup mock call (HTTP POST) to Execution API to create an experiment context
+        /// document.
+        /// </summary>
+        public static ISetup<IRestClient, Task<HttpResponseMessage>> SetupGetExperimentsSummaries(this Mock<IRestClient> apiRestClient)
+        {
+            return apiRestClient.Setup(client => client.GetAsync(
+                It.Is<Uri>(uri => uri.PathAndQuery == $"/api/experimentSummary/"),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<HttpCompletionOption>()));
         }
     }
 }

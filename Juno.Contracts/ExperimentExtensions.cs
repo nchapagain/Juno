@@ -103,7 +103,7 @@
         {
             experiment.ThrowIfNull(nameof(experiment));
 
-            return experiment.Metadata.GetValue<bool>(Experiment.EnableDiagnostics, false);
+            return experiment.Metadata.GetValue<bool>(MetadataProperty.EnableDiagnostics, false);
         }
 
         /// <summary>

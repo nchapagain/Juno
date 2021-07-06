@@ -9,6 +9,7 @@
     using AutoFixture;
     using Juno.Contracts;
     using Juno.DataManagement;
+    using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Moq;
@@ -19,12 +20,13 @@
     [Category("Unit")]
     public class InProgressExperimentsProviderTests
     {
-        private const string TargetExperimentInstances = InProgressExperimentsProvider.Parameters.TargetExperimentsInstances;
+        private const string TargetExperimentInstances = nameof(InProgressExperimentsProviderTests.TargetExperimentInstances);
 
         private Fixture mockFixture;
         private IServiceCollection mockServices;
         private IConfiguration mockConfiguration;
         private Mock<IExperimentDataManager> mockExperimentDataManager;
+        private ScheduleContext mockContext;
 
         [SetUp]
         public void SetupTests()
@@ -39,6 +41,7 @@
                 .AddJsonFile($"juno-dev01.environmentsettings.json")
                 .Build();
             this.mockServices.AddSingleton<IExperimentDataManager>(this.mockExperimentDataManager.Object);
+            this.mockContext = new ScheduleContext(new Item<GoalBasedSchedule>("id", this.mockFixture.Create<GoalBasedSchedule>()), this.mockFixture.Create<TargetGoalTrigger>(), this.mockConfiguration);
         }
 
         [Test]
@@ -46,7 +49,6 @@
         {
             Precondition component = this.mockFixture.Create<Precondition>();
             component.Parameters.Add(InProgressExperimentsProviderTests.TargetExperimentInstances, 5);
-            ScheduleContext context = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), this.mockFixture.Create<TargetGoalTrigger>(), this.mockConfiguration);
             InProgressExperimentsProvider provider = new InProgressExperimentsProvider(this.mockServices);
             IEnumerable<JObject> queryResult = new List<JObject>()
             {
@@ -55,7 +57,7 @@
             this.mockExperimentDataManager.Setup(mgr => mgr.QueryExperimentsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(queryResult));
 
-            bool result = await provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None);
+            bool result = await provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None);
             Assert.IsTrue(result);
         }
 
@@ -64,7 +66,6 @@
         {
             Precondition component = this.mockFixture.Create<Precondition>();
             component.Parameters.Add(InProgressExperimentsProviderTests.TargetExperimentInstances, 5);
-            ScheduleContext context = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), this.mockFixture.Create<TargetGoalTrigger>(), this.mockConfiguration);
             InProgressExperimentsProvider provider = new InProgressExperimentsProvider(this.mockServices);
             IEnumerable<JObject> queryResult = new List<JObject>()
             {
@@ -73,7 +74,7 @@
             this.mockExperimentDataManager.Setup(mgr => mgr.QueryExperimentsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(queryResult));
 
-            bool result = await provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None);
+            bool result = await provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None);
             Assert.IsFalse(result);
         }
 
@@ -82,12 +83,11 @@
         {
             Precondition component = this.mockFixture.Create<Precondition>();
             component.Parameters.Add(InProgressExperimentsProviderTests.TargetExperimentInstances, 5);
-            ScheduleContext context = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), this.mockFixture.Create<TargetGoalTrigger>(), this.mockConfiguration);
             InProgressExperimentsProvider provider = new InProgressExperimentsProvider(this.mockServices);
             this.mockExperimentDataManager.Setup(mgr => mgr.QueryExperimentsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Throws(new Exception());
 
-            Assert.ThrowsAsync<Exception>(() => provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None));
+            Assert.ThrowsAsync<Exception>(() => provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None));
         }
     }
 }

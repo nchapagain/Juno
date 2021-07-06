@@ -17,12 +17,17 @@
         /// <summary>
         /// Native Application Client Id for Corp
         /// </summary>
-        private const string FrontDoorAPIEndPointCorp = "https://junodev01experiments.azurewebsites.net";
+        private const string ExperimentApiDevEndpoint = "https://junodev01experiments.azurewebsites.net";
 
         /// <summary>
-        /// Native Application Client Id for AME
+        /// Native Application Client Id for PROD AME
         /// </summary>
-        private const string FrontDoorAPIEndPointAME = "https://junoprod01experiments.azurewebsites.net";
+        private const string ExperimentApiProdEndpoint = "https://junoprod01experiments.azurewebsites.net";
+
+        /// <summary>
+        /// Native Application Client Id for PPE AME
+        /// </summary>
+        private const string ExperimentApiPpeEndpoint = "https://junoppe01experiments.azurewebsites.net";
 
         /// <summary>
         /// Native Application Client Id for Corp
@@ -35,15 +40,20 @@
         private const string NativeAppClientIdAME = "66b900a9-991a-40d0-85b8-68c027e5ef2e";
 
         /// <summary>
-        /// FrontDoorApiAppId for Corp
+        /// ExperimentApiAppId for Corp
         /// </summary>
-        private const string FrontDoorApiAppIdCorp = "8d43b83c-7869-425a-a18d-8cb490c9e7d2";
+        private const string ExperimentApiAppIdCorp = "8d43b83c-7869-425a-a18d-8cb490c9e7d2";
 
         /// <summary>
-        /// FrontDoorApiAppId for AME
+        /// ExperimentApiAppId for AME
         /// </summary>
-        private const string FrontDoorApiAppIdAME = "e2d9854a-429b-4bcb-ba21-415f7e978a49";
+        private const string ExperimentApiAppIdProdAME = "e2d9854a-429b-4bcb-ba21-415f7e978a49";
 
+        /// <summary>
+        /// ExperimentApiAppId for PPE AME
+        /// </summary>
+        private const string ExperimentApiAppIdPPEAME = "3b146683-117c-44cc-8919-c7b7cb637927";
+        
         /// <summary>
         /// Tenant Id for Microsoft (Corp)
         /// </summary>
@@ -79,9 +89,14 @@
         public Uri ServiceUri { get; set; }
 
         /// <summary>
-        /// Flag to determine Corp vs AME
+        /// Flag to determine if PROD AME
         /// </summary>
-        protected bool IsAME { get; set; }
+        protected bool IsProd { get; set; }
+
+        /// <summary>
+        /// Flag to determine if PPE AME
+        /// </summary>
+        protected bool IsPpe { get; set; }
 
         /// <summary>
         /// Validates the parameters passed into the commandlet.
@@ -103,16 +118,24 @@
                 {
                     if (this.ServiceUri == null)
                     {
-                        this.ServiceUri = new Uri(GetAccessToken.FrontDoorAPIEndPointCorp);
-                        this.IsAME = false;
+                        this.ServiceUri = new Uri(GetAccessToken.ExperimentApiDevEndpoint);
+                        this.IsPpe = false;
+                        this.IsProd = false;
                     }
-                    else if (this.ServiceUri.AbsoluteUri.Contains(GetAccessToken.FrontDoorAPIEndPointCorp, StringComparison.InvariantCultureIgnoreCase))
+                    else if (this.ServiceUri.AbsoluteUri.Contains(GetAccessToken.ExperimentApiDevEndpoint, StringComparison.InvariantCultureIgnoreCase))
                     {
-                        this.IsAME = false;
+                        this.IsPpe = false;
+                        this.IsProd = false;
                     }
-                    else if (this.ServiceUri.AbsoluteUri.Contains(GetAccessToken.FrontDoorAPIEndPointAME, StringComparison.InvariantCultureIgnoreCase))
+                    else if (this.ServiceUri.AbsoluteUri.Contains(GetAccessToken.ExperimentApiProdEndpoint, StringComparison.InvariantCultureIgnoreCase))
                     {
-                        this.IsAME = true;
+                        this.IsPpe = false;
+                        this.IsProd = true;
+                    }
+                    else if (this.ServiceUri.AbsoluteUri.Contains(GetAccessToken.ExperimentApiPpeEndpoint, StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        this.IsPpe = true;
+                        this.IsProd = false;
                     }
                     else
                     {
@@ -138,8 +161,14 @@
         /// </summary>
         protected virtual IPublicClientApplication GetPublicClientApplication()
         {
-            return PublicClientApplicationBuilder.Create(this.IsAME ? GetAccessToken.NativeAppClientIdAME : GetAccessToken.NativeAppClientIdCorp)
-              .WithAuthority(new Uri(string.Format("https://login.microsoftonline.com/{0}", this.IsAME ? GetAccessToken.TenantIdAME : GetAccessToken.TenantIdCorp)))
+            string nativeAppClientId = 
+                this.IsProd || this.IsPpe ? GetAccessToken.NativeAppClientIdAME : 
+                GetAccessToken.NativeAppClientIdCorp;
+            string tenantId = 
+                this.IsProd || this.IsPpe ? GetAccessToken.TenantIdAME : 
+                GetAccessToken.TenantIdCorp;
+            return PublicClientApplicationBuilder.Create(nativeAppClientId)
+              .WithAuthority(new Uri(string.Format("https://login.microsoftonline.com/{0}", tenantId)))
               .WithRedirectUri("http://localhost")
               .Build();
         }
@@ -166,7 +195,14 @@
 
         private async Task<AuthenticationResult> GetAccessTokenAsync()
         {
-            string[] scopes = new string[] { string.Format("api://{0}/user_impersonation", this.IsAME ? GetAccessToken.FrontDoorApiAppIdAME : GetAccessToken.FrontDoorApiAppIdCorp), "User.Read" };
+            string experimentApiAppId = 
+                this.IsProd ? GetAccessToken.ExperimentApiAppIdProdAME : 
+                (this.IsPpe ? GetAccessToken.ExperimentApiAppIdPPEAME : 
+                GetAccessToken.ExperimentApiAppIdCorp);
+            string[] scopes = new string[] 
+            { 
+                string.Format("api://{0}/user_impersonation", experimentApiAppId), "User.Read" 
+            };
             IPublicClientApplication app = this.GetPublicClientApplication();
 
             var accounts = await app.GetAccountsAsync().ConfigureAwait(false);

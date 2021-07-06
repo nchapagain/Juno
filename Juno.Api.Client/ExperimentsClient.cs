@@ -23,14 +23,15 @@
     /// </summary>
     public class ExperimentsClient : IExperimentClient
     {
+        private const string EnvironmentsApiRoute = "/api/environments";
+        private const string ExecutionGoalsApiRoute = "/api/executionGoals";
+        private const string ExecutionGoalTemplatesApiRoute = "/api/executionGoalTemplates";
         private const string ExperimentsApiRoute = "/api/experiments";
         private const string ExperimentContextApiRoute = "/api/experiments/{0}/resources";
         private const string ExperimentProvidersApiRoute = "/api/experiments/providers";
         private const string ExperimentStatusApiRoute = "/api/experimentstatus";
-        private const string ExecutionGoalsApiRoute = "/api/executionGoals";
-        private const string ExecutionGoalTemplatesApiRoute = "/api/executionGoalTemplates";
+        private const string ExperimentSummaryApiRoute = "/api/experimentSummary";
         private const string ExperimentTemplatesApiRoute = "/api/experimentTemplates";
-        private const string EnvironmentsApiRoute = "/api/environments";
 
         /// <summary>
         /// Defines the default retry policy for Api operations on timeout only
@@ -93,7 +94,6 @@
                 {
                     return await this.RestClient.PutAsync(requestUri, requestBody, cancellationToken)
                         .ConfigureAwait(false);
-
                 }).ConfigureAwait(false);
             }
         }
@@ -119,7 +119,6 @@
                 {
                     return await this.RestClient.PostAsync(requestUri, requestBody, cancellationToken)
                         .ConfigureAwait(false);
-
                 }).ConfigureAwait(false);
             }
         }
@@ -139,7 +138,6 @@
                 {
                     return await this.RestClient.PostAsync(requestUri, requestBody, cancellationToken)
                         .ConfigureAwait(false);
-
                 }).ConfigureAwait(false);
             }
         }
@@ -164,10 +162,8 @@
                 {
                     return await this.RestClient.PostAsync(requestUri, requestBody, cancellationToken)
                         .ConfigureAwait(false);
-
                 }).ConfigureAwait(false);
             }
-
         }
 
         /// <summary>
@@ -177,7 +173,7 @@
         /// <param name="cancellationToken"><see cref="CancellationToken"/></param>
         /// <returns>
         /// An <see cref="HttpResponseMessage"/> containing the <see cref="GoalBasedSchedule"/> created.
-        /// </returns>        
+        /// </returns>
         public async Task<HttpResponseMessage> CreateExecutionGoalTemplateAsync(Item<GoalBasedSchedule> executionGoalTemplate, CancellationToken cancellationToken)
         {
             executionGoalTemplate.ThrowIfNull(nameof(executionGoalTemplate));
@@ -231,7 +227,6 @@
             {
                 return await this.RestClient.GetAsync(requestUri, cancellationToken)
                     .ConfigureAwait(false);
-
             }).ConfigureAwait(false);
         }
 
@@ -246,7 +241,6 @@
             {
                 return await this.RestClient.GetAsync(requestUri, cancellationToken)
                     .ConfigureAwait(false);
-
             }).ConfigureAwait(false);
         }
 
@@ -261,7 +255,6 @@
             {
                 return await this.RestClient.GetAsync(requestUri, cancellationToken)
                     .ConfigureAwait(false);
-
             }).ConfigureAwait(false);
         }
 
@@ -291,7 +284,20 @@
             {
                 return await this.RestClient.GetAsync(requestUri, cancellationToken)
                     .ConfigureAwait(false);
+            }).ConfigureAwait(false);
+        }
 
+        /// <see cref="IExperimentClient.GetExperimentSummaryAsync"/>
+        public async Task<HttpResponseMessage> GetExperimentSummaryAsync(CancellationToken cancellationToken)
+        {
+            // Format: /api/experimentSummary/
+            string route = $"{ExperimentsClient.ExperimentSummaryApiRoute}/";
+            Uri requestUri = new Uri(this.BaseUri, route);
+
+            return await this.RetryPolicy.ExecuteAsync(async () =>
+            {
+                return await this.RestClient.GetAsync(requestUri, cancellationToken)
+                    .ConfigureAwait(false);
             }).ConfigureAwait(false);
         }
 
@@ -341,7 +347,7 @@
             }).ConfigureAwait(false);
         }
 
-        /// <see cref="IExperimentClient.GetExecutionGoalsAsync"/>       
+        /// <see cref="IExperimentClient.GetExecutionGoalsAsync"/>
         public async Task<HttpResponseMessage> GetExecutionGoalsAsync(CancellationToken cancellationToken, string teamName = null, string executionGoalId = null, ExecutionGoalView view = ExecutionGoalView.Full)
         {
             string route = $"{ExperimentsClient.ExecutionGoalsApiRoute}";
@@ -383,7 +389,6 @@
                 {
                     return await this.RestClient.PostAsync(requestUri, requestBody, cancellationToken)
                         .ConfigureAwait(false);
-
                 }).ConfigureAwait(false);
             }
         }
@@ -403,7 +408,6 @@
                 {
                     return await this.RestClient.PutAsync(requestUri, requestBody, cancellationToken)
                         .ConfigureAwait(false);
-
                 }).ConfigureAwait(false);
             }
         }
@@ -423,7 +427,6 @@
                 {
                     return await this.RestClient.PostAsync(requestUri, requestBody, cancellationToken)
                         .ConfigureAwait(false);
-
                 }).ConfigureAwait(false);
             }
         }
@@ -452,7 +455,6 @@
             return await this.RetryPolicy.ExecuteAsync(async () =>
             {
                 return await this.RestClient.GetAsync(requestUri, cancellationToken).ConfigureAwait(false);
-
             }).ConfigureAwait(false);
         }
 
@@ -478,7 +480,6 @@
             return await this.RetryPolicy.ExecuteAsync(async () =>
             {
                 return await this.RestClient.GetAsync(requestUri, cancellationToken).ConfigureAwait(false);
-
             }).ConfigureAwait(false);
         }
 
@@ -497,7 +498,6 @@
                 {
                     return await this.RestClient.PutAsync(requestUri, requestBody, cancellationToken)
                         .ConfigureAwait(false);
-
                 }).ConfigureAwait(false);
             }
         }
@@ -517,7 +517,28 @@
                 {
                     return await this.RestClient.PutAsync(requestUri, requestBody, cancellationToken)
                         .ConfigureAwait(false);
+                }).ConfigureAwait(false);
+            }
+        }
 
+        /// <see cref="IExperimentClient.UpdateExecutionGoalFromTemplateAsync"/>
+        public async Task<HttpResponseMessage> UpdateExecutionGoalFromTemplateAsync(ExecutionGoalParameter parameters, string templateId, string executionGoalId, string teamName, CancellationToken cancellationToken)
+        {
+            parameters.ThrowIfNull(nameof(parameters));
+            templateId.ThrowIfNullOrWhiteSpace(nameof(templateId));
+            executionGoalId.ThrowIfNullOrWhiteSpace(nameof(executionGoalId));
+            teamName.ThrowIfNullOrWhiteSpace(nameof(teamName));
+
+            using (StringContent requestBody = (StringContent)(RequestResponseExtensions.ToJsonContent(parameters.ToJson())))
+            {
+                // Format: /api/executionGoals
+                string route = $"{ExperimentsClient.ExecutionGoalsApiRoute}/{Uri.EscapeUriString(templateId)}?teamName={Uri.EscapeUriString(teamName)}&executionGoalId={Uri.EscapeUriString(executionGoalId)}";
+                Uri requestUri = new Uri(this.BaseUri, route);
+
+                return await this.RetryPolicy.ExecuteAsync(async () =>
+                {
+                    return await this.RestClient.PutAsync(requestUri, requestBody, cancellationToken)
+                        .ConfigureAwait(false);
                 }).ConfigureAwait(false);
             }
         }
@@ -526,6 +547,5 @@
         {
             return new StringContent(content, Encoding.UTF8, "application/json");
         }
-
     }
 }

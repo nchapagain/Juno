@@ -2,33 +2,31 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Data;
     using System.IO;
     using System.Reflection;
-    using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
     using AutoFixture;
     using Juno.Contracts;
-    using Juno.Contracts.Configuration;
-    using Juno.Providers;
-    using Juno.Scheduler.Preconditions.Manager;
-    using Microsoft.Azure.CRC.Telemetry;
+    using Juno.DataManagement;
+    using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Moq;
+    using Newtonsoft.Json.Linq;
     using NUnit.Framework;
 
     [TestFixture]
     [Category("Unit")]
-    public class SuccessfulExperimentsProviderTests
+    public class SuccessfulExperimentsProviderExTests
     {
-        private const string TargetInstanceParameter = "targetExperimentInstances";
+        private const string TargetExperimentInstances = nameof(SuccessfulExperimentsProviderExTests.TargetExperimentInstances);
 
         private Fixture mockFixture;
         private IServiceCollection mockServices;
         private IConfiguration mockConfiguration;
-        private Mock<IKustoManager> mockKustoManager;
+        private Mock<IExperimentDataManager> mockExperimentDataManager;
+        private ScheduleContext mockContext;
 
         [SetUp]
         public void SetupTests()
@@ -36,144 +34,60 @@
             this.mockFixture = new Fixture();
             this.mockFixture.SetUpGoalBasedScheduleMocks();
             this.mockServices = new ServiceCollection();
-            this.mockKustoManager = new Mock<IKustoManager>();
+            this.mockExperimentDataManager = new Mock<IExperimentDataManager>();
             this.mockConfiguration = new ConfigurationBuilder().SetBasePath(Path.Combine(
                  Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
                  @"Configuration"))
                 .AddJsonFile($"juno-dev01.environmentsettings.json")
                 .Build();
-
-            this.mockServices.AddSingleton<IKustoManager>(this.mockKustoManager.Object);
+            this.mockServices.AddSingleton<IExperimentDataManager>(this.mockExperimentDataManager.Object);
+            this.mockContext = new ScheduleContext(new Item<GoalBasedSchedule>("id", this.mockFixture.Create<GoalBasedSchedule>()), this.mockFixture.Create<TargetGoalTrigger>(), this.mockConfiguration);
         }
 
         [Test]
-        public void ConfigureServicesValidatesParameters()
+        public async Task IsConditionSatisfiedAsyncReturnsExpectedResultWhenConditionIsStatisfied()
         {
-            GoalComponent component = this.mockFixture.Create<Precondition>();
-            ScheduleContext context = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), this.mockFixture.Create<TargetGoalTrigger>(), this.mockConfiguration);
-
+            Precondition component = this.mockFixture.Create<Precondition>();
+            component.Parameters.Add(SuccessfulExperimentsProviderExTests.TargetExperimentInstances, 5);
             SuccessfulExperimentsProvider provider = new SuccessfulExperimentsProvider(this.mockServices);
-            
-            Assert.ThrowsAsync<ArgumentException>(() => provider.ConfigureServicesAsync(component, null));
-            Assert.ThrowsAsync<ArgumentException>(() => provider.ConfigureServicesAsync(null, context));
-        }
+            IEnumerable<JObject> queryResult = new List<JObject>()
+            {
+                JObject.Parse(@"{""Count"": 0 }")
+            };
+            this.mockExperimentDataManager.Setup(mgr => mgr.QueryExperimentsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(queryResult));
 
-        [Test]
-        public void IsConditionSatisfiedAsyncValidatesParameters()
-        {
-            Precondition componenet = this.mockFixture.Create<Precondition>();
-            componenet.Parameters.Add(SuccessfulExperimentsProviderTests.TargetInstanceParameter, 5);
-            ScheduleContext context = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), this.mockFixture.Create<TargetGoalTrigger>(), this.mockConfiguration);
-
-            PreconditionProvider provider = new SuccessfulExperimentsProvider(this.mockServices);
-
-            Assert.ThrowsAsync<ArgumentException>(() => provider.IsConditionSatisfiedAsync(null, context, CancellationToken.None));
-            Assert.ThrowsAsync<ArgumentException>(() => provider.IsConditionSatisfiedAsync(componenet, null, CancellationToken.None));
-        }
-
-        [Test]
-        public void IsConditionSatisfiedAsyncReturnsExpectedResultWhenStringParameterIsPassed()
-        {
-            string stringTargetInstanceParameter = "15";
-
-            Precondition component = this.mockFixture.Create<Precondition>();
-            component.Parameters.Add(SuccessfulExperimentsProviderTests.TargetInstanceParameter, stringTargetInstanceParameter);
-            ScheduleContext context = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), this.mockFixture.Create<TargetGoalTrigger>(), this.mockConfiguration);
-
-            this.mockKustoManager.Setup(mgr => mgr.GetKustoResponseAsync(It.IsAny<string>(), It.IsAny<KustoSettings>(), It.IsAny<string>(), It.IsAny<double?>()))
-                .Returns(Task.FromResult(SuccessfulExperimentsProviderTests.GetValidKustoResponse()));
-
-            PreconditionProvider provider = new SuccessfulExperimentsProvider(this.mockServices);
-            bool result = provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None).GetAwaiter().GetResult();
-
+            bool result = await provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None);
             Assert.IsTrue(result);
         }
 
         [Test]
-        public void IsConditionSatisfiedAsyncReturnsExpectedResultWhenConditionIsSatisfied()
+        public async Task IsConditionSatisfiedAsyncReturnsExpectedResultWhenConditionIsNotStatisfied()
         {
             Precondition component = this.mockFixture.Create<Precondition>();
-            component.Parameters.Add(SuccessfulExperimentsProviderTests.TargetInstanceParameter, 15);
-            ScheduleContext context = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), this.mockFixture.Create<TargetGoalTrigger>(), this.mockConfiguration);
+            component.Parameters.Add(SuccessfulExperimentsProviderExTests.TargetExperimentInstances, 5);
+            SuccessfulExperimentsProvider provider = new SuccessfulExperimentsProvider(this.mockServices);
+            IEnumerable<JObject> queryResult = new List<JObject>()
+            {
+                JObject.Parse(@"{""Count"": 5 }")
+            };
+            this.mockExperimentDataManager.Setup(mgr => mgr.QueryExperimentsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.FromResult(queryResult));
 
-            this.mockKustoManager.Setup(mgr => mgr.GetKustoResponseAsync(It.IsAny<string>(), It.IsAny<KustoSettings>(), It.IsAny<string>(), It.IsAny<double?>()))
-                .Returns(Task.FromResult(SuccessfulExperimentsProviderTests.GetValidKustoResponse()));
-
-            PreconditionProvider provider = new SuccessfulExperimentsProvider(this.mockServices);
-            bool result = provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None).GetAwaiter().GetResult();
-
-            Assert.IsTrue(result);
-        }
-
-        [Test]
-        public void IsConditionSatisfiedAsyncReturnsExpectedResultWhenConditionIsNotSatisfied()
-        {
-            Precondition component = this.mockFixture.Create<Precondition>();
-            component.Parameters.Add(SuccessfulExperimentsProviderTests.TargetInstanceParameter, 5);
-            ScheduleContext context = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), this.mockFixture.Create<TargetGoalTrigger>(), this.mockConfiguration);
-
-            this.mockKustoManager.Setup(mgr => mgr.GetKustoResponseAsync(It.IsAny<string>(), It.IsAny<KustoSettings>(), It.IsAny<string>(), It.IsAny<double?>()))
-                .Returns(Task.FromResult(SuccessfulExperimentsProviderTests.GetValidKustoResponse()));
-
-            PreconditionProvider provider = new SuccessfulExperimentsProvider(this.mockServices);
-            bool result = provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None).GetAwaiter().GetResult();
-
+            bool result = await provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None);
             Assert.IsFalse(result);
         }
 
         [Test]
-        public void IsConditionSatisfiedAsyncReturnsExpectedResultWhenErrorOccurs()
+        public void IsConditionSatisfiedAsyncReturnsExpectedResultWhenAnExceptionOccurs()
         {
             Precondition component = this.mockFixture.Create<Precondition>();
-            component.Parameters.Add(SuccessfulExperimentsProviderTests.TargetInstanceParameter, 10);
-            ScheduleContext context = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), this.mockFixture.Create<TargetGoalTrigger>(), this.mockConfiguration);
-
-            this.mockKustoManager.Setup(mgr => mgr.GetKustoResponseAsync(It.IsAny<string>(), It.IsAny<KustoSettings>(), It.IsAny<string>(), It.IsAny<double?>()))
+            component.Parameters.Add(SuccessfulExperimentsProviderExTests.TargetExperimentInstances, 5);
+            SuccessfulExperimentsProvider provider = new SuccessfulExperimentsProvider(this.mockServices);
+            this.mockExperimentDataManager.Setup(mgr => mgr.QueryExperimentsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Throws(new Exception());
 
-            PreconditionProvider provider = new SuccessfulExperimentsProvider(this.mockServices);
-            Assert.ThrowsAsync<Exception>(() => provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None));
-        }
-
-        [Test]
-        public void IsConditionSatisfiedAsyncAccessesCorrectCacheKey()
-        {
-            Precondition component = this.mockFixture.Create<Precondition>();
-            component.Parameters.Add(SuccessfulExperimentsProviderTests.TargetInstanceParameter, 15);
-            TargetGoalTrigger targetGoal = this.mockFixture.Create<TargetGoalTrigger>();
-            ScheduleContext context = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), targetGoal, this.mockConfiguration);
-
-            this.mockKustoManager.Setup(mgr => mgr.GetKustoResponseAsync(
-                It.Is<string>(value => value.Equals(string.Concat("SuccessfulExperiments", targetGoal.TargetGoal), StringComparison.Ordinal)),
-                It.IsAny<KustoSettings>(),
-                It.IsAny<string>(), 
-                It.IsAny<double?>()))
-                .Returns(Task.FromResult(SuccessfulExperimentsProviderTests.GetValidKustoResponse()));
-
-            PreconditionProvider provider = new SuccessfulExperimentsProvider(this.mockServices);
-            bool result = provider.IsConditionSatisfiedAsync(component, context, CancellationToken.None).GetAwaiter().GetResult();
-
-            Assert.IsTrue(result);
-
-            this.mockKustoManager.Verify(mgr => mgr.GetKustoResponseAsync(
-                It.Is<string>(value => value.Equals(string.Concat("SuccessfulExperiments", targetGoal.TargetGoal), StringComparison.Ordinal)),
-                It.IsAny<KustoSettings>(),
-                It.IsAny<string>(),
-                It.IsAny<double?>()),
-                Times.Once());
-        }
-
-        private static DataTable GetValidKustoResponse()
-        {
-            DataTable result = new DataTable();
-            DataColumn count = new DataColumn("experimentCount");
-            result.Columns.Add(count);
-
-            DataRow row = result.NewRow();
-            row["experimentCount"] = 10;
-            result.Rows.Add(row);
-
-            return result;
+            Assert.ThrowsAsync<Exception>(() => provider.IsConditionSatisfiedAsync(component, this.mockContext, CancellationToken.None));
         }
     }
 }

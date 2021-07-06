@@ -62,6 +62,20 @@
                     CreatedTimeUtc = DateTime.UtcNow,
                     ExpirationTimeUtc = DateTime.UtcNow.AddDays(1),
                     DeletedTimeUtc = DateTime.UtcNow.AddDays(1)
+                }, this.mockFixture.Component.Group),
+                TipSession.ToEnvironmentEntity(new TipSession
+                {
+                    TipSessionId = Guid.NewGuid().ToString(),
+                    ClusterName = "AnyCluster02",
+                    Region = "AnyRegion02",
+                    GroupName = this.mockFixture.Component.Group,
+                    NodeId = Guid.NewGuid().ToString(),
+                    ChangeIdList = new List<string> { Guid.NewGuid().ToString() },
+                    Status = TipSessionStatus.Created,
+                    CreatedTimeUtc = DateTime.UtcNow,
+                    ExpirationTimeUtc = DateTime.UtcNow.AddDays(1),
+                    DeletedTimeUtc = DateTime.UtcNow.AddDays(1),
+                    NodeTag = "A2"
                 }, this.mockFixture.Component.Group)
             };
 
@@ -75,28 +89,27 @@
                 { "osSku", "WindowsServer" },
                 { "osVersion", "VersionABC" },
                 { "vmSize", "Standard_F4s_v2" },
-                { "vmCount", 2 }
+                { "vmCount", 2 },
+                { "role", "Server" }
             });
 
             this.mockFixture.Services.AddSingleton(NullLogger.Instance);
             this.mockFixture.Services.AddSingleton(this.mockFixture.KeyVault.Object);
-            this.mockDiagnosticRequest = new List<DiagnosticsRequest>()
+            this.mockDiagnosticRequest = this.mockVmResourceGroup.VirtualMachines.Select(vm => vm.TipSessionId).Distinct().Select(tip => new DiagnosticsRequest(
+                this.mockFixture.ExperimentId,
+                Guid.NewGuid().ToString(),
+                DiagnosticsIssueType.ArmVmCreationFailure,
+                DateTime.UtcNow.AddHours(-2),
+                DateTime.UtcNow,
+                new Dictionary<string, IConvertible>()
                 {
-                    new DiagnosticsRequest(
-                        this.mockFixture.ExperimentId,
-                        Guid.NewGuid().ToString(),
-                        DiagnosticsIssueType.ArmVmCreationFailure,
-                        DateTime.UtcNow.AddHours(-2),
-                        DateTime.UtcNow,
-                        new Dictionary<string, IConvertible>()
-                        {
-                            { DiagnosticsParameter.TipSessionId, this.mockVmResourceGroup.TipSessionId },
-                            { DiagnosticsParameter.SubscriptionId, this.mockVmResourceGroup.SubscriptionId },
-                            { DiagnosticsParameter.ResourceGroupName, this.mockVmResourceGroup.Name },
-                            { DiagnosticsParameter.ExperimentId, this.mockFixture.ExperimentId },
-                            { DiagnosticsParameter.ProviderName, nameof(ArmVmProvider) }
-                        })
-                };
+                    { DiagnosticsParameter.TipSessionId, tip },
+                    { DiagnosticsParameter.SubscriptionId, this.mockVmResourceGroup.SubscriptionId },
+                    { DiagnosticsParameter.ResourceGroupName, this.mockVmResourceGroup.Name },
+                    { DiagnosticsParameter.ExperimentId, this.mockFixture.ExperimentId },
+                    { DiagnosticsParameter.ProviderName, nameof(ArmVmProvider) }
+                })).ToList();
+
             this.provider = new TestArmVmProvider(this.mockFixture.Services);
         }
 
@@ -309,6 +322,9 @@
         [TestCase(ProvisioningState.Succeeded, ExecutionStatus.Succeeded)]
         public void ProviderWithDiagnosticsEnabledDoesNotRequestDiagnosticsFromUnfailedExperiments(ProvisioningState state, ExecutionStatus status)
         {
+            // This is the scenario where ArmProvider has executed more than 1 time.
+            this.mockFixture.Context.ExperimentStep.Attempts = 2;
+
             // Enable Diagnostics flag is enabled
             this.mockFixture.Component.Parameters[StepParameters.EnableDiagnostics] = true;
             // Testing other resource group deployment execution statuses
@@ -422,10 +438,10 @@
                 expectedNodeId);
 
             Assert.IsNotNull(definition);
-            Assert.AreEqual(definition.ClusterId, expectedClusterName);
-            Assert.AreEqual(definition.NodeId, expectedNodeId);
+            Assert.AreEqual(definition.VirtualMachines.First().ClusterId, expectedClusterName);
+            Assert.AreEqual(definition.VirtualMachines.First().NodeId, expectedNodeId);
             Assert.AreEqual(definition.Region, expectedRegion);
-            Assert.AreEqual(definition.TipSessionId, expectedTipSessionId);
+            Assert.AreEqual(definition.VirtualMachines.First().TipSessionId, expectedTipSessionId);
             Assert.AreEqual(definition.Environment, EnvironmentSettings.Initialize(this.mockFixture.Configuration).Environment);
             Assert.AreEqual(definition.ExperimentId, this.mockFixture.Context.Experiment.Id);
             Assert.AreEqual(definition.StepId, this.mockFixture.Context.ExperimentStep.Id);
@@ -434,12 +450,62 @@
         }
 
         [Test]
-        public void ProviderReturnCorrectStatusonResourceDeployment()
+        public void ProviderReturnCorrectStatusOnResourceDeployment()
         {
+            // This is the scenario where ArmProvider first execute
+            this.mockFixture.Context.ExperimentStep.Attempts = 1;
             this.ValidateResourceGroupDeployment(ProvisioningState.Accepted, ExecutionStatus.InProgress);
+
+            // The attempts must have been at least 1 for those scenarios
+            this.mockFixture.Context.ExperimentStep.Attempts = 2;
             this.ValidateResourceGroupDeployment(ProvisioningState.Running, ExecutionStatus.InProgress);
             this.ValidateResourceGroupDeployment(ProvisioningState.Failed, ExecutionStatus.Failed);
             this.ValidateResourceGroupDeployment(ProvisioningState.Succeeded, ExecutionStatus.Succeeded);
+        }
+
+        [Test]
+        public void ProviderReturnCorrectStatusOnResourceDeploymentWithNodeTag()
+        {
+            // This is the scenario where ArmProvider first execute
+            this.mockFixture.Context.ExperimentStep.Attempts = 1;
+            this.mockFixture.Component.Parameters.Add("nodeTag", "A2");
+            this.ValidateResourceGroupDeployment(ProvisioningState.Accepted, ExecutionStatus.InProgress);
+
+            // The attempts must have been at least 1 for those scenarios
+            this.mockFixture.Context.ExperimentStep.Attempts = 2;
+            this.ValidateResourceGroupDeployment(ProvisioningState.Running, ExecutionStatus.InProgress);
+            this.ValidateResourceGroupDeployment(ProvisioningState.Failed, ExecutionStatus.Failed);
+            this.ValidateResourceGroupDeployment(ProvisioningState.Succeeded, ExecutionStatus.Succeeded);
+        }
+
+        [Test]
+        public void ProviderReturnCorrectStatusOnResourceDeploymentWithCrossNodeScenario()
+        {
+            // This is the scenario where ArmProvider first execute
+            this.mockFixture.Context.ExperimentStep.Attempts = 1;
+            this.mockFixture.Component.Parameters.Add("nodeTag", "A2");
+
+            this.mockVmResourceGroup.State = ProvisioningState.Succeeded;
+            this.mockVmResourceGroup.VirtualMachines.ToList().ForEach(deployment => deployment.State = ProvisioningState.Succeeded);
+
+            this.mockFixture.DataClient
+                .Setup(c => c.GetOrCreateStateAsync<VmResourceGroupDefinition>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>(), It.IsAny<string>()))
+                .ReturnsAsync(this.mockVmResourceGroup);
+            this.ValidateResourceGroupDeployment(ProvisioningState.Accepted, ExecutionStatus.InProgress);
+
+            // The attempts must have been at least 1 for those scenarios
+            this.mockFixture.Context.ExperimentStep.Attempts = 2;
+            this.ValidateResourceGroupDeployment(ProvisioningState.Running, ExecutionStatus.InProgress);
+            this.ValidateResourceGroupDeployment(ProvisioningState.Failed, ExecutionStatus.Failed);
+            this.ValidateResourceGroupDeployment(ProvisioningState.Succeeded, ExecutionStatus.Succeeded);
+        }
+
+        [Test]
+        public void ProviderReturnCorrectStatusOnResourceDeploymentWithTipSessionTagNotFound()
+        {
+            this.mockFixture.Component.Parameters.Add("nodeTag", "A3");
+            ExecutionResult result = this.ValidateResourceGroupDeployment(ProvisioningState.Running, ExecutionStatus.Failed);
+            Assert.AreEqual("A TiP session/entity for experiment group 'Group A' with nodeTag 'A3' was not found.", result.Error.Message);
         }
 
         [Test]
@@ -461,29 +527,24 @@
                 expectedNodeId);
 
             Assert.IsNotNull(definition.Tags);
-            Assert.IsTrue(definition.Tags.Count == 7 + this.mockFixture.Component.Tags.Count);
+            Assert.AreEqual(5 + this.mockFixture.Component.Tags.Count, definition.Tags.Count);
             Assert.AreEqual(definition.Tags["experimentId"], this.mockFixture.Context.Experiment.Id);
             Assert.AreEqual(definition.Tags["experimentGroup"], this.mockFixture.Component.Group);
             Assert.AreEqual(definition.Tags["experimentStepId"], this.mockFixture.Context.ExperimentStep.Id);
-            Assert.AreEqual(definition.Tags["tipSessionId"], expectedTipSessionId);
-            Assert.AreEqual(definition.Tags["nodeId"], expectedNodeId);
             Assert.IsTrue(definition.Tags.ContainsKey("createdDate"));
             Assert.IsTrue(definition.Tags.ContainsKey("expirationDate"));
         }
 
-        private void ValidateResourceGroupDeployment(ProvisioningState resourceGroupState, ExecutionStatus expectedStatus)
+        private ExecutionResult ValidateResourceGroupDeployment(ProvisioningState resourceGroupState, ExecutionStatus expectedStatus)
         {
             this.mockFixture.DataClient.OnSaveState<VmResourceGroupDefinition>().Returns(Task.CompletedTask);
             // Reset the status and VM states/statuses
-            if (expectedStatus == ExecutionStatus.Succeeded)
-            {
-                this.mockVmResourceGroup.State = ProvisioningState.Succeeded;
-                this.mockVmResourceGroup.VirtualMachines.ToList().ForEach(deployment => deployment.State = ProvisioningState.Succeeded);
+            this.mockVmResourceGroup.State = resourceGroupState;
+            this.mockVmResourceGroup.VirtualMachines.ToList().ForEach(deployment => deployment.State = resourceGroupState);
 
-                this.mockFixture.DataClient
-                    .Setup(c => c.GetOrCreateStateAsync<VmResourceGroupDefinition>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>(), It.IsAny<string>()))
-                    .ReturnsAsync(this.mockVmResourceGroup);
-            }
+            this.mockFixture.DataClient
+                .Setup(c => c.GetOrCreateStateAsync<VmResourceGroupDefinition>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>(), It.IsAny<string>()))
+                .ReturnsAsync(this.mockVmResourceGroup);
 
             this.mockFixture.DataClient.OnGetEntitiesProvisioned()
                 .Returns(Task.FromResult(this.mockTipSessionEntities));
@@ -502,6 +563,7 @@
 
             Assert.IsNotNull(result);
             Assert.AreEqual(expectedStatus, result.Status);
+            return result;
         }
 
         private class TestArmVmProvider : ArmVmProvider

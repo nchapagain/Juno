@@ -9,9 +9,12 @@
     using Juno.Extensions.Telemetry;
     using Juno.Providers;
     using Juno.Scheduler.Preconditions.Manager;
+    using Kusto.Data.Exceptions;
     using Microsoft.Azure.CRC.Extensions;
     using Microsoft.Azure.CRC.Telemetry;
+    using Microsoft.Azure.CRC.Telemetry.Logging;
     using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Logging;
     using static Juno.Scheduler.Preconditions.Manager.KustoDataTableExtension;
 
     /// <summary>
@@ -83,19 +86,28 @@
 
                 string resolvedQuery = this.ReplaceQueryParameters(scheduleContext, component, settings.Environment);
 
-                DataTable response = await kustoManager.GetKustoResponseAsync(
-                    string.Concat(CacheKeys.FailureRate, scheduleContext.TargetGoalTrigger.TargetGoal),
-                    kustoSettings,
-                    resolvedQuery).ConfigureDefaults();
-
-                if (response.Rows.Count != 0)
+                try
                 {
-                    int failureRate = response.ParseSingleRowSingleKustoColumn(KustoColumn.FailureRate);
-                    conditionSatisfied = failureRate > targetFailureRate;
+                    DataTable response = await kustoManager.GetKustoResponseAsync(
+                        string.Concat(CacheKeys.FailureRate, scheduleContext.TargetGoalTrigger.Name),
+                        kustoSettings,
+                        resolvedQuery).ConfigureDefaults();
 
-                    telemetryContext.AddContext(SchedulerEventProperty.FailureRate, failureRate);
-                    telemetryContext.AddContext(EventProperty.Count, failureRate);
-                    telemetryContext.AddContext(SchedulerEventProperty.Threshold, targetFailureRate);
+                    if (response.Rows.Count != 0)
+                    {
+                        int failureRate = response.ParseSingleRowSingleKustoColumn(KustoColumn.FailureRate);
+                        conditionSatisfied = failureRate > targetFailureRate;
+
+                        telemetryContext.AddContext(SchedulerEventProperty.FailureRate, failureRate);
+                        telemetryContext.AddContext(EventProperty.Count, failureRate);
+                        telemetryContext.AddContext(SchedulerEventProperty.Threshold, targetFailureRate);
+                    }
+                }
+                catch (KustoRequestThrottledException)
+                {
+                    // Do not let throttled exceptions prevent execution.
+                    this.Logger.LogTelemetry($"{nameof(FailureRatePreconditionProvider)}.ThrottledWarning", LogLevel.Warning, telemetryContext);
+                    return false;
                 }
             }
 
@@ -104,7 +116,7 @@
 
         private string ReplaceQueryParameters(ScheduleContext scheduleContext, Precondition component, string environment)
         {
-            string targetGoalFilter = scheduleContext.TargetGoalTrigger.TargetGoal;
+            string targetGoalFilter = scheduleContext.TargetGoalTrigger.Name;
             int daysAgo = component.Parameters.GetValue<int>(Parameters.DaysAgo, this.defaultDaysAgo);
             int minimumExperimentInstance = component.Parameters.GetValue<int>(Parameters.MinimumExperimentInstance);
 

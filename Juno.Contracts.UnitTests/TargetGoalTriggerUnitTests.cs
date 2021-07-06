@@ -30,12 +30,11 @@
             Assert.Throws<ArgumentException>(() => new TargetGoalTrigger(
                 validComponent.Id,
                 invalidParameter,
-                validComponent.TargetGoal,
+                validComponent.Name,
                 validComponent.CronExpression,
                 validComponent.Enabled,
-                validComponent.ExperimentName,
-                validComponent.TeamName,
                 validComponent.Version,
+                validComponent.TeamName,
                 validComponent.Created,
                 validComponent.LastModified));
 
@@ -45,45 +44,30 @@
                 invalidParameter,
                 validComponent.CronExpression,
                 validComponent.Enabled,
-                validComponent.ExperimentName,
-                validComponent.TeamName,
                 validComponent.Version,
+                validComponent.TeamName,
                 validComponent.Created,
                 validComponent.LastModified));
 
             Assert.Throws<ArgumentException>(() => new TargetGoalTrigger(
                 validComponent.Id,
                 validComponent.ExecutionGoal,
-                validComponent.TargetGoal,
+                validComponent.Name,
                 invalidParameter,
                 validComponent.Enabled,
-                validComponent.ExperimentName,
-                validComponent.TeamName,
                 validComponent.Version,
+                validComponent.TeamName,
                 validComponent.Created,
                 validComponent.LastModified));
 
             Assert.Throws<ArgumentException>(() => new TargetGoalTrigger(
                 validComponent.Id,
                 validComponent.ExecutionGoal,
-                validComponent.TargetGoal,
+                validComponent.Name,
                 validComponent.CronExpression,
                 validComponent.Enabled,
                 invalidParameter,
                 validComponent.TeamName,
-                validComponent.Version,
-                validComponent.Created,
-                validComponent.LastModified));
-
-            Assert.Throws<ArgumentException>(() => new TargetGoalTrigger(
-                validComponent.Id,
-                validComponent.ExecutionGoal,
-                validComponent.TargetGoal,
-                validComponent.CronExpression,
-                validComponent.Enabled,
-                validComponent.ExperimentName,
-                validComponent.TeamName,
-                invalidParameter,
                 validComponent.Created,
                 validComponent.LastModified));
         }
@@ -109,24 +93,22 @@
             TargetGoalTrigger instance1 = new TargetGoalTrigger(
                 template.Id.ToLowerInvariant(),
                 template.ExecutionGoal.ToLowerInvariant(),
-                template.TargetGoal.ToLowerInvariant(),
+                template.Name.ToLowerInvariant(),
                 template.CronExpression.ToLowerInvariant(),
                 template.Enabled,
-                template.ExperimentName.ToLowerInvariant(),
-                template.TeamName.ToLowerInvariant(),
                 template.Version.ToLowerInvariant(),
+                template.TeamName.ToLowerInvariant(),
                 template.Created,
                 template.LastModified);
 
             TargetGoalTrigger instance2 = new TargetGoalTrigger(
                 template.Id.ToUpperInvariant(),
                 template.ExecutionGoal.ToUpperInvariant(),
-                template.TargetGoal.ToUpperInvariant(),
+                template.Name.ToUpperInvariant(),
                 template.CronExpression.ToUpperInvariant(),
                 template.Enabled,
-                template.ExperimentName.ToUpperInvariant(),
-                template.TeamName.ToUpperInvariant(),
                 template.Version.ToUpperInvariant(),
+                template.TeamName.ToLowerInvariant(),
                 template.Created,
                 template.LastModified);
 

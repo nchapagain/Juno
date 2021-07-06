@@ -1,14 +1,6 @@
-﻿// The query for the Successful Experiments Provider
-// This query will return a dataTable with column: experimentCount
-// experimentCount value looks at successful experiments that have been launched under the governing target goal that launched it
-// This query relies on getTargetGoalSummary() from Staging DB
-//
-let queryStart = $startTime$;
-let queryEnd = now();
-let targetGoalExpected = "$targetGoal$";
-let environmentSetting = "$environment$";
-let targetGoalSuccessfulCount = cluster('azurecrc.westus2.kusto.windows.net').database('JunoStaging').getTargetGoalSummary(targetGoalExpected, queryStart, queryEnd)
-| where environment == environmentSetting
-| project experimentCount = SucceededExp+InprogressExp;
-targetGoalSuccessfulCount
-| take 1
+﻿SELECT COUNT(b.id) AS Count
+FROM b
+WHERE b.lastModified > DateTimeAdd("dd", @daysAgo, GetCurrentDateTime ()) 
+    AND b.definition.metadata.targetGoal = '@targetGoal'
+    AND b.definition.metadata.executionGoalId = '@executionGoalId'
+    AND (b.status = 'InProgress' OR b.status = 'Succeeded')

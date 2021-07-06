@@ -6,7 +6,9 @@
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
+    using AutoFixture;
     using Juno.Contracts;
+    using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
@@ -24,6 +26,7 @@
 
         private ScheduleContext mockContext;
         private GoalBasedSchedule mockExecutionGoal;
+        private Fixture mockFixture;
 
         [SetUp]
         public void SetupTests()
@@ -36,9 +39,13 @@
             this.executionGoalExecution = new ExecutionGoalHandler(this.mockServices);
 
             TargetGoalTrigger targetGoalTrigger = FixtureExtensions.CreateTargetGoalTrigger();
-            Goal targetGoal = FixtureExtensions.CreateTargetGoal(targetGoalTrigger.TargetGoal);
-            this.mockExecutionGoal = FixtureExtensions.CreateExecutionGoalFromTemplate(targetGoals: new List<Goal>() { targetGoal });
-            this.mockContext = new ScheduleContext(this.mockExecutionGoal, targetGoalTrigger, new Mock<IConfiguration>().Object);
+            TargetGoal targetGoal = FixtureExtensions.CreateTargetGoal(targetGoalTrigger.Name);
+            this.mockExecutionGoal = FixtureExtensions.CreateExecutionGoalFromTemplate(targetGoals: new List<TargetGoal>() { targetGoal });
+
+            this.mockFixture = new Fixture();
+            this.mockFixture.SetUpGoalBasedScheduleMocks();
+            Mock<IConfiguration> mockConfiguration = new Mock<IConfiguration>();
+            this.mockContext = new ScheduleContext(new Item<GoalBasedSchedule>("id", this.mockFixture.Create<GoalBasedSchedule>()), this.mockFixture.Create<TargetGoalTrigger>(), mockConfiguration.Object);
         }
 
         [Test]

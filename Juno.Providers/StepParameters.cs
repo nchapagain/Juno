@@ -91,6 +91,16 @@
         public const string RunAsAdministrator = nameof(StepParameters.RunAsAdministrator);
 
         /// <summary>
+        /// Parameter = 'nodeTag'.
+        /// </summary>
+        public const string NodeTag = nameof(StepParameters.NodeTag);
+
+        /// <summary>
+        /// Parameter = 'Count'.
+        /// </summary>
+        public const string Count = nameof(StepParameters.Count);
+
+        /// <summary>
         /// Parameter = 'timeout' (e.g. 00:30:00).
         /// </summary>
         public const string Timeout = nameof(StepParameters.Timeout);

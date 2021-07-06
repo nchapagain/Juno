@@ -54,9 +54,7 @@
             IEnumerable<TargetGoalParameter> validComponents = this.mockFixture.Create<ExecutionGoalParameter>().TargetGoals;
             foreach (TargetGoalParameter validComponent in validComponents)
             {
-                Assert.Throws<ArgumentException>(() => new TargetGoalParameter(validComponent.Id, invalidPrameter, validComponent.Parameters));
-                Assert.Throws<ArgumentException>(() => new TargetGoalParameter(invalidPrameter, validComponent.Workload, validComponent.Parameters));
-                Assert.Throws<ArgumentException>(() => new TargetGoalParameter(invalidPrameter, invalidPrameter, validComponent.Parameters));
+                Assert.Throws<ArgumentException>(() => new TargetGoalParameter(invalidPrameter, false, validComponent.Parameters));
             }
         }
 
@@ -75,7 +73,7 @@
             // Parameters is null here.
             TargetGoalParameter template = this.mockFixture.Create<ExecutionGoalParameter>().TargetGoals.FirstOrDefault();
 
-            TargetGoalParameter targetGoalParameter = new TargetGoalParameter(template.Id, template.Workload);
+            TargetGoalParameter targetGoalParameter = new TargetGoalParameter(template.Name, true);
             Assert.DoesNotThrow(() => targetGoalParameter.GetHashCode());
         }
 
@@ -87,13 +85,13 @@
             foreach (var template in templates)
             {
                 TargetGoalParameter instance1 = new TargetGoalParameter(
-                    template.Id.ToLowerInvariant(),
-                    template.Workload.ToLowerInvariant(),
+                    template.Name.ToLowerInvariant(),
+                    true,
                     template.Parameters);
 
                 TargetGoalParameter instance2 = new TargetGoalParameter(
-                    template.Id.ToUpperInvariant(),
-                    template.Workload.ToUpperInvariant(),
+                    template.Name.ToUpperInvariant(),
+                    true,
                     template.Parameters);
 
                 Assert.AreEqual(instance1.GetHashCode(), instance2.GetHashCode());

@@ -36,6 +36,7 @@
             this.mockDependencies = new FixtureDependencies();
             this.mockFixture.SetupExperimentMocks();
             this.mockTemplate = new Item<GoalBasedSchedule>("an id", FixtureExtensions.CreateExecutionGoalTemplate());
+            this.mockTemplate.SetETag("an eTag");
             this.mockGetResponse = this.mockFixture.CreateHttpResponse(System.Net.HttpStatusCode.OK, this.mockTemplate);
 
             this.retryPolicy = Policy.Handle<Exception>()
@@ -147,7 +148,11 @@
             Assert.AreEqual(this.expectedTemplateId, this.cmdlet.TemplateId);
             Assert.IsTrue(this.cmdlet.AsJson);
             Assert.IsTrue(this.cmdlet.IsJsonObject);
-            Assert.AreEqual(this.mockTemplate, this.cmdlet.Results);
+            Assert.IsNull((this.cmdlet.Results as Item<GoalBasedSchedule>).GetETag());
+            Assert.IsNotNull(this.mockTemplate.GetETag());
+            Assert.AreNotEqual(this.mockTemplate, this.cmdlet.Results);
+            this.cmdlet.RemoveTags(this.mockTemplate);
+            Assert.AreEqual(this.mockTemplate.ToJson(), this.cmdlet.Results.ToJson());
         }
 
         private class TestGetTemplateCmdlet : GetTemplateCmdlet
@@ -164,6 +169,11 @@
             public void ProcessInternal()
             {
                 this.ProcessRecord();
+            }
+
+            public void RemoveTags(ItemBase item)
+            {
+                this.RemoveServerSideDataTags(item);
             }
 
             protected override void WriteResults(object results)

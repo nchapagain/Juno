@@ -121,6 +121,15 @@
             IEnumerable<ExecutionStatus> status = null);
 
         /// <summary>
+        /// Makes an API request to get experiment summaries.
+        /// </summary>
+        /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
+        /// <returns>
+        /// An <see cref="HttpResponseMessage"/> containing the <see cref="ExperimentSummary"/>.
+        /// </returns>
+        Task<HttpResponseMessage> GetExperimentSummaryAsync(CancellationToken cancellationToken);
+
+        /// <summary>
         /// Makes an API request to get experiment instance statuses for end-to-end experiments.
         /// </summary>
         /// <param name="experimentName">The name of the experiment/experiment instances.</param>
@@ -180,7 +189,7 @@
         /// <param name="cancellationToken"><see cref="CancellationToken"/></param>
         /// <returns>
         /// An <see cref="HttpResponseMessage"/> containing the <see cref="GoalBasedSchedule"/>.
-        /// </returns>        
+        /// </returns>
         Task<HttpResponseMessage> GetExecutionGoalsAsync(CancellationToken cancellationToken, string teamName = null, string executionGoalId = null, ExecutionGoalView view = ExecutionGoalView.Full);
 
         /// <summary>
@@ -191,7 +200,7 @@
         /// <param name="cancellationToken"><see cref="CancellationToken"/></param>
         /// <returns>
         /// An <see cref="HttpResponseMessage"/>.
-        /// </returns>        
+        /// </returns>
         Task<HttpResponseMessage> DeleteExecutionGoalAsync(string executionGoalId, string teamName, CancellationToken cancellationToken);
 
         /// <summary>
@@ -202,11 +211,11 @@
         /// <param name="cancellationToken"><see cref="CancellationToken"/></param>
         /// <returns>
         /// An <see cref="HttpResponseMessage"/>.
-        /// </returns>        
+        /// </returns>
         Task<HttpResponseMessage> DeleteExecutionGoalTemplateAsync(string executionGoalTemplateId, string teamName, CancellationToken cancellationToken);
 
         /// <summary>
-        /// Retrieves a list execution goal template metadata 
+        /// Retrieves a list execution goal template metadata
         /// </summary>
         /// <param name="teamName">Name of the team that owns the templates</param>
         /// <param name="cancellationToken"><see cref="CancellationToken"/></param>
@@ -243,5 +252,16 @@
         /// An <see cref="HttpResponseMessage"/> containing the <see cref="GoalBasedSchedule"/> created.
         /// </returns>
         Task<HttpResponseMessage> UpdateExecutionGoalTemplateAsync(Item<GoalBasedSchedule> executionGoalTemplate, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Updates an execution goal from template
+        /// </summary>
+        /// <param name="parameters">Parameters that was provided by user</param>
+        /// <param name="templateId">Template Id</param>
+        /// <param name="executionGoalId">The id of the execution goal</param>
+        /// <param name="teamName">Team that owns the template</param>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/></param>
+        /// <returns></returns>
+        Task<HttpResponseMessage> UpdateExecutionGoalFromTemplateAsync(ExecutionGoalParameter parameters, string templateId, string executionGoalId, string teamName, CancellationToken cancellationToken);
     }
 }

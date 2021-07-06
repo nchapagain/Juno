@@ -61,12 +61,31 @@ namespace Juno.Execution.Api.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to select * from c where c.cosmosDocType = &quot;businessSignals&quot;.
+        /// </summary>
+        internal static string BusinessSignalsQuery {
+            get {
+                return ResourceManager.GetString("BusinessSignalsQuery", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to select * from c where c.cosmosDocType = &quot;progress&quot;.
+        /// </summary>
+        internal static string ExperimentsProgress {
+            get {
+                return ResourceManager.GetString("ExperimentsProgress", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to SELECT 
         ///exp.id,
         ///exp.definition.name,
         ///exp.status,
         ///exp.definition.metadata.teamName,
         ///exp.definition.metadata.revision ?? CONCAT(exp.definition.metadata.payloadVersion, &quot;_&quot;, exp.definition.metadata.payloadPFVersion) as revision,
+        ///exp.definition.metadata.workload,
         ///exp.created,
         ///exp.lastModified
         ///FROM exp WHERE exp.definition.name = &apos;{0}&apos;.

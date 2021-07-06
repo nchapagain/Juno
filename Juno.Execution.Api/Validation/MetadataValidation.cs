@@ -23,19 +23,27 @@
         /// <summary>
         /// Required metadata properties for ALL experiments.
         /// </summary>
-        internal static List<string> RequiredMetadata { get; } = new List<string>
+        internal static List<string> RequiredMetadata { get; } = new List<string>()
         {
-            "experimentType",
-            "generation",
-            "nodeCpuId",
-            "payload",
-            "payloadType",
-            "payloadVersion",
-            "payloadPFVersion",
-            "workload",
-            "workloadType",
-            "workloadVersion",
-            "impactType"
+            MetadataProperty.ExperimentType,
+            MetadataProperty.Generation,
+            MetadataProperty.NodeCpuId,
+            MetadataProperty.Payload,
+            MetadataProperty.Revision,
+            MetadataProperty.TenantId,
+            MetadataProperty.Workload,
+            MetadataProperty.ImpactType
+        };
+
+        /// <summary>
+        /// Required metadata properties given certain other properties exist for ALL experiments.
+        /// </summary>
+        internal static Dictionary<string, List<string>> RequiredIfExistsMetadata { get; } = new Dictionary<string, List<string>>()
+        {
+            // In the entries below, the Value is a set of metadata properties that are required if
+            // the property defined by the Key exists. For example, if the 'payload'
+            { MetadataProperty.PayloadType, new List<string> { MetadataProperty.PayloadVersion, MetadataProperty.PayloadPFVersion } },
+            { MetadataProperty.WorkloadType, new List<string> { MetadataProperty.WorkloadVersion } },
         };
 
         /// <summary>
@@ -58,13 +66,29 @@
         {
             List<string> missingMetadata = new List<string>();
 
-            foreach (string property in MetadataValidation.RequiredMetadata)
+            // Metadata that is absolutely required.
+            MetadataValidation.RequiredMetadata.ForEach(property =>
             {
                 if (experiment.Metadata?.TryGetValue(property, out IConvertible value) != true)
                 {
                     missingMetadata.Add(property);
                 }
-            }
+            });
+
+            // Metadata that is required if certain other metadata properties exist.
+            MetadataValidation.RequiredIfExistsMetadata.ToList().ForEach(entry =>
+            {
+                if (experiment.Metadata?.TryGetValue(entry.Key, out IConvertible value) == true)
+                {
+                    entry.Value.ForEach(property =>
+                    {
+                        if (experiment.Metadata?.TryGetValue(property, out IConvertible value) != true)
+                        {
+                            missingMetadata.Add(property);
+                        }
+                    });
+                }
+            });
 
             if (missingMetadata.Any())
             {

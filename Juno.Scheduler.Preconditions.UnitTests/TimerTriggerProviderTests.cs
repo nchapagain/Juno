@@ -6,6 +6,7 @@
     using System.Threading.Tasks;
     using AutoFixture;
     using Juno.Contracts;
+    using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Moq;
@@ -28,7 +29,8 @@
             this.mockInterval = TimeSpan.FromMinutes(10);
             this.mockFixture = new Fixture();
             this.mockFixture.SetUpGoalBasedScheduleMocks();
-            this.mockContext = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), this.mockFixture.Create<TargetGoalTrigger>(), new Mock<IConfiguration>().Object);
+            Mock<IConfiguration> mockConfiguration = new Mock<IConfiguration>();
+            this.mockContext = new ScheduleContext(new Item<GoalBasedSchedule>("id", this.mockFixture.Create<GoalBasedSchedule>()), this.mockFixture.Create<TargetGoalTrigger>(), mockConfiguration.Object);
         }
 
         [Test]

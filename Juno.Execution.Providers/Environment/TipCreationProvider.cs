@@ -32,6 +32,7 @@
     {
         // The timeout for the entirety of the TiP creation process.
         private static readonly TimeSpan DefaultTimeout = TimeSpan.FromHours(2);
+        private static readonly TimeSpan ReevaluationExtension = TimeSpan.FromMinutes(1);
 
         private ITipClient tipClient;
         private TipSettings tipSettings;
@@ -143,7 +144,7 @@
             component.ThrowIfNull(nameof(component));
             telemetryContext.ThrowIfNull(nameof(telemetryContext));
 
-            ExecutionResult result = new ExecutionResult(ExecutionStatus.InProgress);
+            ExecutionResult result = new ExecutionResult(ExecutionStatus.InProgress, extensionTimeout: TipCreationProvider.ReevaluationExtension);
 
             if (!cancellationToken.IsCancellationRequested)
             {

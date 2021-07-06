@@ -5,6 +5,7 @@
     using System.Threading;
     using AutoFixture;
     using Juno.Contracts;
+    using Microsoft.Azure.CRC.Contracts;
     using Moq;
     using NUnit.Framework;
     using Polly;
@@ -19,7 +20,7 @@
         private TestGetParametersCmdlet cmdlet;
         private Fixture mockFixture;
         private FixtureDependencies mockDependencies;
-        private ExecutionGoalSummary mockResponseContent;
+        private Item<GoalBasedSchedule> mockResponseContent;
         private HttpResponseMessage mockGetResponse;
         private bool exceptionThrown;
         private string expectedTeamName;
@@ -32,7 +33,8 @@
             this.mockFixture = new Fixture();
             this.mockDependencies = new FixtureDependencies();
             this.mockFixture.SetupExperimentMocks();
-            this.mockResponseContent = FixtureExtensions.CreateExecutionGoalMetadata();
+            this.mockFixture.SetUpGoalBasedScheduleMocks();
+            this.mockResponseContent = new Item<GoalBasedSchedule>("an Id", FixtureExtensions.CreateExecutionGoalFromTemplate());
             this.mockGetResponse = this.mockFixture.CreateHttpResponse(System.Net.HttpStatusCode.OK, this.mockResponseContent);
 
             this.retryPolicy = Policy.Handle<Exception>()
@@ -97,7 +99,7 @@
                 Assert.AreEqual(this.cmdlet.TeamName, teamName);
                 Assert.AreEqual(this.cmdlet.TemplateId, definitionId);
                 Assert.IsFalse(this.cmdlet.AsJson);
-                Assert.AreEqual(View.Summary, view);
+                Assert.AreEqual(View.Full, view);
             }).ThrowsAsync(expectedException);
 
             try
@@ -131,7 +133,7 @@
                 Assert.AreEqual(this.cmdlet.TeamName, teamName);
                 Assert.AreEqual(this.cmdlet.TemplateId, definitionId);
                 Assert.IsTrue(this.cmdlet.AsJson);
-                Assert.AreEqual(View.Summary, view);
+                Assert.AreEqual(View.Full, view);
             }).ReturnsAsync(this.mockGetResponse);
 
             try
@@ -168,14 +170,14 @@
                 this.ProcessRecord();
             }
 
-            public dynamic GetExpectedParameters(ExecutionGoalSummary executionGoalSummary)
+            public dynamic GetExpectedParameters(Item<GoalBasedSchedule> goalBasedSchedule)
             {
-                return base.GetParametersFromSummary(executionGoalSummary, true);
+                return base.GetParametersFromGoalBasedSchedule(goalBasedSchedule);
             }
 
-            protected override dynamic GetParametersFromSummary(ExecutionGoalSummary executionGoalSummary, bool isTest = false)
+            protected override dynamic GetParametersFromGoalBasedSchedule(Item<GoalBasedSchedule> goalBasedSchedule)
             {
-                return base.GetParametersFromSummary(executionGoalSummary, true);
+                return base.GetParametersFromGoalBasedSchedule(goalBasedSchedule);
             }
 
             protected override void WriteResults(object results)

@@ -37,7 +37,9 @@
     [SupportedParameter(Name = Parameters.SigImageReference, Type = typeof(string), Required = false)]
     [SupportedParameter(Name = Parameters.Platform, Type = typeof(string), Required = false)]
     [SupportedParameter(Name = Parameters.Regions, Type = typeof(string), Required = false)]
+    [SupportedParameter(Name = Parameters.Role, Type = typeof(string), Required = false)]
     [SupportedParameter(Name = Parameters.SubscriptionId, Type = typeof(string), Required = true)]
+    [SupportedParameter(Name = Parameters.NodeTag, Type = typeof(string), Required = false)]
     [SupportedParameter(Name = Parameters.UseTipSession, Type = typeof(bool), Required = false)]
     [SupportedParameter(Name = Parameters.PinnedCluster, Type = typeof(string), Required = false)]
     [SupportedParameter(Name = Parameters.VmCount, Type = typeof(int), Required = true)]
@@ -48,8 +50,15 @@
     {
         private const int DefaultDataDiskCount = 1;
         private const string DefaultDiskSku = "Standard_LRS";
-        private const int DefaultDataDiskSizeInGB = 32;
+        private const int DefaultDataDiskSizeInGB = 1024;
         private const string DefaultOsVersion = "latest";
+        private static readonly TimeSpan ReevaluationExtension = TimeSpan.FromMinutes(1);
+
+        private EnvironmentEntity tipSession;
+        private string targetRegion;
+        private IConvertible useTipSession;
+        private string targetVmSku;
+        private string clusterName;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ArmVmProvider"/> class.
@@ -67,7 +76,7 @@
             component.ThrowIfNull(nameof(component));
             telemetryContext.ThrowIfNull(nameof(telemetryContext));
 
-            ExecutionResult result = new ExecutionResult(ExecutionStatus.InProgress);
+            ExecutionResult result = new ExecutionResult(ExecutionStatus.InProgress, extensionTimeout: ArmVmProvider.ReevaluationExtension);
 
             if (!cancellationToken.IsCancellationRequested)
             {
@@ -78,66 +87,19 @@
                         vmResourceGroupStateKey,
                         cancellationToken).ConfigureDefaults();
 
-                if (resourceGroupDefinition == null)
+                // The '<=' should technically be '==' because Attempts start from 1. However, in unit tests this was not set so doing '<=' just in case.
+                if (context.ExperimentStep.Attempts <= 1)
                 {
-                    EnvironmentEntity tipSession = null;
-                    string targetRegion = null;
-                    IConvertible useTipSession = true;
-                    string targetVmSku = null;
-                    string clusterName = null;
-
-                    if (!component.Parameters.TryGetValue(Parameters.UseTipSession, out useTipSession) || (bool)useTipSession == true)
+                    if (resourceGroupDefinition == null)
                     {
-                        // The provider supports the ability for the author to define 1 or more VM SKUs that can
-                        // be used. When the original TiP session is created, the supported VM SKUs are included in the
-                        // metadata for the TiP session and node entities. If the workflow step definition/component defines
-                        // more than 1 VM SKU, the set of VM SKUs defined will be compared with the set of VM SKUs available (on the
-                        // TiP node). A final VM SKU will be selected from the intersection of the 2 sets.
-                        tipSession = await this.GetTargetTipSessionAsync(context, component, cancellationToken).ConfigureDefaults();
-
-                        targetRegion = tipSession.Region();
-                        targetVmSku = ArmVmProvider.GetTargetVmSku(component, tipSession, telemetryContext);
-                        clusterName = tipSession.ClusterName();
+                        // This is the scenario where no resource group in this ExperimentGroup has been setup. Creating new resource group for this ExperimentGroup (i.e. GroupA).
+                        resourceGroupDefinition = await this.SetupOriginalResourceGroupDefinitionAsync(context, component, telemetryContext, cancellationToken).ConfigureDefaults();
                     }
                     else
                     {
-                        // The parameter requirements are already validated beforehand.
-                        // Parameter Format
-                        // regions: East US,East US 2,West US,West US 2
-                        // vmSize: Standard_D2s_v3, vmSize: Standard_D2_v3,Standard_D2s_v3
-                        string regions = component.Parameters.GetValue<string>(Parameters.Regions);
-                        string[] allRegions = regions.Split(new char[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
-                            .Select(entry => entry.Trim()).ToArray();
-
-                        targetRegion = allRegions.Length == 1
-                            ? allRegions[0]
-                            : allRegions.Shuffle().First();
-
-                        targetVmSku = ArmVmProvider.GetTargetVmSku(component, telemetryContext);
-                        clusterName = component.Parameters.GetValue<string>(Parameters.PinnedCluster, string.Empty);
+                        // Resource group is not null. Appending VMs onto it.
+                        resourceGroupDefinition = await this.AppendVmToExistingResourceGroupAsync(resourceGroupDefinition, context, component, telemetryContext, cancellationToken).ConfigureDefaults();
                     }
-
-                    if (string.IsNullOrWhiteSpace(targetRegion))
-                    {
-                        throw new ProviderException("The target region is not defined or cannot be determined from the context available.");
-                    }
-
-                    if (string.IsNullOrWhiteSpace(targetVmSku))
-                    {
-                        throw new ProviderException("The target VM SKU is not defined or cannot be determined from the context available.");
-                    }
-
-                    telemetryContext.AddContext("region", targetRegion);
-                    telemetryContext.AddContext("vmSku", targetVmSku);
-
-                    resourceGroupDefinition = ArmVmProvider.CreateResourceGroupDefinition(
-                        context,
-                        component,
-                        targetRegion,
-                        targetVmSku,
-                        clusterName,
-                        tipSession?.TipSessionId(),
-                        tipSession?.NodeId());
                 }
 
                 telemetryContext.AddContext(resourceGroupDefinition);
@@ -307,8 +269,6 @@
                 { "experimentId", context.Experiment.Id },
                 { "experimentGroup", component.Group },
                 { "experimentStepId", context.ExperimentStep.Id },
-                { "tipSessionId", tipSessionId ?? AgentIdentification.UnknownEntity },
-                { "nodeId", nodeId ?? AgentIdentification.UnknownEntity },
                 { "createdDate", DateTime.UtcNow.ToString("o") },
                 { "expirationDate", DateTime.UtcNow.AddDays(2).ToString("o") }
             };
@@ -322,6 +282,7 @@
             List<AzureVmSpecification> vmSpecifications = new List<AzureVmSpecification>();
 
             int vmCount = component.Parameters.GetValue<int>(Parameters.VmCount, 1);
+            string role = component.Parameters.GetValue<string>(Parameters.Role, string.Empty);
             string osDiskStorageAccountType = ArmVmProvider.GetTargetDiskSku(
                 component.Parameters.GetValue<string>(Parameters.OsDiskStorageAccountType, ArmVmProvider.DefaultDiskSku),
                 vmSku);
@@ -348,7 +309,11 @@
                     component.Parameters.GetValue<int>(Parameters.DataDiskSizeInGB, ArmVmProvider.DefaultDataDiskSizeInGB),
                     dataDiskStorageAccountType,
                     component.Parameters.GetValue<bool>(Parameters.EnableAcceleratedNetworking, false),
-                    component.Parameters.GetValue<string>(Parameters.SigImageReference, string.Empty)));
+                    sigImageReference: component.Parameters.GetValue<string>(Parameters.SigImageReference, string.Empty),
+                    nodeId: nodeId,
+                    tipSessionId: tipSessionId,
+                    clusterId: clusterName,
+                    role: role));
             }
 
             return new VmResourceGroupDefinition(
@@ -358,9 +323,6 @@
                 context.ExperimentStep.Id,
                 vmSpecifications,
                 region,
-                clusterName,
-                tipSessionId,
-                nodeId,
                 resourceGroupTags,
                 component.Parameters.GetValue<string>(Parameters.Platform, VmPlatform.WinX64));
         }
@@ -395,11 +357,29 @@
             component.ThrowIfNull(nameof(component));
 
             EnvironmentEntity tipSessionEntity = null;
+            string nodeTag = component.Parameters.GetValue<string>(Parameters.NodeTag, string.Empty);
             IEnumerable<EnvironmentEntity> entitiesProvisioned = await this.GetEntitiesProvisionedAsync(context, cancellationToken).ConfigureDefaults();
 
             if (entitiesProvisioned != null)
             {
-                tipSessionEntity = entitiesProvisioned.GetEntities(EntityType.TipSession, context.ExperimentStep.ExperimentGroup).FirstOrDefault();
+                if (string.IsNullOrWhiteSpace(nodeTag))
+                {
+                    tipSessionEntity = entitiesProvisioned.GetEntities(EntityType.TipSession, context.ExperimentStep.ExperimentGroup).FirstOrDefault();
+                }
+                else
+                {
+                    tipSessionEntity = entitiesProvisioned
+                        .GetEntities(EntityType.TipSession, context.ExperimentStep.ExperimentGroup)
+                        .Where(e => (string)e.Metadata[nameof(TipSession.NodeTag)] == nodeTag)
+                        .FirstOrDefault();
+
+                    if (tipSessionEntity == null)
+                    {
+                        throw new ProviderException(
+                            $"A TiP session/entity for experiment group '{context.ExperimentStep.ExperimentGroup}' with nodeTag '{nodeTag}' was not found.",
+                            ErrorReason.ExpectedEnvironmentEntitiesNotFound);
+                    }
+                }
             }
 
             if (tipSessionEntity == null)
@@ -440,6 +420,112 @@
             }
         }
 
+        private async Task ReadTipSessionAndVmInformationAsync(ExperimentContext context, ExperimentComponent component, EventContext telemetryContext, CancellationToken cancellationToken)
+        {
+            if (!component.Parameters.TryGetValue(Parameters.UseTipSession, out this.useTipSession) || (bool)this.useTipSession == true)
+            {
+                // The provider supports the ability for the author to define 1 or more VM SKUs that can
+                // be used. When the original TiP session is created, the supported VM SKUs are included in the
+                // metadata for the TiP session and node entities. If the workflow step definition/component defines
+                // more than 1 VM SKU, the set of VM SKUs defined will be compared with the set of VM SKUs available (on the
+                // TiP node). A final VM SKU will be selected from the intersection of the 2 sets.
+                this.tipSession = await this.GetTargetTipSessionAsync(context, component, cancellationToken).ConfigureDefaults();
+
+                this.targetRegion = this.tipSession.Region();
+                this.targetVmSku = ArmVmProvider.GetTargetVmSku(component, this.tipSession, telemetryContext);
+                this.clusterName = this.tipSession.ClusterName();
+            }
+            else
+            {
+                // The parameter requirements are already validated beforehand.
+                // Parameter Format
+                // regions: East US,East US 2,West US,West US 2
+                // vmSize: Standard_D2s_v3, vmSize: Standard_D2_v3,Standard_D2s_v3
+                string regions = component.Parameters.GetValue<string>(Parameters.Regions);
+                string[] allRegions = regions.Split(new char[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(entry => entry.Trim()).ToArray();
+
+                this.targetRegion = allRegions.Length == 1
+                    ? allRegions[0]
+                    : allRegions.Shuffle().First();
+
+                this.targetVmSku = ArmVmProvider.GetTargetVmSku(component, telemetryContext);
+                this.clusterName = component.Parameters.GetValue<string>(Parameters.PinnedCluster, string.Empty);
+            }
+
+            if (string.IsNullOrWhiteSpace(this.targetRegion))
+            {
+                throw new ProviderException("The target region is not defined or cannot be determined from the context available.");
+            }
+
+            if (string.IsNullOrWhiteSpace(this.targetVmSku))
+            {
+                throw new ProviderException("The target VM SKU is not defined or cannot be determined from the context available.");
+            }
+
+            telemetryContext.AddContext("region", this.targetRegion);
+            telemetryContext.AddContext("vmSku", this.targetVmSku);
+        }
+
+        private async Task<VmResourceGroupDefinition> SetupOriginalResourceGroupDefinitionAsync(
+            ExperimentContext context, ExperimentComponent component, EventContext telemetryContext, CancellationToken cancellationToken)
+        {
+            await this.ReadTipSessionAndVmInformationAsync(context, component, telemetryContext, cancellationToken).ConfigureDefaults();
+
+            return ArmVmProvider.CreateResourceGroupDefinition(
+                context,
+                component,
+                this.targetRegion,
+                this.targetVmSku,
+                this.clusterName,
+                this.tipSession?.TipSessionId(),
+                this.tipSession?.NodeId());
+        }
+
+        private async Task<VmResourceGroupDefinition> AppendVmToExistingResourceGroupAsync(
+            VmResourceGroupDefinition resourceGroupDefinition, ExperimentContext context, ExperimentComponent component, EventContext telemetryContext, CancellationToken cancellationToken)
+        {
+            await this.ReadTipSessionAndVmInformationAsync(context, component, telemetryContext, cancellationToken).ConfigureDefaults();
+            EnvironmentSettings settings = EnvironmentSettings.Initialize(context.Configuration);
+
+            int vmCount = component.Parameters.GetValue<int>(Parameters.VmCount, 1);
+            string role = component.Parameters.GetValue<string>(Parameters.Role, string.Empty);
+            string osDiskStorageAccountType = ArmVmProvider.GetTargetDiskSku(
+                component.Parameters.GetValue<string>(Parameters.OsDiskStorageAccountType, ArmVmProvider.DefaultDiskSku),
+                this.targetVmSku);
+
+            string dataDiskStorageAccountType = ArmVmProvider.GetTargetDiskSku(
+                component.Parameters.GetValue<string>(Parameters.DataDiskStorageAccountType, ArmVmProvider.DefaultDiskSku),
+                this.targetVmSku);
+
+            string dataDiskSku = ArmVmProvider.GetTargetDiskSku(
+               component.Parameters.GetValue<string>(Parameters.DataDiskSku, ArmVmProvider.DefaultDiskSku),
+               this.targetVmSku);
+
+            for (int i = 0; i < vmCount; i++)
+            {
+                resourceGroupDefinition.AddVirtualMachine(new AzureVmSpecification(
+                    osDiskStorageAccountType,
+                    this.targetVmSku,
+                    component.Parameters.GetValue<string>(Parameters.OsPublisher, string.Empty),
+                    component.Parameters.GetValue<string>(Parameters.OsOffer, string.Empty),
+                    component.Parameters.GetValue<string>(Parameters.OsSku, string.Empty),
+                    component.Parameters.GetValue<string>(Parameters.OsVersion, ArmVmProvider.DefaultOsVersion),
+                    component.Parameters.GetValue<int>(Parameters.DataDiskCount, ArmVmProvider.DefaultDataDiskCount),
+                    dataDiskSku,
+                    component.Parameters.GetValue<int>(Parameters.DataDiskSizeInGB, ArmVmProvider.DefaultDataDiskSizeInGB),
+                    dataDiskStorageAccountType,
+                    component.Parameters.GetValue<bool>(Parameters.EnableAcceleratedNetworking, false),
+                    sigImageReference: component.Parameters.GetValue<string>(Parameters.SigImageReference, string.Empty),
+                    nodeId: this.tipSession?.NodeId(),
+                    tipSessionId: this.tipSession?.TipSessionId(),
+                    clusterId: this.clusterName,
+                    role: role));
+            }
+
+            return resourceGroupDefinition;
+        }
+
         private async Task RequestDiagnosticsAsync(ExperimentContext context, VmResourceGroupDefinition resourceGroupDefinition, EventContext telemetryContext, CancellationToken cancellationToken)
         {
             context.ThrowIfNull(nameof(context));
@@ -453,9 +539,7 @@
                 {
                     await this.Logger.LogTelemetryAsync($"{nameof(ArmVmProvider)}.RequestDiagnostics", relatedContext, async () =>
                     {
-                        List<DiagnosticsRequest> requests = new List<DiagnosticsRequest>()
-                        {
-                            new DiagnosticsRequest(
+                        List<DiagnosticsRequest> requests = resourceGroupDefinition.VirtualMachines.Select(vm => vm.TipSessionId).Distinct().Select(tip => new DiagnosticsRequest(
                                 context.ExperimentId,
                                 Guid.NewGuid().ToString(),
                                 DiagnosticsIssueType.ArmVmCreationFailure,
@@ -463,13 +547,12 @@
                                 DateTime.UtcNow,
                                 new Dictionary<string, IConvertible>()
                                 {
-                                    { DiagnosticsParameter.TipSessionId, resourceGroupDefinition.TipSessionId },
+                                    { DiagnosticsParameter.TipSessionId, tip },
                                     { DiagnosticsParameter.SubscriptionId, resourceGroupDefinition.SubscriptionId },
                                     { DiagnosticsParameter.ResourceGroupName, resourceGroupDefinition.Name },
                                     { DiagnosticsParameter.ExperimentId, context.ExperimentId },
                                     { DiagnosticsParameter.ProviderName, nameof(ArmVmProvider) }
-                                })
-                        };
+                                })).ToList();
 
                         relatedContext.AddContext("requests", requests);
                         await this.AddDiagnosticsRequestAsync(context, requests, cancellationToken).ConfigureDefaults();
@@ -489,7 +572,7 @@
 
             foreach (var vm in definition.VirtualMachines)
             {
-                AgentIdentification agentId = AgentIdentification.CreateVirtualMachineId(definition.ClusterId, definition.NodeId, vm.Name, definition.TipSessionId);
+                AgentIdentification agentId = AgentIdentification.CreateVirtualMachineId(vm.ClusterId, vm.NodeId, vm.Name, vm.TipSessionId);
 
                 var metadata = new Dictionary<string, IConvertible>
                 {
@@ -556,7 +639,9 @@
             internal const string SigImageReference = nameof(Parameters.SigImageReference);
             internal const string Platform = nameof(Parameters.Platform);
             internal const string Regions = nameof(Parameters.Regions);
+            internal const string Role = nameof(Parameters.Role);
             internal const string SubscriptionId = nameof(Parameters.SubscriptionId);
+            internal const string NodeTag = nameof(Parameters.NodeTag);
             internal const string UseTipSession = nameof(Parameters.UseTipSession);
             internal const string PinnedCluster = nameof(Parameters.PinnedCluster);
             internal const string VmCount = nameof(Parameters.VmCount);

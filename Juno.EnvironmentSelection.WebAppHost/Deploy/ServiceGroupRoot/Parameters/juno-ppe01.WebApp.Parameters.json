@@ -1,0 +1,29 @@
+﻿{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"paths": [
+		{
+			"parameterReference": "servicePackageLink"
+		}
+	],
+	"parameters": {
+		"siteName": {
+			"value": "junoppe01environment"
+		},
+		"servicePlanName": {
+			"value": "junoppe01serviceplan-api-2"
+		},
+		"servicePackageLink": {
+			"value": "bin\\WebApp.zip"
+		},
+		"location": {
+			"value": "East US"
+		},
+		"IISWebAppName": {
+			"value": "junoppe01environment__staging"
+		},
+		"Sku": {
+			"value": "P3v2"
+		}
+	}
+}

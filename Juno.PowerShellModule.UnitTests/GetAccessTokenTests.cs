@@ -202,7 +202,7 @@
             {
                 get
                 {
-                    return this.IsAME;
+                    return this.IsProd;
                 }
             }
 

@@ -3196,7 +3196,7 @@
         "dependencies": {
           "Juno.Contracts": "1.0.0",
           "Microsoft.AspNetCore.Mvc.Core": "2.2.5",
-          "Microsoft.Azure.CRC.Common": "1.2.0",
+          "Microsoft.Azure.CRC.Common": "1.3.0",
           "Microsoft.Azure.CRC.Contracts": "0.0.1",
           "Microsoft.Azure.CRC.Rest": "0.0.1",
           "Microsoft.Extensions.Logging": "5.0.0",
@@ -3214,7 +3214,7 @@
         "type": "project",
         "framework": ".NETStandard,Version=v2.1",
         "dependencies": {
-          "Microsoft.Azure.CRC.Common": "1.2.0",
+          "Microsoft.Azure.CRC.Common": "1.3.0",
           "Microsoft.Azure.CRC.Contracts": "0.0.1",
           "Microsoft.Extensions.Configuration": "5.0.0",
           "Microsoft.Extensions.Configuration.Binder": "5.0.0",
@@ -3249,7 +3249,7 @@
           "bin/placeholder/Juno.Execution.Telemetry.dll": {}
         }
       },
-      "Microsoft.Azure.CRC.Common/1.2.0": {
+      "Microsoft.Azure.CRC.Common/1.3.0": {
         "type": "project",
         "framework": ".NETStandard,Version=v2.1",
         "dependencies": {
@@ -3268,7 +3268,7 @@
         "type": "project",
         "framework": ".NETStandard,Version=v2.1",
         "dependencies": {
-          "Microsoft.Azure.CRC.Common": "1.2.0",
+          "Microsoft.Azure.CRC.Common": "1.3.0",
           "Microsoft.Extensions.Logging": "5.0.0",
           "Newtonsoft.Json": "12.0.3",
           "System.Text.Encodings.Web": "5.0.1"
@@ -3284,7 +3284,7 @@
         "type": "project",
         "framework": ".NETStandard,Version=v2.1",
         "dependencies": {
-          "Microsoft.Azure.CRC.Common": "1.2.0",
+          "Microsoft.Azure.CRC.Common": "1.3.0",
           "Microsoft.Identity.Client": "4.28.1",
           "Microsoft.IdentityModel.Clients.ActiveDirectory": "5.2.9",
           "Polly": "7.2.1",
@@ -3301,7 +3301,7 @@
         "type": "project",
         "framework": ".NETStandard,Version=v2.1",
         "dependencies": {
-          "Microsoft.Azure.CRC.Common": "1.2.0",
+          "Microsoft.Azure.CRC.Common": "1.3.0",
           "Microsoft.Azure.CRC.Contracts": "0.0.1",
           "Microsoft.Azure.CRC.Identity": "1.1.0",
           "Microsoft.IdentityModel.Clients.ActiveDirectory": "5.2.9",
@@ -3322,7 +3322,7 @@
         "dependencies": {
           "Azure.Messaging.EventHubs": "5.3.0",
           "Microsoft.ApplicationInsights": "2.17.0",
-          "Microsoft.Azure.CRC.Common": "1.2.0",
+          "Microsoft.Azure.CRC.Common": "1.3.0",
           "Microsoft.Azure.Kusto.Data": "9.0.9",
           "Microsoft.Extensions.Configuration": "5.0.0",
           "Microsoft.Extensions.Logging": "5.0.0",
@@ -10401,7 +10401,7 @@
       "path": "../Juno.Extensions.Telemetry/Juno.Extensions.Telemetry.csproj",
       "msbuildProject": "../Juno.Extensions.Telemetry/Juno.Extensions.Telemetry.csproj"
     },
-    "Microsoft.Azure.CRC.Common/1.2.0": {
+    "Microsoft.Azure.CRC.Common/1.3.0": {
       "type": "project",
       "path": "../../Microsoft.Azure.CRC/Microsoft.Azure.CRC.Common/Microsoft.Azure.CRC.Common.csproj",
       "msbuildProject": "../../Microsoft.Azure.CRC/Microsoft.Azure.CRC.Common/Microsoft.Azure.CRC.Common.csproj"
@@ -10582,7 +10582,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\5.0.200\\RuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\5.0.300\\RuntimeIdentifierGraph.json"
       }
     }
   }

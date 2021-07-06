@@ -46,7 +46,7 @@
             IEnumerable<EnvironmentEntity> selectedTipSessions = this.mockFixture.EntityManager.EntitiesProvisioned.GetTipSessions();
 
             Assert.IsNotNull(selectedTipNodes);
-            Assert.IsTrue(selectedTipNodes.Count() == 2);
+            Assert.AreEqual(2, selectedTipNodes.Count());
             CollectionAssert.AllItemsAreUnique(selectedTipNodes);
             CollectionAssert.AllItemsAreUnique(selectedTipNodes.Select(tipNode => tipNode.Id));
             CollectionAssert.AllItemsAreUnique(selectedTipNodes.Select(tipNode => tipNode.EnvironmentGroup));
@@ -54,7 +54,7 @@
             CollectionAssert.AreEquivalent(this.mockEntityPool, selectedTipNodes);
 
             Assert.IsNotNull(selectedTipSessions);
-            Assert.IsTrue(selectedTipSessions.Count() == 2);
+            Assert.AreEqual(2, selectedTipSessions.Count());
             CollectionAssert.AllItemsAreUnique(selectedTipSessions);
             CollectionAssert.AllItemsAreUnique(selectedTipSessions.Select(tipSession => tipSession.Id));
             CollectionAssert.AllItemsAreUnique(selectedTipSessions.Select(tipSession => tipSession.EnvironmentGroup));
@@ -761,7 +761,8 @@
             this.mockState = new TipCreationProvider2.State
             {
                 StepTimeout = DateTime.UtcNow.AddMinutes(10),
-                Timeout = TimeSpan.FromMinutes(10)
+                Timeout = TimeSpan.FromMinutes(10),
+                CountPerGroup = 1
             };
 
             this.mockEntityPool = new List<EnvironmentEntity>();

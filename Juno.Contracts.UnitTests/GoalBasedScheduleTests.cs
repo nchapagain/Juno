@@ -125,6 +125,55 @@
                 validComponent.Actions));
         }
 
+        /* Tests for Target Goal */
+
+        [Test]
+        public void TargetGoalIsJsonSerializableByDefault()
+        {
+            SerializationAssert.IsJsonSerializable(this.mockFixture.Create<TargetGoal>());
+        }
+
+        [Test]
+        public void TargetGoalIsJsonSerializableUsingExpectedSerializerSettings()
+        {
+            SerializationAssert.IsJsonSerializable(
+                this.mockFixture.Create<TargetGoal>(),
+                ContractSerialization.DefaultJsonSerializationSettings);
+        }
+
+        [Test]
+        [TestCase(null, null)]
+        public void TargetGoalConstructorValidatesRequiredParameters(List<Precondition> invalidPrecondition, List<ScheduleAction> invalidAction)
+        {
+            Goal validComponent = this.mockFixture.Create<Goal>();
+
+            Assert.Throws<ArgumentNullException>(() => new TargetGoal(
+                validComponent.Name,
+                true,
+                invalidPrecondition,
+                validComponent.Actions));
+
+            Assert.Throws<ArgumentNullException>(() => new TargetGoal(
+                validComponent.Name,
+                false,
+                validComponent.Preconditions,
+                invalidAction));
+        }
+
+        [Test]
+        [TestCase(null)]
+        [TestCase("")]
+        [TestCase(" ")]
+        public void TargetGoalConstructorValidatesRequiredStringParameter(string invalidParam)
+        {
+            Goal validComponent = this.mockFixture.Create<Goal>();
+
+            Assert.Throws<ArgumentException>(() => new Goal(
+                invalidParam,
+                validComponent.Preconditions,
+                validComponent.Actions));
+        }
+
         /* Test for Goal Based Schedule */
 
         [Test]
@@ -151,13 +200,7 @@
 
             Assert.Throws<ArgumentException>(() => new GoalBasedSchedule(
                 invalidParameter,
-                validComponent.ExecutionGoalId,
-                validComponent.Name,
-                validComponent.TeamName,
                 validComponent.Description,
-                validComponent.ScheduleMetadata,
-                validComponent.Enabled,
-                validComponent.Version,
                 validComponent.Experiment,
                 validComponent.TargetGoals,
                 validComponent.ControlGoals));
@@ -165,118 +208,6 @@
             Assert.Throws<ArgumentException>(() => new GoalBasedSchedule(
                 validComponent.ExperimentName,
                 invalidParameter,
-                validComponent.Name,
-                validComponent.TeamName,
-                validComponent.Description,
-                validComponent.ScheduleMetadata,
-                validComponent.Enabled,
-                validComponent.Version,
-                validComponent.Experiment,
-                validComponent.TargetGoals,
-                validComponent.ControlGoals));
-
-            Assert.Throws<ArgumentException>(() => new GoalBasedSchedule(
-                validComponent.ExperimentName,
-                validComponent.ExecutionGoalId,
-                invalidParameter,
-                validComponent.TeamName,
-                validComponent.Description,
-                validComponent.ScheduleMetadata,
-                validComponent.Enabled,
-                validComponent.Version,
-                validComponent.Experiment,
-                validComponent.TargetGoals,
-                validComponent.ControlGoals));
-
-            Assert.Throws<ArgumentException>(() => new GoalBasedSchedule(
-                validComponent.ExperimentName,
-                validComponent.ExecutionGoalId,
-                validComponent.Name,
-                invalidParameter,
-                validComponent.Description,
-                validComponent.ScheduleMetadata,
-                validComponent.Enabled,
-                validComponent.Version,
-                validComponent.Experiment,
-                validComponent.TargetGoals,
-                validComponent.ControlGoals));
-
-            Assert.Throws<ArgumentException>(() => new GoalBasedSchedule(
-                validComponent.ExperimentName,
-                validComponent.ExecutionGoalId,
-                validComponent.Name,
-                validComponent.TeamName,
-                invalidParameter,
-                validComponent.ScheduleMetadata,
-                validComponent.Enabled,
-                validComponent.Version,
-                validComponent.Experiment,
-                validComponent.TargetGoals,
-                validComponent.ControlGoals));
-
-            Assert.Throws<ArgumentException>(() => new GoalBasedSchedule(
-                validComponent.ExperimentName,
-                validComponent.ExecutionGoalId,
-                validComponent.Name,
-                validComponent.TeamName,
-                validComponent.Description,
-                validComponent.ScheduleMetadata,
-                validComponent.Enabled,
-                null,
-                validComponent.Experiment,
-                validComponent.TargetGoals,
-                validComponent.ControlGoals));
-        }
-
-        [Test]
-        [TestCase(null)]
-        public void GoalBasedSchedulerConstructorValidatesBoolParameters(bool? invalidParameter)
-        {
-            GoalBasedSchedule validComponent = this.mockFixture.Create<GoalBasedSchedule>();
-
-            Assert.Throws<ArgumentException>(() => new GoalBasedSchedule(
-                validComponent.ExperimentName,
-                validComponent.ExecutionGoalId,
-                validComponent.Name,
-                validComponent.TeamName,
-                validComponent.Description,
-                validComponent.ScheduleMetadata,
-                invalidParameter,
-                validComponent.Version,
-                validComponent.Experiment,
-                validComponent.TargetGoals,
-                validComponent.ControlGoals));
-        }
-
-        [Test]
-        public void GoalBasedSchedulerSupportsDifferentVersions()
-        {
-            GoalBasedSchedule validComponent = this.mockFixture.Create<GoalBasedSchedule>();
-            string oldVersion = "2020-07-27";
-            string newVersion = "2021-01-01";
-
-            Assert.DoesNotThrow(() => new GoalBasedSchedule(
-                validComponent.ExperimentName,
-                validComponent.ExecutionGoalId,
-                validComponent.Name,
-                validComponent.TeamName,
-                validComponent.Description,
-                validComponent.ScheduleMetadata,
-                validComponent.Enabled,
-                oldVersion,
-                null,
-                validComponent.TargetGoals,
-                validComponent.ControlGoals));
-
-            Assert.DoesNotThrow(() => new GoalBasedSchedule(
-                validComponent.ExperimentName,
-                validComponent.ExecutionGoalId,
-                validComponent.Name,
-                validComponent.TeamName,
-                validComponent.Description,
-                validComponent.ScheduleMetadata,
-                validComponent.Enabled,
-                newVersion,
                 validComponent.Experiment,
                 validComponent.TargetGoals,
                 validComponent.ControlGoals));

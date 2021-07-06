@@ -3,12 +3,14 @@
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.IO.Abstractions;
     using System.Linq;
     using System.Management.Automation;
     using System.Net;
     using System.Net.Http;
     using System.Threading;
     using System.Threading.Tasks;
+    using Juno.Api.Client;
     using Juno.Contracts;
     using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Azure.CRC.Extensions;
@@ -100,22 +102,17 @@
                 if (this.ValidateParameters())
                 {
                     HttpResponseMessage response = this.CreateExecutionGoalAsync().GetAwaiter().GetResult();
-                    if (response.StatusCode == HttpStatusCode.Created)
-                    {
-                        object output = this.FormatOutput(response.Content);
+                    response.ThrowOnError<ExperimentException>();
 
-                        if (this.AsJson.IsPresent)
-                        {
-                            this.WriteResultsAsJson(output);
-                        }
-                        else
-                        {
-                            this.WriteResults(output);
-                        }
+                    object output = this.FormatOutput(response.Content);
+
+                    if (this.AsJson.IsPresent)
+                    {
+                        this.WriteResultsAsJson(output);
                     }
                     else
                     {
-                        this.WriteObject(string.Format("New-ExecutionGoal request received response of : {0}", response.StatusCode.ToString()));
+                        this.WriteResults(output);
                     }
                 }
             }
@@ -134,7 +131,6 @@
             base.ValidateParameters();
             if (string.IsNullOrEmpty(this.TemplateId) ||
                string.IsNullOrEmpty(this.TeamName) ||
-               string.IsNullOrEmpty(this.ExperimentName) ||
                string.IsNullOrEmpty(this.ParameterFilePath))
             {
                 throw new ArgumentException($"Invalid arguments passed to module. Required parameters are {nameof(this.TeamName).ToString()}, {nameof(this.TemplateId).ToString()}, {nameof(this.ExperimentName).ToString()}, and {nameof(this.ParameterFilePath).ToString()}.");
@@ -146,44 +142,10 @@
         /// <summary>
         /// Reads the parameter file.
         /// </summary>
-        protected async virtual Task<JObject> GetParameterFileAsync()
+        protected async virtual Task<ExecutionGoalParameter> GetParameterFileAsync()
         {
-            using (StreamReader r = new StreamReader(this.ParameterFilePath))
-            {
-                var json = await r.ReadToEndAsync().ConfigureDefaults();
-                JObject obj = JObject.Parse(json);
-                return obj;
-            }
-        }
-
-        /// <summary>
-        /// Creates an Execution Goal Parameter object.
-        /// </summary>
-        protected async virtual Task<ExecutionGoalParameter> CreateExecutionGoalParametersAsync()
-        {
-            JObject obj = await this.GetParameterFileAsync().ConfigureDefaults();
-            dynamic sharedParameters = obj["SharedParameters"];
-            dynamic targetGoalParameters = obj["TargetGoals"].Values<JObject>()
-                .Where(m => m["parameters"]["targetInstances"].Value<int>() > 0);
-
-            ////dynamic targetGoalParameters = obj["TargetGoals"].Where(x => (int)x["parameters"]["targetInstances"] > 0);
-            dynamic sharedParams = new Dictionary<string, IConvertible>();
-            foreach (var param in sharedParameters)
-            {
-                sharedParams.Add(param.Name, param.Value);
-            }
-
-            ExecutionGoalParameter parameters = new ExecutionGoalParameter(
-                string.Concat(this.ExperimentName.Replace(" ", string.Empty, StringComparison.InvariantCultureIgnoreCase), "_", Guid.NewGuid()),
-                this.ExperimentName,
-                this.TeamName,
-                GetAccessToken.Username,
-                ////this.IsEnabled,
-                false,
-                JsonConvert.DeserializeObject<IEnumerable<TargetGoalParameter>>(JsonConvert.SerializeObject(targetGoalParameters)),
-                sharedParams);
-
-            return parameters;
+            FileSystem fileSystem = new FileSystem();
+            return JsonConvert.DeserializeObject<ExecutionGoalParameter>(await fileSystem.File.ReadAllTextAsync(this.ParameterFilePath).ConfigureAwait(false));
         }
 
         /// <summary>
@@ -218,7 +180,7 @@
             {
                 using (CancellationTokenSource source = new CancellationTokenSource())
                 {
-                    ExecutionGoalParameter parameters = await this.CreateExecutionGoalParametersAsync().ConfigureDefaults();
+                    ExecutionGoalParameter parameters = await this.GetParameterFileAsync().ConfigureAwait(false);
 
                     HttpResponseMessage responseMessage = null;
                     await this.RetryPolicy.ExecuteAsync(async () =>

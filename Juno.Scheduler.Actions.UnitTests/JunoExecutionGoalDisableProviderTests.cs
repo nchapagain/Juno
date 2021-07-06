@@ -9,6 +9,7 @@
     using Juno.Contracts;
     using Juno.DataManagement;
     using Juno.Providers;
+    using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Moq;
@@ -37,7 +38,8 @@
             this.services.AddSingleton<IScheduleTimerDataManager>(this.scheduleDataMgr.Object);
 
             this.gbScheduleTrigger = this.mockFixture.Create<TargetGoalTrigger>();
-            this.mockContext = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), this.mockFixture.Create<TargetGoalTrigger>(), new Mock<IConfiguration>().Object);
+            Mock<IConfiguration> mockConfiguration = new Mock<IConfiguration>();
+            this.mockContext = new ScheduleContext(new Item<GoalBasedSchedule>("id", this.mockFixture.Create<GoalBasedSchedule>()), this.mockFixture.Create<TargetGoalTrigger>(), mockConfiguration.Object);
         }
 
         [Test]

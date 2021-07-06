@@ -113,7 +113,6 @@
             this.mockDependencies.ExperimentClient.Setup(m => m.GetExecutionGoalsAsync(It.IsAny<CancellationToken>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ExecutionGoalView>())).Callback((CancellationToken token, string teamName, string executionId, ExecutionGoalView view) =>
             {
                 Assert.AreEqual(teamName, this.mockItemFromFile.Definition.TeamName);
-                Assert.AreEqual(executionId, this.mockItemFromFile.Definition.ExecutionGoalId);
                 Assert.IsFalse(this.cmdlet.AsJson);
                 Assert.AreEqual(view, ExecutionGoalView.Full);
             }).ReturnsAsync(this.mockGetResponse);
@@ -170,6 +169,12 @@
             Assert.IsNotNull(this.cmdlet.Results);
             Assert.IsInstanceOf<Item<GoalBasedSchedule>>(this.cmdlet.Results);
             Assert.AreEqual(actualGoalBasedSchedule.Definition, (this.cmdlet.Results as Item<GoalBasedSchedule>).Definition);
+
+            Assert.IsNull((this.cmdlet.Results as Item<GoalBasedSchedule>).GetETag());
+            Assert.IsNotNull(this.mockItemUpdated.GetETag());
+            Assert.AreNotEqual(this.mockItemUpdated.ToJson(), this.cmdlet.Results.ToJson());
+            this.cmdlet.RemoveTags(this.mockItemUpdated);
+            Assert.AreEqual(this.mockItemUpdated.ToJson(), this.cmdlet.Results.ToJson());
         }
 
         private class TestUpdateExecutionGoalCmdlet : UpdateExecutionGoalCmdlet
@@ -188,6 +193,11 @@
             public void ProcessInternal()
             {
                 this.ProcessRecord();
+            }
+
+            public void RemoveTags(ItemBase item)
+            {
+                this.RemoveServerSideDataTags(item);
             }
 
             protected override Item<GoalBasedSchedule> GetExecutionGoalFromFile(string filePath)

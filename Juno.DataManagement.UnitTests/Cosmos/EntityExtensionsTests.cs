@@ -315,7 +315,17 @@
         [Test]
         public void ToTargetGoalTriggerExtensionCreatesTheExpectedTriggerFromAnEntity()
         {
-            TargetGoalTrigger expectedResult = this.mockTargetGoal;
+            TargetGoalTrigger expectedResult = new TargetGoalTrigger(
+                this.mockTargetGoalEntity.Id, 
+                this.mockTargetGoalEntity.ExecutionGoal, 
+                this.mockTargetGoalEntity.Name, 
+                this.mockTargetGoalEntity.CronExpression, 
+                this.mockTargetGoalEntity.Enabled, 
+                this.mockTargetGoalEntity.PartitionKey, 
+                this.mockTargetGoalEntity.TeamName, 
+                DateTime.UtcNow, 
+                DateTime.UtcNow);
+
             TargetGoalTrigger actualResult = this.mockTargetGoalEntity.ToTargetGoalTrigger();
 
             Assert.IsTrue(expectedResult.Equals(actualResult));
@@ -344,23 +354,30 @@
         [Test]
         public void ToTargetGoalTableEntityExtensionCreatesTheExpectedEntityFromTargetGoalTrigger()
         {
-            TargetGoalTableEntity expectedResult = this.mockTargetGoalEntity;
+            TargetGoalTableEntity expectedResult = new TargetGoalTableEntity
+            { 
+                Name = this.mockTargetGoal.Name,
+                Id = this.mockTargetGoal.Id,
+                TeamName = this.mockTargetGoal.TeamName,
+                CronExpression = this.mockTargetGoal.CronExpression,
+                ExecutionGoal = this.mockTargetGoal.ExecutionGoal,
+                PartitionKey = this.mockTargetGoal.Version
+            };
+
             TargetGoalTableEntity actualResult = this.mockTargetGoal.ToTargetGoalTableEntity();
 
             Assert.AreEqual(expectedResult.Id, actualResult.Id);
             Assert.AreEqual(expectedResult.PartitionKey, actualResult.PartitionKey);
             Assert.AreEqual(expectedResult.RowKey, actualResult.RowKey);
             Assert.AreEqual(expectedResult.CronExpression, actualResult.CronExpression);
-            Assert.AreEqual(expectedResult.TeamName, actualResult.TeamName);
             Assert.AreEqual(expectedResult.ExecutionGoal, actualResult.ExecutionGoal);
-            Assert.AreEqual(expectedResult.ExperimentName, actualResult.ExperimentName);
         }
 
         [Test]
         public void ToTargetGoalTableEntityExtenstionCreatesTheExpectedEntityFromTargetGoal()
         {
-            Goal targetGoal = FixtureExtensions.CreateTargetGoal();
-            GoalBasedSchedule executionGoal = FixtureExtensions.CreateExecutionGoalFromTemplate(targetGoals: new List<Goal>() { targetGoal });
+            TargetGoal targetGoal = FixtureExtensions.CreateTargetGoal();
+            Item<GoalBasedSchedule> executionGoal = new Item<GoalBasedSchedule>(Guid.NewGuid().ToString(), FixtureExtensions.CreateExecutionGoalFromTemplate(targetGoals: new List<TargetGoal>() { targetGoal }));
 
             TargetGoalTableEntity expectedResult = FixtureExtensions.CreateTargetTableEntityFromTemplates(executionGoal, targetGoal);
             TargetGoalTableEntity actualResult = targetGoal.ToTableEntity(executionGoal);
@@ -369,9 +386,7 @@
             Assert.AreEqual(expectedResult.PartitionKey, actualResult.PartitionKey);
             Assert.AreEqual(expectedResult.RowKey, actualResult.RowKey);
             Assert.AreEqual(expectedResult.CronExpression, actualResult.CronExpression);
-            Assert.AreEqual(expectedResult.TeamName, actualResult.TeamName);
             Assert.AreEqual(expectedResult.ExecutionGoal, actualResult.ExecutionGoal);
-            Assert.AreEqual(expectedResult.ExperimentName, actualResult.ExperimentName);
         }
     }
 }

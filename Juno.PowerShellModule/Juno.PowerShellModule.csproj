@@ -18,7 +18,7 @@
         Revision
         -->
 
-    <AssemblyAndPackageVersion>2.0.1</AssemblyAndPackageVersion>
+    <AssemblyAndPackageVersion>2.1.1</AssemblyAndPackageVersion>
     <!-- Append PackagePreReleaseSuffix if you want to test guest agent
     https://docs.microsoft.com/en-us/nuget/create-packages/prerelease-packages
     Example: 

@@ -53,6 +53,10 @@
     "enableAcceleratedNetworking": {
       "type": "bool",
       "defaultValue": false
+    },
+    "privateIPAddress": {
+      "type": "string",
+      "defaultValue": "10.0.1.0"
     }
   },
   "variables": {
@@ -68,7 +72,9 @@
     "ipconfigName": "[concat('ipcfg', '-',parameters('virtualMachineName'))]",
     "publicIpAddressSku": "Basic",
     "publicIpAddressType": "Dynamic",
+    "privateIPAddress": "[parameters('privateIPAddress')]",
     "datadisk": "_datadisk_",
+    "osDiskSizeGB": 512,
     "defaultDisk": [
       {
         "sku": "Premium_LRS",
@@ -121,7 +127,8 @@
               "subnet": {
                 "id": "[variables('subnetRef')]"
               },
-              "privateIPAllocationMethod": "Dynamic",
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddress": "[variables('privateIPAddress')]",
               "publicIpAddress": {
                 "id": "[resourceId(resourceGroup().name, 'Microsoft.Network/publicIpAddresses', variables('publicIpAddressName'))]"
               }
@@ -170,6 +177,7 @@
         "storageProfile": {
           "osDisk": {
             "createOption": "FromImage",
+            "diskSizeGB": "[variables('osDiskSizeGB')]",
             "managedDisk": {
               "storageAccountType": "[parameters('osDiskStorageAccountType')]"
             }

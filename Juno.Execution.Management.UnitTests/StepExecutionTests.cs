@@ -15,6 +15,7 @@
     using Juno.Providers.Workloads;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
+    using Newtonsoft.Json.Linq;
     using NUnit.Framework;
 
     [TestFixture]
@@ -312,6 +313,51 @@
             IEnumerable<ExperimentStepInstance> nextSteps = TestStepExecution.GetNextExperimentSteps(mockExperimentSteps);
 
             Assert.IsEmpty(nextSteps);
+        }
+
+        [Test]
+        public void StepExecutionSelectsACleanupStepWhenItIsPresentInTheMiddleOfTheWorkflow_1()
+        {
+            var steps = new List<KeyValuePair<ExecutionStatus, Type>>()
+            {
+              new KeyValuePair<ExecutionStatus, Type>(ExecutionStatus.Succeeded, typeof(ExampleTipCreationProvider)),
+              new KeyValuePair<ExecutionStatus, Type>(ExecutionStatus.Succeeded, typeof(ExamplePayloadProvider)),
+              new KeyValuePair<ExecutionStatus, Type>(ExecutionStatus.Succeeded, typeof(ExamplePayloadProvider)),
+              new KeyValuePair<ExecutionStatus, Type>(ExecutionStatus.Succeeded, typeof(ExampleCertificationProvider)),
+              new KeyValuePair<ExecutionStatus, Type>(ExecutionStatus.Succeeded, typeof(ExampleDiagnosticsProvider)),
+              new KeyValuePair<ExecutionStatus, Type>(ExecutionStatus.Pending, typeof(ExampleCleanupProvider)),
+              new KeyValuePair<ExecutionStatus, Type>(ExecutionStatus.Pending, typeof(ExamplePayloadProvider)),
+            };
+
+            IEnumerable<ExperimentStepInstance> mockExperimentSteps = this.CreateSteps(steps);
+            mockExperimentSteps.ElementAt(5).Definition.Extensions[ContractExtension.Flow] = JToken.FromObject(new ExperimentFlow(null, null, true));
+            IEnumerable<ExperimentStepInstance> nextSteps = TestStepExecution.GetNextExperimentSteps(mockExperimentSteps);
+
+            Assert.IsNotEmpty(nextSteps);
+            Assert.IsTrue(nextSteps.Count() == 1);
+            CollectionAssert.AreEquivalent(nextSteps, mockExperimentSteps.Where(step => step.StepType == SupportedStepType.EnvironmentCleanup).Take(1));
+        }
+
+        [Test]
+        public void StepExecutionSelectsACleanupStepWhenItIsPresentInTheMiddleOfTheWorkflow_2()
+        {
+            var steps = new List<KeyValuePair<ExecutionStatus, Type>>()
+            {
+              new KeyValuePair<ExecutionStatus, Type>(ExecutionStatus.Succeeded, typeof(ExampleTipCreationProvider)),
+              new KeyValuePair<ExecutionStatus, Type>(ExecutionStatus.Succeeded, typeof(ExamplePayloadProvider)),
+              new KeyValuePair<ExecutionStatus, Type>(ExecutionStatus.Failed, typeof(ExamplePayloadProvider)),
+              new KeyValuePair<ExecutionStatus, Type>(ExecutionStatus.Pending, typeof(ExamplePayloadProvider)),
+              new KeyValuePair<ExecutionStatus, Type>(ExecutionStatus.Pending, typeof(ExampleCleanupProvider)),
+              new KeyValuePair<ExecutionStatus, Type>(ExecutionStatus.Pending, typeof(ExamplePayloadProvider)),
+            };
+
+            IEnumerable<ExperimentStepInstance> mockExperimentSteps = this.CreateSteps(steps);
+            mockExperimentSteps.ElementAt(5).Definition.Extensions[ContractExtension.Flow] = JToken.FromObject(new ExperimentFlow(null, null, true));
+            IEnumerable<ExperimentStepInstance> nextSteps = TestStepExecution.GetNextExperimentSteps(mockExperimentSteps);
+
+            Assert.IsNotEmpty(nextSteps);
+            Assert.IsTrue(nextSteps.Count() == 1);
+            CollectionAssert.AreEquivalent(nextSteps, mockExperimentSteps.Where(step => step.StepType == SupportedStepType.EnvironmentCleanup).Take(1));
         }
 
         [Test]

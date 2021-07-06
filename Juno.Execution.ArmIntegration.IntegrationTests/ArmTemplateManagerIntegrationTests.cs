@@ -49,9 +49,6 @@ namespace Juno.Execution.ArmIntegration
                     Guid.NewGuid().ToString(),
                     vmSpecifications,
                     "EastUS",
-                    "BLAPrdApp15",
-                    "030829af-23c3-4edc-893d-136c049ca6f8",
-                    "bf56c7ab-6c73-4996-8554-cfccae809fe4",
                     new ConcurrentDictionary<string, string>());
 
                 while (!rgDef.VirtualMachines.Any(s => s.IsDeploymentFinished()))
@@ -82,9 +79,6 @@ namespace Juno.Execution.ArmIntegration
                     Guid.NewGuid().ToString(),
                     vmSpecifications,
                     "EastUS",
-                    "BLAPrdApp15",
-                    "4bf1a8ff-48ec-4f63-910a-5e1a5fa6650d",
-                    "d6a9a363-81a4-47d1-9960-fb19ce20cd64",
                     new ConcurrentDictionary<string, string>());
 
                 var exception = Assert.Throws<ProviderException>(() =>
@@ -117,9 +111,6 @@ namespace Juno.Execution.ArmIntegration
                     Guid.NewGuid().ToString(),
                     vmSpecifications,
                     "West US",
-                    "BY3PrdApp19",
-                    "da2d6d61-11d7-4e58-8884-923a47c7560d",
-                    "e3527bb7-1489-43b6-ae97-ba4ad964d3a4",
                     new ConcurrentDictionary<string, string>());
 
                 while (!rgDef.VirtualMachines.Any(s => s.IsDeploymentFinished()))

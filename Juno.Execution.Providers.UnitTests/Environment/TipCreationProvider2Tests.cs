@@ -42,7 +42,8 @@
             this.mockState = new TipCreationProvider2.State
             {
                 StepTimeout = DateTime.UtcNow.AddMinutes(10),
-                Timeout = TimeSpan.FromMinutes(10)
+                Timeout = TimeSpan.FromMinutes(10),
+                CountPerGroup = 1
             };
 
             this.mockEntityPool = new List<EnvironmentEntity>
@@ -146,7 +147,7 @@
             this.mockLogger.OnLog = (level, eventId, message, exc) =>
             {
                 Assert.IsTrue(
-                    eventId.Name.StartsWith(nameof(TipCreationProvider)),
+                    eventId.Name.StartsWith(nameof(TipCreationProvider2)),
                     $"Event '{eventId.Name}' does not have the prefix expected.");
             };
 
@@ -231,7 +232,6 @@
                 .Select(nodes => nodes.First());
 
             IEnumerable<EnvironmentEntity> expectedTipSessions = expectedTipNodes.Select(node => TipCreationProvider2Tests.CreateTipSessionEntityFrom(node));
-            this.mockEntityPool.AddRange(expectedTipSessions);
 
             // First execution selects the TiP nodes. The second execution confirms the TiP node statuses.
             await this.provider.ExecuteAsync(this.mockFixture.Context, this.mockFixture.Component, CancellationToken.None);
@@ -306,7 +306,7 @@
 
         [Test]
         public async Task ProviderAttemptsToCreateTipSessionsSelectingOtherNodesWhenTheInitialAttemptsFail()
-         {
+        {
             // Stage a couple of TiP sessions in the entity pool. The provider will add the TipSession entities
             // to the entity pool when the initial request is made.
             IEnumerable<EnvironmentEntity> originalTipNodesSelected = this.mockEntityPool.GetNodes().GroupBy(node => node.EnvironmentGroup)
@@ -337,7 +337,7 @@
             await this.provider.ExecuteAsync(this.mockFixture.Context, this.mockFixture.Component, CancellationToken.None);
             await this.provider.ExecuteAsync(this.mockFixture.Context, this.mockFixture.Component, CancellationToken.None);
 
-            Assert.IsTrue(newTipSessionsRequested == 2);
+            Assert.AreEqual(2, newTipSessionsRequested);
         }
 
         [Test]
@@ -583,11 +583,11 @@
             Assert.IsTrue(executionAttempts == 2);
         }
 
-        private static EnvironmentEntity CreateTipSessionEntityFrom(EnvironmentEntity node)
+        private static EnvironmentEntity CreateTipSessionEntityFrom(EnvironmentEntity node, TipSessionStatus tipStatus = TipSessionStatus.Created)
         {
             node.TipSessionId(Guid.NewGuid().ToString());
             node.TipSessionRequestChangeId(Guid.NewGuid().ToString());
-            node.TipSessionStatus(TipSessionStatus.Created.ToString());
+            node.TipSessionStatus(tipStatus.ToString());
 
             EnvironmentEntity tipSession = EnvironmentEntity.TipSession(node.TipSessionId(), node.EnvironmentGroup, node.Metadata);
             tipSession.NodeId(node.Id);

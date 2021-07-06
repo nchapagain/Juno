@@ -11,10 +11,13 @@
     using Juno.Extensions.Telemetry;
     using Juno.Providers;
     using Juno.Scheduler.Preconditions.Manager;
+    using Kusto.Data.Exceptions;
     using Microsoft.Azure.CRC.Extensions;
     using Microsoft.Azure.CRC.Telemetry;
+    using Microsoft.Azure.CRC.Telemetry.Logging;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Logging;
 
     /// <summary>
     /// A <see cref="PreconditionProvider"/> that evaluates if the overall system
@@ -76,17 +79,26 @@
 
                 EnvironmentSettings settings = EnvironmentSettings.Initialize(scheduleContext.Configuration);
                 KustoSettings kustoSettings = settings.KustoSettings.Get(Setting.AzureCM);
-                DataTable response = await kustoManager.GetKustoResponseAsync(CacheKeys.DailyOFR, kustoSettings, this.Query)
-                    .ConfigureDefaults();
+                try
+                {
+                    DataTable response = await kustoManager.GetKustoResponseAsync(CacheKeys.DailyOFR, kustoSettings, this.Query)
+                        .ConfigureDefaults();
 
-                List<JunoOFRNode> junoOfrs = response.ParseOFRNodes();
-                IEnumerable<string> tipList = junoOfrs.Select(ofr => ofr.TipSessionId);
-                conditionSatisfied = junoOfrs.Count >= ofrThreshold;
+                    List<JunoOFRNode> junoOfrs = response.ParseOFRNodes();
+                    IEnumerable<string> tipList = junoOfrs.Select(ofr => ofr.TipSessionId);
+                    conditionSatisfied = junoOfrs.Count >= ofrThreshold;
 
-                telemetryContext.AddContext(EventProperty.Count, junoOfrs.Count);
-                telemetryContext.AddContext(SchedulerEventProperty.Threshold, ofrThreshold);
-                telemetryContext.AddContext(SchedulerEventProperty.OffendingTipSessions, tipList);
-                telemetryContext.AddContext(SchedulerEventProperty.JunoOfrs, junoOfrs);
+                    telemetryContext.AddContext(EventProperty.Count, junoOfrs.Count);
+                    telemetryContext.AddContext(SchedulerEventProperty.Threshold, ofrThreshold);
+                    telemetryContext.AddContext(SchedulerEventProperty.OffendingTipSessions, tipList);
+                    telemetryContext.AddContext(SchedulerEventProperty.JunoOfrs, junoOfrs);
+                }
+                catch (KustoRequestThrottledException)
+                {
+                    // Do not let throttled exceptions prevent execution.
+                    this.Logger.LogTelemetry($"{nameof(JunoDailyOFRPreconditionProvider)}.ThrottledWarning", LogLevel.Warning, telemetryContext);
+                    return false;
+                }
             }
 
             return conditionSatisfied;

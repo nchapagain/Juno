@@ -15,6 +15,7 @@
     using Juno.Contracts;
     using Juno.Execution.AgentRuntime;
     using Juno.Execution.ArmIntegration;
+    using Juno.Execution.Providers.Workloads.VCContracts;
     using Juno.Extensions.Telemetry;
     using Juno.Providers;
     using Microsoft.Azure.CRC.Contracts;
@@ -46,6 +47,7 @@
     public class VirtualClientWorkloadProvider : ExperimentProvider
     {
         private const int MaximumVcCrashes = 5;
+        private static readonly TimeSpan ReevaluationExtension = TimeSpan.FromMinutes(5);
 
         /// <summary>
         /// Retry logic if unable to kill process or delete directory
@@ -95,7 +97,7 @@
             component.ThrowIfNull(nameof(component));
             telemetryContext.ThrowIfNull(nameof(telemetryContext));
 
-            ExecutionResult result = new ExecutionResult(ExecutionStatus.InProgressContinue);
+            ExecutionResult result = new ExecutionResult(ExecutionStatus.InProgressContinue, extensionTimeout: VirtualClientWorkloadProvider.ReevaluationExtension);
 
             if (!cancellationToken.IsCancellationRequested)
             {
@@ -186,25 +188,33 @@
             telemetryContext.ThrowIfNull(nameof(telemetryContext));
 
             string containerId = string.Empty;
-            if (telemetryContext.Properties.ContainsKey(Metadata.ContainerId))
+            if (telemetryContext.Properties.ContainsKey(MetadataProperty.ContainerId))
             {
-                containerId = telemetryContext.Properties[Metadata.ContainerId]?.ToString();
+                containerId = telemetryContext.Properties[MetadataProperty.ContainerId]?.ToString();
             }
 
-            return new Dictionary<string, string>
+            IDictionary<string, string> metadata = new Dictionary<string, string>
             {
-                { Metadata.AgentId, agentId.ToString() },
-                { Metadata.ContainerId, containerId },
-                { Metadata.TipSessionId, agentId.Context },
-                { Metadata.NodeId, agentId.NodeName },
-                { Metadata.NodeName, agentId.NodeName },
-                { Metadata.ExperimentId, context.Experiment.Id },
-                { Metadata.ExperimentStepId, context.ExperimentStep.Id },
-                { Metadata.ExperimentGroup, context.ExperimentStep.ExperimentGroup },
-                { Metadata.GroupId, context.ExperimentStep.ExperimentGroup },
-                { Metadata.VirtualMachineName, agentId.VirtualMachineName },
-                { Metadata.ClusterName, agentId.ClusterName }
+                { MetadataProperty.AgentId, agentId.ToString() },
+                { MetadataProperty.AgentType, !string.IsNullOrWhiteSpace(agentId.VirtualMachineName) ? AgentType.GuestAgent.ToString() : AgentType.HostAgent.ToString() },
+                { MetadataProperty.ContainerId, containerId },
+                { MetadataProperty.TipSessionId, agentId.Context },
+                { MetadataProperty.NodeId, agentId.NodeName },
+                { MetadataProperty.NodeName, agentId.NodeName },
+                { MetadataProperty.ExperimentId, context.Experiment.Id },
+                { MetadataProperty.ExperimentStepId, context.ExperimentStep.Id },
+                { MetadataProperty.ExperimentGroup, context.ExperimentStep.ExperimentGroup },
+                { MetadataProperty.GroupId, context.ExperimentStep.ExperimentGroup },
+                { MetadataProperty.VirtualMachineName, agentId.VirtualMachineName },
+                { MetadataProperty.ClusterName, agentId.ClusterName }
             };
+
+            if (context.Experiment.Definition.Metadata?.Any() == true)
+            {
+                context.Experiment.Definition.Metadata.ToList().ForEach(kvPair => metadata[kvPair.Key] = kvPair.Value?.ToString());
+            }
+
+            return metadata;
         }
 
         /// <summary>
@@ -214,11 +224,12 @@
         /// <param name="component">The experiment component containing the step definition and parameters.</param>
         /// <param name="metadata">A set of one or more metadata properties to pass to the VirtualClient.exe on the command-line.</param>
         /// <param name="specificationFilePath">The path to the specification file (if it exists).</param>
+        /// <param name="layoutFilePath">Layout file path for the VC.</param>
         /// <param name="cancellationToken">Cancellation token to talk to AzureKeyvault</param>
         /// <returns></returns>
         [SuppressMessage("Readability", "AZCA1006:PrefixStaticCallsWithClassName Rule", Justification = "Code analysis is mistaken here.")]
         protected async virtual Task<IProcessProxy> CreateProcessAsync(
-            ExperimentContext context, ExperimentComponent component, IDictionary<string, string> metadata, string specificationFilePath, CancellationToken cancellationToken)
+            ExperimentContext context, ExperimentComponent component, IDictionary<string, string> metadata, string specificationFilePath, string layoutFilePath, CancellationToken cancellationToken)
         {
             context.ThrowIfNull(nameof(context));
             component.ThrowIfNull(nameof(component));
@@ -238,6 +249,8 @@
             {
                 commandArguments += $" --specificationPath=\"{specificationFilePath}\"";
             }
+
+            commandArguments += $" --layoutPath=\"{layoutFilePath}\"";
 
             // The gives virtual client the same seed for the same experiment.
             int seed = VirtualClientWorkloadProvider.GenerateSeedFromExperimentId(context.Experiment.Id);
@@ -446,6 +459,7 @@
             return isStarted;
         }
 
+        [SuppressMessage("Readability", "AZCA1006:PrefixStaticCallsWithClassName Rule", Justification = "Code analysis is mistaken here.")]
         private Task StopProcessAsync(IProcessProxy process, EventContext telemetryContext, CancellationToken cancellationToken)
         {
             process.ThrowIfNull(nameof(process));
@@ -456,7 +470,13 @@
                 if (!cancellationToken.IsCancellationRequested)
                 {
                     EventContext relatedContext = telemetryContext.Clone(withProperties: true)
-                        .AddContext(nameof(process), process.StartInfo);
+                        .AddContext(nameof(process), new
+                        {
+                            id = process.Id,
+                            command = process.StartInfo.FileName,
+                            commandArguments = Common.SensitiveData.ObscureSecrets(process.StartInfo.Arguments),
+                            workingDir = process.StartInfo.WorkingDirectory
+                        });
 
                     this.Logger.LogTelemetry($"{nameof(VirtualClientWorkloadProvider)}.StopProcess", relatedContext, () =>
                     {
@@ -493,6 +513,7 @@
             await this.Logger.LogTelemetryAsync($"{nameof(VirtualClientWorkloadProvider)}.StartVirtualClient", relatedContext, async () =>
             {
                 string specificationFilePath = null;
+                string layoutFilePath = null;
                 if (!component.Parameters.TryGetValue(StepParameters.IncludeSpecifications, out IConvertible includeSpecs) || bool.Parse(includeSpecs.ToString()) == true)
                 {
                     specificationFilePath = Path.Combine(Path.GetDirectoryName(VirtualClientWorkloadProvider.GetVirtualClientExePath(component)), "Specifications.json");
@@ -500,9 +521,13 @@
                         .GetAwaiter().GetResult();
                 }
 
+                layoutFilePath = Path.Combine(Path.GetDirectoryName(VirtualClientWorkloadProvider.GetVirtualClientExePath(component)), "layout.json");
+                this.WriteLayoutFileAsync(context, layoutFilePath, telemetryContext, cancellationToken)
+                    .GetAwaiter().GetResult();
+
                 DateTime processEndTime = DateTime.UtcNow.Add(component.Parameters.GetTimeSpanValue(StepParameters.Duration));
                 IDictionary<string, string> metadata = VirtualClientWorkloadProvider.CreateMetadata(context, component, agentId, telemetryContext);
-                IProcessProxy process = await this.CreateProcessAsync(context, component, metadata, specificationFilePath, cancellationToken)
+                IProcessProxy process = await this.CreateProcessAsync(context, component, metadata, specificationFilePath, layoutFilePath, cancellationToken)
                     .ConfigureDefaults();
 
                 if (!this.StartProcess(process, relatedContext, cancellationToken))
@@ -544,6 +569,64 @@
                     this.Logger.LogTelemetry($"{nameof(VirtualClientWorkloadProvider)}.UnexpectedStartupExit", LogLevel.Warning, startupErrorContext);
                 }
             }).ConfigureDefaults();
+        }
+
+        private async Task<bool> WriteLayoutFileAsync(ExperimentContext context, string filePath, EventContext telemetryContext, CancellationToken cancellationToken)
+        {
+            bool fileWritten = false;
+
+            try
+            {
+                IFileSystem fileSystem = this.Services.GetService<IFileSystem>();
+                if (!fileSystem.File.Exists(filePath))
+                {
+                    EventContext relatedContext = telemetryContext.Clone()
+                        .AddContext("filePath", filePath);
+
+                    await this.Logger.LogTelemetryAsync($"{nameof(VirtualClientWorkloadProvider)}.WriteLayoutFile", relatedContext, async () =>
+                    {
+                        string vmResourceGroupStateKey = string.Format(ContractExtension.ResourceGroup, context.ExperimentStep.ExperimentGroup);
+
+                        VmResourceGroupDefinition resourceGroupDefinition = await this.GetStateAsync<VmResourceGroupDefinition>(
+                                context,
+                                vmResourceGroupStateKey,
+                                cancellationToken).ConfigureDefaults();
+
+                        List<ClientInstance> vcClients = new List<ClientInstance>();
+                        foreach (VmDefinition vm in resourceGroupDefinition.VirtualMachines)
+                        {
+                            AgentIdentification agentId = new AgentIdentification(vm.ClusterId, vm.NodeId, vm.VirtualMachineName, vm.TipSessionId);
+                            List<ClientDisk> disks = new List<ClientDisk>();
+                            disks.Add(new ClientDisk("os_disk", vm.OsDiskStorageAccountType));
+                            foreach (VmDisk disk in vm.VirtualDisks)
+                            {
+                                disks.Add(new ClientDisk("remote_disk", disk.StorageAccountType, disk.Lun));
+                            }
+
+                            ClientInstance instance = new ClientInstance(agentId.ToString(), vm.PrivateIPAddress, vm.Role, disks);
+
+                            vcClients.Add(instance);
+                        }
+
+                        EnvironmentLayout layout = new EnvironmentLayout(vcClients);
+                        string layoutJson = layout.ToJson();
+                        relatedContext.AddContext("layout", layoutJson);
+
+                        await VirtualClientWorkloadProvider.SpecificationFileWriteRetryPolicy.Execute(async () =>
+                        {
+                            await fileSystem.File.WriteAllTextAsync(filePath, layoutJson).ConfigureDefaults();
+                            fileWritten = true;
+
+                        }).ConfigureDefaults();
+                    }).ConfigureDefaults();
+                }
+            }
+            catch
+            {
+                // Best effort until the code path is hardened.
+            }
+
+            return fileWritten;
         }
 
         private async Task<bool> WriteSpecificationsFileAsync(ExperimentContext context, string filePath, EventContext telemetryContext, CancellationToken cancellationToken)
@@ -635,22 +718,6 @@
 
             [JsonIgnore]
             public bool IsProcessDurationExpired => DateTime.UtcNow > this.ProcessEndTime;
-        }
-
-        private class Metadata
-        {
-            internal const string AgentId = "agentId";
-            internal const string ContainerId = "containerId";
-            internal const string TipSessionId = "tipSessionId";
-            internal const string ExperimentId = "experimentId";
-            internal const string ExperimentStepId = "experimentStepId";
-            internal const string ExperimentGroup = "experimentGroup";
-            internal const string GroupId = "groupId";
-            internal const string VirtualMachineName = "virtualMachineName";
-            internal const string NodeId = "nodeId";
-            internal const string NodeName = "nodeName";
-            internal const string ClusterName = "clusterName";
-            internal const string Context = "context";
         }
     }
 }

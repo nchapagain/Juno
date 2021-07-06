@@ -32,11 +32,6 @@
             List<string> validationErrors = new List<string>();
             bool isValid = true;
 
-            if (GoalBasedScheduleExtensions.IsExecutionGoalVersion20200727(executionGoal.Version))
-            {
-                return new ValidationResult(isValid, validationErrors);
-            }
-
             foreach (Goal targetGoal in executionGoal.TargetGoals)
             {
                 if (!targetGoal.Preconditions.Any(precondition => precondition.Type.Equals(ContractExtension.SuccessfulExperimentsProvider, StringComparison.OrdinalIgnoreCase)))

@@ -27,6 +27,12 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <Compile Remove="Configuration\**" />
+      <EmbeddedResource Remove="Configuration\**" />
+      <None Remove="Configuration\**" />
+    </ItemGroup>
+
+    <ItemGroup>
       <Content Include="..\Juno.Documentation\Examples\ABC_Experiment.json" Link="Resources\Experiments\ABC_Experiment.json">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>

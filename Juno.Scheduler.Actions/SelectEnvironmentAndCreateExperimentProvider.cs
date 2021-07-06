@@ -49,9 +49,7 @@
                 scheduleAction.Parameters.Remove(Constants.EnvironmentQuery);
 
                 telemetryContext.AddContext(nameof(query), query.Name);
-
-                // Allow the parameterization of the values in the query.
-                this.OverwriteQueryparameters(query, scheduleAction.Parameters);
+                query.OverwriteQueryparameters(scheduleAction.Parameters);
 
                 // Change regions from * to subscription
                 this.OverwriteSearchValues(query);
@@ -92,19 +90,6 @@
 
                 await base.ExecuteActionAsync(scheduleAction, scheduleContext, telemetryContext, cancellationToken)
                     .ConfigureDefaults();
-            }
-        }
-
-        private void OverwriteQueryparameters(EnvironmentQuery query, IDictionary<string, IConvertible> parameters)
-        {
-            const string queryTag = "query.";
-            foreach (KeyValuePair<string, IConvertible> parameter in parameters)
-            {
-                if (parameter.Key.StartsWith(queryTag, StringComparison.OrdinalIgnoreCase))
-                {
-                    string parameterName = parameter.Key.Substring(queryTag.Length);
-                    query.Parameters.Add(parameterName, parameter.Value);
-                }
             }
         }
 

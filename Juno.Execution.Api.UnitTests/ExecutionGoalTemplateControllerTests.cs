@@ -46,7 +46,7 @@
         private Fixture mockFixture;
         private GoalBasedSchedule mockExecutionGoal;
         private Item<GoalBasedSchedule> mockExecutionGoalItem;
-        private Goal mockTargetGoal;
+        private TargetGoal mockTargetGoal;
         private Mock<IScheduleDataManager> mockExecutionGoalDataManager;
         private ExecutionGoalTemplateController controller;
         private ExecutionGoalSummary mockExecutionMetadata;
@@ -62,8 +62,9 @@
 
             string cronExpression = "* * * * *";
 
-            this.mockTargetGoal = new Goal(
+            this.mockTargetGoal = new TargetGoal(
                 name: "TargetGoal",
+                true,
                 preconditions: new List<Precondition>()
                 {
                     new Precondition(
@@ -91,18 +92,13 @@
 
             this.mockExecutionGoal = new GoalBasedSchedule(
                 template.ExperimentName,
-                template.ExecutionGoalId,
-                template.Name,
-                template.TeamName,
                 template.Description,
-                template.ScheduleMetadata,
-                template.Enabled,
-                template.Version,
                 template.Experiment,
-                new List<Goal> { this.mockTargetGoal },
-                template.ControlGoals);
+                new List<TargetGoal> { this.mockTargetGoal },
+                template.ControlGoals,
+                template.Metadata);
 
-            this.mockExecutionGoalItem = new Item<GoalBasedSchedule>(this.mockExecutionGoal.ExecutionGoalId, this.mockExecutionGoal);
+            this.mockExecutionGoalItem = new Item<GoalBasedSchedule>(Guid.NewGuid().ToString(), this.mockExecutionGoal);
 
             this.mockExecutionGoalDataManager = new Mock<IScheduleDataManager>();
             this.controller = new ExecutionGoalTemplateController(this.mockExecutionGoalDataManager.Object, NullLogger.Instance);

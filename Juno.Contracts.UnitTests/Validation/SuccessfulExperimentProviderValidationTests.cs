@@ -110,18 +110,13 @@
             GoalBasedSchedule mockSchedule = this.mockFixture.Create<GoalBasedSchedule>();
             return new GoalBasedSchedule(
                     mockSchedule.ExperimentName,
-                    mockSchedule.ExecutionGoalId,
-                    mockSchedule.Name,
-                    mockSchedule.TeamName,
                     mockSchedule.Description,
-                    mockSchedule.ScheduleMetadata,
-                    mockSchedule.Enabled,
-                    mockSchedule.Version,
                     mockSchedule.Experiment,
-                    new List<Goal>
+                    new List<TargetGoal>
                     {
-                    new Goal(
+                    new (
                         name: "TargetGoal1",
+                        true,
                         preconditions: new List<Precondition>()
                         {
                             timerTriggerPrecondition, successfulExperimentPrecondition

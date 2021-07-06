@@ -67,6 +67,7 @@
             IScheduleTimerDataManager targetGoalManager = HostDependencies.CreateScheduleTimerDataManager(settings, keyVaultClient, logger);
             IExperimentTemplateDataManager experimentTemplateDataManager = HostDependencies.CreateExperimentTemplateDataManager(settings, keyVaultClient, logger);
             IExperimentKustoTelemetryDataManager kustoDataManager = new ExecutionGoalKustoTelemetryDataManager(HostDependencies.CreateKustoClient(settings), this.Configuration, logger);
+            IAnalysisCacheManager analysisCacheManager = HostDependencies.CreateAnalysisCacheManager(settings, keyVaultClient, logger);
 
             services.AddSingleton<ILogger>(logger);
             services.AddSingleton<IAzureKeyVault>(keyVaultClient);
@@ -77,6 +78,7 @@
             services.AddSingleton<IScheduleTimerDataManager>(targetGoalManager);
             services.AddSingleton<IExperimentTemplateDataManager>(experimentTemplateDataManager);
             services.AddSingleton<IExperimentKustoTelemetryDataManager>(kustoDataManager);
+            services.AddSingleton<IAnalysisCacheManager>(analysisCacheManager);
 
             // Setup schema validation rules
             ExperimentValidation.Instance.AddRange(new List<IValidationRule<Experiment>>
@@ -91,14 +93,16 @@
                 ExperimentOwnerEmailRules.Instance,
                 TargetGoalRules.Instance,
                 TimerTriggerProviderRules.Instance,
-                SuccessfulExperimentsProviderRules.Instance
+                SuccessfulExperimentsProviderRules.Instance,
+                ExecutionGoalMetadataValidationRules.Instance
             });
 
             ExecutionGoalTemplateValidation.Instance.AddRange(new List<IValidationRule<GoalBasedSchedule>>
             {
                 ExperimentOwnerEmailRules.Instance,
                 TargetGoalRules.Instance,
-                TimerTriggerProviderRules.Instance
+                TimerTriggerProviderRules.Instance,
+                ExecutionGoalMetadataValidationRules.Instance
             });
 
             // Add OpenAPI/Swagger definition.

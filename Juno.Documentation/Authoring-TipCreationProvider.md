@@ -33,7 +33,9 @@ The following parameters will be used creating experiment step.
 
 | Name                | Required   | Data Type        | Description                |
 | ------------------- | ---------- | ---------------- | -------------------------- |
-| isAmberNodeRequest  | Yes        | bool             | Specifies whether the tip sessions should be created on Amber or probation nodes. Default is false.
+| isAmberNodeRequest  | No         | bool             | Specifies whether the tip sessions should be created on Amber or probation nodes. Default is false.
+| nodeTag             | No         | string           | Comma/semicolumn delimited tags which will be tagged on tip sessions. (e.g. "T1,T2,T3")
+| count               | No         | int              | Defines the number of TiP nodes to create/acquire for the group(s). Defaults to 1.
 
 
 ##### Example Definitions
@@ -51,7 +53,9 @@ The following parameters will be used creating experiment step.
     "description": "Creates TiP sessions for all experiment groups to isolate a set of physical nodes from customer workloads in an Azure data center.",
     "group": "*",
     "parameters": {
-        "isAmberNodeRequest": true
+        "isAmberNodeRequest": true,
+        "count": 2
+        "nodeTag": "A1,A2,B1,B2"
     }
 }
 ```

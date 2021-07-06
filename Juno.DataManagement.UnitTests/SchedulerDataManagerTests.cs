@@ -19,7 +19,7 @@
     public class SchedulerDataManagerTests
     {
         private Fixture mockFixture;
-        private GoalBasedSchedule mockExecutionGoal;
+        private Item<GoalBasedSchedule> mockExecutionGoal;
         private TargetGoalTrigger mockTargetGoal;
         private ScheduleDataManager dataManager;
         private Mock<IDocumentStore<CosmosAddress>> mockDocumentStore;
@@ -32,7 +32,7 @@
             this.mockFixture.SetUpGoalBasedScheduleMocks();
             this.mockFixture.SetupEnvironmentSelectionMocks();
 
-            this.mockExecutionGoal = this.mockFixture.Create<GoalBasedSchedule>();
+            this.mockExecutionGoal = new Item<GoalBasedSchedule>(Guid.NewGuid().ToString(), this.mockFixture.Create<GoalBasedSchedule>());
             this.mockTargetGoal = this.mockFixture.Create<TargetGoalTrigger>();
 
             this.mockDocumentStore = new Mock<IDocumentStore<CosmosAddress>>();
@@ -42,8 +42,7 @@
         [Test]
         public void ScheduleDataManagerCreateTheExpectedExecutionGoal()
         {
-            string executionGoalId = this.mockExecutionGoal.ExecutionGoalId;
-            Item<GoalBasedSchedule> expectedGoal = new Item<GoalBasedSchedule>(executionGoalId, this.mockExecutionGoal);
+            string executionGoalId = this.mockExecutionGoal.Id;
             this.mockDocumentStore.Setup(store => store.SaveDocumentAsync(
                 It.IsAny<CosmosAddress>(),
                 It.IsAny<Item<GoalBasedSchedule>>(),
@@ -51,19 +50,18 @@
                 It.IsAny<bool>()))
                 .Callback<CosmosAddress, Item<GoalBasedSchedule>, CancellationToken, bool>((actualAddress, data, token, replace) =>
                 {
-                    Assert.AreEqual(expectedGoal.Definition, data.Definition);
-                    Assert.AreEqual(expectedGoal.Id, data.Id);
+                    Assert.AreEqual(this.mockExecutionGoal.Definition, data.Definition);
+                    Assert.AreEqual(this.mockExecutionGoal.Id, data.Id);
                 })
-                .Returns(Task.FromResult(expectedGoal));
+                .Returns(Task.FromResult(this.mockExecutionGoal));
 
-            this.dataManager.CreateExecutionGoalAsync(expectedGoal, CancellationToken.None)
+            this.dataManager.CreateExecutionGoalAsync(this.mockExecutionGoal, CancellationToken.None)
                 .GetAwaiter().GetResult();
         }
 
         [Test]
         public void ScheduleDataManagerRetrievesExpectedExecutionGoal()
         {
-            var cosmosResult = new Item<GoalBasedSchedule>(Guid.NewGuid().ToString(), this.mockExecutionGoal);
             this.mockDocumentStore.Setup(store => store.GetDocumentAsync<Item<GoalBasedSchedule>>(
                 It.IsAny<CosmosAddress>(),
                 It.IsAny<CancellationToken>()))
@@ -72,17 +70,16 @@
                     CosmosAddress expectedAddress = ScheduleAddressFactory.CreateExecutionGoalAddress(this.mockTargetGoal.TeamName, this.mockTargetGoal.ExecutionGoal);
                     Assert.IsTrue(expectedAddress.Equals(actualAddress));
                 })
-                .Returns(Task.FromResult(cosmosResult));
+                .Returns(Task.FromResult(this.mockExecutionGoal));
 
             Item<GoalBasedSchedule> actualInstance = this.dataManager.GetExecutionGoalAsync(this.mockTargetGoal.ExecutionGoal, this.mockTargetGoal.TeamName, CancellationToken.None)
                 .GetAwaiter().GetResult();
-            Assert.AreEqual(actualInstance, cosmosResult);
+            Assert.AreEqual(actualInstance, this.mockExecutionGoal);
         }
 
         [Test]
         public async Task GetExecutionGoalsAsyncRetrievesExpectedExecutionGoals()
         {
-            var cosmosResult = new Item<GoalBasedSchedule>(Guid.NewGuid().ToString(), this.mockExecutionGoal);
             this.mockDocumentStore.Setup(store => store.GetDocumentsAsync<Item<GoalBasedSchedule>>(
                 It.IsAny<CosmosAddress>(),
                 It.IsAny<CancellationToken>(),
@@ -92,16 +89,15 @@
                     CosmosAddress expectedAddress = ScheduleAddressFactory.CreateExecutionGoalAddress(this.mockTargetGoal.TeamName);
                     Assert.IsTrue(expectedAddress.Equals(actualAddress));
                 })
-                .Returns(Task.FromResult(new List<Item<GoalBasedSchedule>>() { cosmosResult } as IEnumerable<Item<GoalBasedSchedule>>));
+                .Returns(Task.FromResult(new List<Item<GoalBasedSchedule>>() { this.mockExecutionGoal } as IEnumerable<Item<GoalBasedSchedule>>));
 
             IEnumerable<Item<GoalBasedSchedule>> actualExecutionGoals = await this.dataManager.GetExecutionGoalsAsync(CancellationToken.None, "teamName");
-            Assert.AreEqual(cosmosResult, actualExecutionGoals.FirstOrDefault());
+            Assert.AreEqual(this.mockExecutionGoal, actualExecutionGoals.FirstOrDefault());
         }
 
         [Test]
         public async Task GetExecutionGoalsAsyncRetrievesExpectedExecutionGoalsWithoutTeamName()
         {
-            var cosmosResult = new Item<GoalBasedSchedule>(Guid.NewGuid().ToString(), this.mockExecutionGoal);
             this.mockDocumentStore.Setup(store => store.GetDocumentsAsync<Item<GoalBasedSchedule>>(
                 It.IsAny<CosmosAddress>(),
                 It.IsAny<CancellationToken>(),
@@ -111,17 +107,17 @@
                     CosmosAddress expectedAddress = ScheduleAddressFactory.CreateExecutionGoalAddress();
                     Assert.IsTrue(expectedAddress.Equals(actualAddress));
                 })
-                .Returns(Task.FromResult(new List<Item<GoalBasedSchedule>>() { cosmosResult } as IEnumerable<Item<GoalBasedSchedule>>));
+                .Returns(Task.FromResult(new List<Item<GoalBasedSchedule>>() { this.mockExecutionGoal } as IEnumerable<Item<GoalBasedSchedule>>));
 
             IEnumerable<Item<GoalBasedSchedule>> actualExecutionGoals = await this.dataManager.GetExecutionGoalsAsync(CancellationToken.None);
-            Assert.AreEqual(cosmosResult, actualExecutionGoals.FirstOrDefault());
+            Assert.AreEqual(this.mockExecutionGoal, actualExecutionGoals.FirstOrDefault());
         }
 
         [Test]
         public void UpdateExecutionGoalAsyncUpdatesTheExpectedExecutionGoal()
         {
-            string executionGoalId = this.mockExecutionGoal.ExecutionGoalId;
-            Item<GoalBasedSchedule> expectedGoal = new Item<GoalBasedSchedule>(executionGoalId, this.mockExecutionGoal);
+            string executionGoalId = this.mockExecutionGoal.Id;
+            Item<GoalBasedSchedule> expectedGoal = this.mockExecutionGoal;
             expectedGoal.SetETag("Thisismyetag");
             this.mockDocumentStore.Setup(store => store.SaveDocumentAsync(
                 It.IsAny<CosmosAddress>(),
@@ -140,7 +136,7 @@
                 It.IsAny<CancellationToken>()))
                 .Callback<CosmosAddress, CancellationToken>((actualAddress, token) =>
                 {
-                    Assert.AreEqual(actualAddress, ScheduleAddressFactory.CreateExecutionGoalAddress(this.mockExecutionGoal.TeamName, this.mockExecutionGoal.ExecutionGoalId));
+                    Assert.AreEqual(actualAddress, ScheduleAddressFactory.CreateExecutionGoalAddress(this.mockExecutionGoal.Definition.TeamName, this.mockExecutionGoal.Id));
                 })
                 .Returns(Task.FromResult(expectedGoal));
 
@@ -151,18 +147,18 @@
         [Test]
         public void ScheduleDataManagerDeletesTheExpectedExperiment()
         {
-            string expectedId = this.mockExecutionGoal.ExecutionGoalId;
+            string expectedId = this.mockExecutionGoal.Id;
             this.mockDocumentStore.Setup(store => store.DeleteDocumentAsync(
                 It.IsAny<CosmosAddress>(),
                 It.IsAny<CancellationToken>()))
                 .Callback<CosmosAddress, CancellationToken>((actualAddress, token) =>
                 {
-                    CosmosAddress expectedAddress = ScheduleAddressFactory.CreateExecutionGoalAddress(this.mockExecutionGoal.TeamName, expectedId);
+                    CosmosAddress expectedAddress = ScheduleAddressFactory.CreateExecutionGoalAddress(this.mockExecutionGoal.Definition.TeamName, expectedId);
                     Assert.IsTrue(expectedAddress.Equals(actualAddress));
                 })
                 .Returns(Task.CompletedTask);
 
-            this.dataManager.DeleteExecutionGoalAsync(expectedId, this.mockExecutionGoal.TeamName, CancellationToken.None)
+            this.dataManager.DeleteExecutionGoalAsync(expectedId, this.mockExecutionGoal.Definition.TeamName, CancellationToken.None)
                 .GetAwaiter()
                 .GetResult();
         }
@@ -171,7 +167,7 @@
         public void ScheduleDataMangerGetsExpectedExecutionGoalTemplate()
         {
             string id = Guid.NewGuid().ToString();
-            Item<GoalBasedSchedule> expectedResult = new Item<GoalBasedSchedule>(id, this.mockExecutionGoal);
+            Item<GoalBasedSchedule> expectedResult = this.mockExecutionGoal;
             this.mockDocumentStore.Setup(store => store.GetDocumentAsync<Item<GoalBasedSchedule>>(
                 It.IsAny<CosmosAddress>(),
                 It.IsAny<CancellationToken>()))
@@ -190,8 +186,8 @@
             string id2 = Guid.NewGuid().ToString();
             IEnumerable<Item<GoalBasedSchedule>> cosmosReturnValue = new List<Item<GoalBasedSchedule>>()
             {
-                new Item<GoalBasedSchedule>(id1, this.mockExecutionGoal),
-                new Item<GoalBasedSchedule>(id2, this.mockExecutionGoal)
+                new Item<GoalBasedSchedule>(id1, this.mockExecutionGoal.Definition),
+                new Item<GoalBasedSchedule>(id2, this.mockExecutionGoal.Definition)
             };
             this.mockDocumentStore.Setup(mgr => mgr.GetDocumentsAsync<Item<GoalBasedSchedule>>(
                 It.IsAny<CosmosAddress>(),
@@ -204,28 +200,26 @@
             foreach (ExecutionGoalSummary info in actualResult)
             {
                 Assert.IsTrue(info.Id == id1 || info.Id == id2);
-                Assert.IsTrue(info.Description == this.mockExecutionGoal.Description);
-                Assert.IsTrue(info.TeamName == this.mockExecutionGoal.TeamName);
+                Assert.IsTrue(info.Description == this.mockExecutionGoal.Definition.Description);
+                Assert.IsTrue(info.TeamName == this.mockExecutionGoal.Definition.TeamName);
             }
         }
 
         [Test]
         public void ScheduleDataManagerGetsExpectedExecutionGoalInfo()
         {
-            string id1 = Guid.NewGuid().ToString();
-            string id2 = Guid.NewGuid().ToString();
-            Item<GoalBasedSchedule> cosmosReturnValue = new Item<GoalBasedSchedule>(id1, this.mockExecutionGoal);
+            Item<GoalBasedSchedule> cosmosReturnValue = this.mockExecutionGoal;
                 
             this.mockDocumentStore.Setup(mgr => mgr.GetDocumentAsync<Item<GoalBasedSchedule>>(
                 It.IsAny<CosmosAddress>(),
                 It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(cosmosReturnValue));
 
-            IEnumerable<ExecutionGoalSummary> result = this.dataManager.GetExecutionGoalTemplateInfoAsync(CancellationToken.None, "a string", id1).GetAwaiter().GetResult();
+            IEnumerable<ExecutionGoalSummary> result = this.dataManager.GetExecutionGoalTemplateInfoAsync(CancellationToken.None, "a string", "an id").GetAwaiter().GetResult();
             ExecutionGoalSummary actualResult = result.First();
 
             Assert.IsNotNull(actualResult);
-            Assert.AreEqual(id1, actualResult.Id);
+            Assert.AreEqual(this.mockExecutionGoal.Id, actualResult.Id);
         }
 
         [Test]
@@ -254,20 +248,18 @@
         [Test]
         public void ScheduleDataManagerGetsExpectedExecutionGoalInfoWithSummaryView()
         {
-            string id1 = Guid.NewGuid().ToString();
-            string id2 = Guid.NewGuid().ToString();
-            Item<GoalBasedSchedule> cosmosReturnValue = new Item<GoalBasedSchedule>(id1, this.mockExecutionGoal);
+            Item<GoalBasedSchedule> cosmosReturnValue = this.mockExecutionGoal;
 
             this.mockDocumentStore.Setup(mgr => mgr.GetDocumentAsync<Item<GoalBasedSchedule>>(
                 It.IsAny<CosmosAddress>(),
                 It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(cosmosReturnValue));
 
-            IEnumerable<ExecutionGoalSummary> result = this.dataManager.GetExecutionGoalsInfoAsync(CancellationToken.None, "a string", id1).GetAwaiter().GetResult();
+            IEnumerable<ExecutionGoalSummary> result = this.dataManager.GetExecutionGoalsInfoAsync(CancellationToken.None, "a string", "an id").GetAwaiter().GetResult();
             ExecutionGoalSummary actualResult = result.First();
 
             Assert.IsNotNull(actualResult);
-            Assert.AreEqual(id1, actualResult.Id);
+            Assert.AreEqual(this.mockExecutionGoal.Id, actualResult.Id);
         }
     }
 }

@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  
+  <PropertyGroup>
+    <!--
+        Version information for an assembly consists of the following four values:
+
+        Major Version
+        Minor Version
+        Build Number
+        Revision
+        -->
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <AssemblyName>Juno.Scheduler.Preconditions.IntegrationTests</AssemblyName>
+    <RootNamespace>Juno.Scheduler.Preconditions</RootNamespace>
+    <AssemblyVersion>1.0.0</AssemblyVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Moq" Version="4.16.1" />
+    <PackageReference Include="nunit" Version="3.13.1" />
+    <PackageReference Include="NUnit3TestAdapter" Version="3.17.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.8.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Microsoft.Azure.CRC\Microsoft.Azure.CRC.TestExtensions\Microsoft.Azure.CRC.TestExtensions.csproj" />
+    <ProjectReference Include="..\Juno.Scheduler.Preconditions\Juno.Scheduler.Preconditions.csproj" />
+    <ProjectReference Include="..\Juno.TestExtensions\Juno.TestExtensions.csproj" />
+  </ItemGroup>
+
+  <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), Module.props))\Module.props" />
+
+</Project>

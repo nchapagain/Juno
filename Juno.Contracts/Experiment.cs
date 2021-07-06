@@ -3,7 +3,9 @@
     using System;
     using System.Collections.Generic;
     using System.ComponentModel.DataAnnotations;
+    using System.Diagnostics.CodeAnalysis;
     using System.Linq;
+    using System.Security.Cryptography;
     using System.Text;
     using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Azure.CRC.Extensions;
@@ -15,12 +17,6 @@
     [JsonObject(MemberSerialization = MemberSerialization.OptIn)]
     public class Experiment : IEquatable<Experiment>
     {
-        /// <summary>
-        /// Metadata property defines whether auto-triage diagnostics should be enabled on the
-        /// experiment.
-        /// </summary>
-        public const string EnableDiagnostics = nameof(Experiment.EnableDiagnostics);
-
         private int? hashCode;
 
         /// <summary>
@@ -186,6 +182,55 @@
         {
             return !(lhs == rhs);
         }
+
+        // Notes:
+        // We do not have a consensus on where the recommendation ID should be created or the format of it. We are
+        // leaving this here for reference as we come back to this so that we do not lose track of the work we did
+        // to integrate it and can simply refactor that to match the requisite semantics in the future.
+        /////// <summary>
+        /////// Generates a "calculated" (and repeatable) Guid from the set of identifiers provided.
+        /////// </summary>
+        /////// <param name="identifiers">The set of 1 or more identifiers collectively used to generate the hash.</param>
+        /////// <returns>
+        /////// A repeatable "calculated" hash created from the identifiers.
+        /////// </returns>
+        ////[SuppressMessage("Security", "CA5351:Do Not Use Broken Cryptographic Algorithms", Justification = "This algorithm is NOT being used for cryptography. This is a Guid/hash generator.")]
+        ////public static Guid GenerateHash(params string[] identifiers)
+        ////{
+        ////    identifiers.ThrowIfNullOrEmpty(nameof(identifiers));
+
+        ////    using (MD5 md5 = MD5.Create())
+        ////    {
+        ////        byte[] hashBytes = md5.ComputeHash(Encoding.UTF8.GetBytes(string.Join(',', identifiers)));
+        ////        return new Guid(hashBytes);
+        ////    }
+        ////}
+
+        /////// <summary>
+        /////// Adds a "recommendationId" to the experiment metadata given the experiment
+        /////// name, revision and tenantId metadata.
+        /////// </summary>
+        ////public void AddRecommendationId(bool replace = false)
+        ////{
+        ////    if (replace || !this.Metadata.ContainsKey(MetadataProperty.RecommendationId))
+        ////    {
+        ////        if (!this.Metadata.TryGetValue(MetadataProperty.Revision, out IConvertible revision))
+        ////        {
+        ////            throw new SchemaException(
+        ////                $"Required metadata properties missing. In order to create a recommendation ID, the experiment must " +
+        ////                $"have a '{MetadataProperty.Revision}' property defined in the metadata.");
+        ////        }
+
+        ////        if (!this.Metadata.TryGetValue(MetadataProperty.TenantId, out IConvertible tenantId))
+        ////        {
+        ////            throw new SchemaException(
+        ////                $"Required metadata properties missing. In order to create a recommendation ID, the experiment must " +
+        ////                $"have a '{MetadataProperty.TenantId}' property defined in the metadata.");
+        ////        }
+
+        ////        this.Metadata[MetadataProperty.RecommendationId] = Experiment.GenerateHash(this.Name, revision.ToString(), tenantId.ToString()).ToString();
+        ////    }
+        ////}
 
         /// <summary>
         /// Override method determines if the two objects are equal

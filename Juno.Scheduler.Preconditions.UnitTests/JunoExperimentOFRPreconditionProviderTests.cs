@@ -10,6 +10,7 @@
     using Juno.Contracts.Configuration;
     using Juno.Providers;
     using Juno.Scheduler.Preconditions.Manager;
+    using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Moq;
@@ -42,8 +43,9 @@
                 .AddJsonFile($"juno-dev01.environmentsettings.json")
                 .Build();
             GoalBasedSchedule mockSchedule = this.mockFixture.Create<GoalBasedSchedule>();
-            TargetGoalTrigger mockTrigger = new ("id", mockSchedule.Name, mockSchedule.TargetGoals[0].Name, "* * * * *", true, mockSchedule.ExperimentName, mockSchedule.TeamName, mockSchedule.Version, DateTime.UtcNow, DateTime.UtcNow);
-            this.mockContext = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), mockTrigger, this.configuration);
+            mockSchedule.TargetGoals[0].Actions[0].Parameters.Add(ExecutionGoalMetadata.ExperimentName, "experimentName");
+            TargetGoalTrigger mockTrigger = new ("id", mockSchedule.ExperimentName, mockSchedule.TargetGoals[0].Name, "* * * * *", true, mockSchedule.TeamName, mockSchedule.Version, DateTime.UtcNow, DateTime.UtcNow);
+            this.mockContext = new ScheduleContext(new Item<GoalBasedSchedule>("id", mockSchedule), mockTrigger, this.configuration);
         }
 
         [Test]

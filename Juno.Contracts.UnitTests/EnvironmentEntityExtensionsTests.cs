@@ -32,7 +32,7 @@
                     ["ClusterName"] = "Cluster01",
                     ["RackLocation"] = "Rack01"
                 }),
-                EnvironmentEntity.Node("Node03", "Group B", new Dictionary<string, IConvertible>
+                EnvironmentEntity.Node("Node03", "Group A", new Dictionary<string, IConvertible>
                 {
                     ["ClusterName"] = "Cluster01",
                     ["RackLocation"] = "Rack01"
@@ -42,13 +42,18 @@
                     ["ClusterName"] = "Cluster01",
                     ["RackLocation"] = "Rack01"
                 }),
-
-                EnvironmentEntity.Node("Node05", "Group C", new Dictionary<string, IConvertible>
+                EnvironmentEntity.Node("Node05", "Group B", new Dictionary<string, IConvertible>
                 {
                     ["ClusterName"] = "Cluster01",
                     ["RackLocation"] = "Rack01"
                 }),
+
                 EnvironmentEntity.Node("Node06", "Group C", new Dictionary<string, IConvertible>
+                {
+                    ["ClusterName"] = "Cluster01",
+                    ["RackLocation"] = "Rack01"
+                }),
+                EnvironmentEntity.Node("Node07", "Group C", new Dictionary<string, IConvertible>
                 {
                     ["ClusterName"] = "Cluster01",
                     ["RackLocation"] = "Rack01"
@@ -584,7 +589,7 @@
             for (int i = 0; i < experimentGroups.Count(); i++)
             {
                 string group = experimentGroups.ElementAt(i);
-                EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.Any, group, selectedNodes.ToArray());
+                EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.Any, group, countPerGroup: 1, selectedNodes.ToArray());
                 selectedNodes.Add(selectedNode);
 
                 Assert.IsNotNull(selectedNode);
@@ -594,6 +599,73 @@
             }
 
             CollectionAssert.AreEquivalent(experimentGroups, selectedNodes.Select(node => node.EnvironmentGroup));
+        }
+
+        [Test]
+        public void GetNodeExtensionSelectsTheExpectedNodes_AnyMultipleNodesScenario()
+        {
+            int countPerGroup = 3;
+
+            IEnumerable<string> experimentGroups = this.mockEntities.Select(e => e.EnvironmentGroup).Distinct();
+            IEnumerable<string> expectedExperimentGroups = new List<string>();
+            for (int j = 0; j < countPerGroup; j++)
+            {
+                expectedExperimentGroups = expectedExperimentGroups.Concat(experimentGroups);
+            }
+
+            List<EnvironmentEntity> selectedNodes = new List<EnvironmentEntity>();
+
+            for (int i = 0; i < experimentGroups.Count(); i++)
+            {
+                string group = experimentGroups.ElementAt(i);
+                for (int j = 0; j < countPerGroup; j++)
+                {
+                    EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.Any, group, countPerGroup: countPerGroup, selectedNodes.ToArray());
+                    selectedNodes.Add(selectedNode);
+
+                    Assert.IsNotNull(selectedNode);
+                    Assert.IsTrue(selectedNodes.All(node => node.EntityType == EntityType.Node));
+                    Assert.IsFalse(selectedNodes.Any(node => node.Discarded()));
+                    CollectionAssert.AllItemsAreUnique(selectedNodes);
+                }
+            }
+
+            CollectionAssert.AreEquivalent(expectedExperimentGroups, selectedNodes.Select(node => node.EnvironmentGroup));
+        }
+
+        [Test]
+        public void GetNodeExtensionThrowsWhenTryingToGetMoreThanDefinedNodes_AnyMultipleNodesScenario()
+        {
+            int countPerGroup = 3;
+
+            IEnumerable<string> experimentGroups = this.mockEntities.Select(e => e.EnvironmentGroup).Distinct();
+            IEnumerable<string> expectedExperimentGroups = new List<string>();
+            for (int j = 0; j < countPerGroup; j++)
+            {
+                expectedExperimentGroups = expectedExperimentGroups.Concat(experimentGroups);
+            }
+
+            List<EnvironmentEntity> selectedNodes = new List<EnvironmentEntity>();
+
+            ArgumentException exc = Assert.Throws<ArgumentException>(() =>
+            {
+                for (int i = 0; i < experimentGroups.Count(); i++)
+                {
+                    string group = experimentGroups.ElementAt(i);
+                    for (int j = 0; j < countPerGroup + 1; j++)
+                    {
+                        EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.Any, group, countPerGroup: countPerGroup, selectedNodes.ToArray());
+                        selectedNodes.Add(selectedNode);
+
+                        Assert.IsNotNull(selectedNode);
+                        Assert.IsTrue(selectedNodes.All(node => node.EntityType == EntityType.Node));
+                        Assert.IsFalse(selectedNodes.Any(node => node.Discarded()));
+                        CollectionAssert.AllItemsAreUnique(selectedNodes);
+                    }
+                }
+            });
+
+            Assert.IsTrue(exc.Message.Contains($"The affinity nodes provided already have {countPerGroup} node in the environment group"));
         }
 
         [Test]
@@ -608,7 +680,7 @@
             for (int i = 0; i < experimentGroups.Count(); i++)
             {
                 string group = experimentGroups.ElementAt(i);
-                EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.Any, group, selectedNodes.ToArray());
+                EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.Any, group, countPerGroup: 1, selectedNodes.ToArray());
                 selectedNodes.Add(selectedNode);
 
                 Assert.IsNotNull(selectedNode);
@@ -641,7 +713,7 @@
 
             foreach (string otherGroup in this.mockEntities.Where(e => e.EnvironmentGroup != group).Select(e => e.EnvironmentGroup).Distinct())
             {
-                EnvironmentEntity selectedNode = groupEntities.GetNode(NodeAffinity.Any, otherGroup, groupEntities.First());
+                EnvironmentEntity selectedNode = groupEntities.GetNode(NodeAffinity.Any, otherGroup, countPerGroup: 1, groupEntities.First());
                 Assert.IsNull(selectedNode);
             }
         }
@@ -741,7 +813,7 @@
             for (int i = 0; i < experimentGroups.Count(); i++)
             {
                 string group = experimentGroups.ElementAt(i);
-                EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.SameRack, group, selectedNodes.ToArray());
+                EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.SameRack, group, countPerGroup: 1, selectedNodes.ToArray());
                 selectedNodes.Add(selectedNode);
 
                 Assert.IsNotNull(selectedNode);
@@ -756,6 +828,41 @@
         }
 
         [Test]
+        public void GetNodeExtensionSelectsTheExpectedNodes_SameRackMultipleNodesScenario()
+        {
+            int countPerGroup = 2;
+
+            IEnumerable<string> experimentGroups = this.mockEntities.Select(e => e.EnvironmentGroup).Distinct();
+            IEnumerable<string> expectedExperimentGroups = new List<string>();
+            for (int j = 0; j < countPerGroup; j++)
+            {
+                expectedExperimentGroups = expectedExperimentGroups.Concat(experimentGroups);
+            }
+
+            List<EnvironmentEntity> selectedNodes = new List<EnvironmentEntity>();
+
+            for (int i = 0; i < experimentGroups.Count(); i++)
+            {
+                string group = experimentGroups.ElementAt(i);
+                for (int j = 0; j < countPerGroup; j++)
+                {
+                    EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.SameRack, group, countPerGroup: countPerGroup, selectedNodes.ToArray());
+                    selectedNodes.Add(selectedNode);
+
+                    Assert.IsNotNull(selectedNode);
+                    Assert.IsTrue(selectedNodes.All(node => node.EntityType == EntityType.Node));
+                    Assert.IsFalse(selectedNodes.Any(node => node.Discarded()));
+                    CollectionAssert.AllItemsAreUnique(selectedNodes);
+                }
+
+                Assert.IsTrue(selectedNodes.Select(node => node.ClusterName()).Distinct().Count() == 1);
+                Assert.IsTrue(selectedNodes.Select(node => node.RackLocation()).Distinct().Count() == 1);
+            }
+
+            CollectionAssert.AreEquivalent(expectedExperimentGroups, selectedNodes.Select(node => node.EnvironmentGroup));
+        }
+
+        [Test]
         public void GetNodeExtensionSelectsTheExpectedNodesWhenDiscardedNodesExist_SameRackScenario()
         {
             // Ensure nodes have been marked as "discarded"
@@ -767,7 +874,7 @@
             for (int i = 0; i < experimentGroups.Count(); i++)
             {
                 string group = experimentGroups.ElementAt(i);
-                EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.SameRack, group, selectedNodes.ToArray());
+                EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.SameRack, group, countPerGroup: 1, selectedNodes.ToArray());
                 selectedNodes.Add(selectedNode);
 
                 Assert.IsNotNull(selectedNode);
@@ -780,6 +887,44 @@
             }
 
             CollectionAssert.AreEquivalent(experimentGroups, selectedNodes.Select(node => node.EnvironmentGroup));
+        }
+
+        [Test]
+        public void GetNodeExtensionSelectsTheExpectedNodesWhenDiscardedNodesExist_SameRackMultipleNodesScenario()
+        {
+            // Ensure nodes have been marked as "discarded"
+            this.mockEntities.First().Discarded(true);
+            int countPerGroup = 2;
+
+            IEnumerable<string> experimentGroups = this.mockEntities.Select(e => e.EnvironmentGroup).Distinct();
+            IEnumerable<string> expectedExperimentGroups = new List<string>();
+            for (int j = 0; j < countPerGroup; j++)
+            {
+                expectedExperimentGroups = expectedExperimentGroups.Concat(experimentGroups);
+            }
+
+            List<EnvironmentEntity> selectedNodes = new List<EnvironmentEntity>();
+
+            for (int i = 0; i < experimentGroups.Count(); i++)
+            {
+                string group = experimentGroups.ElementAt(i);
+                for (int j = 0; j < countPerGroup; j++)
+                {
+                    EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.SameRack, group, countPerGroup: countPerGroup, selectedNodes.ToArray());
+                    selectedNodes.Add(selectedNode);
+
+                    Assert.IsNotNull(selectedNode);
+                    Assert.IsTrue(!object.ReferenceEquals(selectedNode, this.mockEntities.First()));
+                    Assert.IsTrue(selectedNodes.All(node => node.EntityType == EntityType.Node));
+                    Assert.IsFalse(selectedNodes.Any(node => node.Discarded()));
+                    CollectionAssert.AllItemsAreUnique(selectedNodes);
+                }
+
+                Assert.IsTrue(selectedNodes.Select(node => node.ClusterName()).Distinct().Count() == 1);
+                Assert.IsTrue(selectedNodes.Select(node => node.RackLocation()).Distinct().Count() == 1);
+            }
+
+            CollectionAssert.AreEquivalent(expectedExperimentGroups, selectedNodes.Select(node => node.EnvironmentGroup));
         }
 
         [Test]
@@ -803,7 +948,7 @@
 
             foreach (string experimentGroup in this.mockEntities.Where(e => e.EnvironmentGroup != group).Select(e => e.EnvironmentGroup).Distinct())
             {
-                EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.SameRack, experimentGroup, groupEntities.Last());
+                EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.SameRack, experimentGroup, countPerGroup: 1, groupEntities.Last());
                 Assert.IsNull(selectedNode);
             }
         }
@@ -903,7 +1048,7 @@
             for (int i = 0; i < experimentGroups.Count(); i++)
             {
                 string group = experimentGroups.ElementAt(i);
-                EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.SameCluster, group, selectedNodes.ToArray());
+                EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.SameCluster, group, countPerGroup: 1, selectedNodes.ToArray());
                 selectedNodes.Add(selectedNode);
 
                 Assert.IsNotNull(selectedNode);
@@ -928,7 +1073,7 @@
             for (int i = 0; i < experimentGroups.Count(); i++)
             {
                 string group = experimentGroups.ElementAt(i);
-                EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.SameCluster, group, selectedNodes.ToArray());
+                EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.SameCluster, group, countPerGroup: 1, selectedNodes.ToArray());
                 selectedNodes.Add(selectedNode);
 
                 Assert.IsNotNull(selectedNode);
@@ -963,7 +1108,7 @@
 
             foreach (string experimentGroup in this.mockEntities.Where(e => e.EnvironmentGroup != group).Select(e => e.EnvironmentGroup).Distinct())
             {
-                EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.SameCluster, experimentGroup, groupEntities.Last());
+                EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.SameCluster, experimentGroup, countPerGroup: 1, groupEntities.Last());
                 Assert.IsNull(selectedNode);
             }
         }
@@ -1063,7 +1208,7 @@
             for (int i = 0; i < experimentGroups.Count(); i++)
             {
                 string group = experimentGroups.ElementAt(i);
-                EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.DifferentCluster, group, selectedNodes.ToArray());
+                EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.DifferentCluster, group, countPerGroup: 1, selectedNodes.ToArray());
                 selectedNodes.Add(selectedNode);
 
                 Assert.IsNotNull(selectedNode);
@@ -1088,7 +1233,7 @@
             for (int i = 0; i < experimentGroups.Count(); i++)
             {
                 string group = experimentGroups.ElementAt(i);
-                EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.DifferentCluster, group, selectedNodes.ToArray());
+                EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.DifferentCluster, group, countPerGroup: 1, selectedNodes.ToArray());
                 selectedNodes.Add(selectedNode);
 
                 Assert.IsNotNull(selectedNode);
@@ -1123,7 +1268,7 @@
 
             foreach (string experimentGroup in this.mockEntities.Where(e => e.EnvironmentGroup != group).Select(e => e.EnvironmentGroup).Distinct())
             {
-                EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.DifferentCluster, experimentGroup, groupEntities.First());
+                EnvironmentEntity selectedNode = this.mockEntities.GetNode(NodeAffinity.DifferentCluster, experimentGroup, countPerGroup: 1, groupEntities.First());
                 Assert.IsNull(selectedNode);
             }
         }

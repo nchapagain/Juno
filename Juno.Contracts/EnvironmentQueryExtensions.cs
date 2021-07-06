@@ -20,6 +20,28 @@
         };
 
         /// <summary>
+        /// Takes all keys that start with query. strips them of the prefix and then adds them to the query 
+        /// parameter dictionary
+        /// </summary>
+        /// <param name="query">The query whose parameters are to be populated.</param>
+        /// <param name="parameters">The parameter dictionary to search through.</param>
+        public static void OverwriteQueryparameters(this EnvironmentQuery query, IDictionary<string, IConvertible> parameters)
+        {
+            query.ThrowIfNull(nameof(query));
+            parameters.ThrowIfNull(nameof(query));
+
+            const string queryTag = "query.";
+            foreach (KeyValuePair<string, IConvertible> parameter in parameters)
+            {
+                if (parameter.Key.StartsWith(queryTag, StringComparison.OrdinalIgnoreCase))
+                {
+                    string parameterName = parameter.Key.Substring(queryTag.Length);
+                    query.Parameters.Add(parameterName, parameter.Value);
+                }
+            }
+        }
+
+        /// <summary>
         /// Returns if this query has references to parameters whose source is external
         /// </summary>
         /// <param name="query">The query to check</param>

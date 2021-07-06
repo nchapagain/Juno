@@ -1,0 +1,26 @@
+﻿// Filters to nodes that haven't run a given experiment successfully. Takes in the experiment name and 
+// returns cluster id, node id
+let includeExperimentName = $includeExperimentName$;
+let includeCluster = datatable(ClusterId:string)[$includeCluster$];
+let excludeCluster = datatable(ClusterId:string)[$excludeCluster$];
+cluster('azurecrc.westus2.kusto.windows.net').database('JunoStaging').NewStagingExperiments
+| where experimentName has includeExperimentName and experimentStatus == 'Succeeded'
+| join kind=inner (
+    cluster('azurecrc.westus2.kusto.windows.net').database('JunoStaging').NewStagingNodeResources
+) on experimentId
+| extend NodeId=nodeId
+| distinct NodeId
+| join kind=rightanti hint.strategy=broadcast (
+        cluster('azuredcmkpi.westus2.kusto.windows.net').database('AzureDCMDb').dcmInventoryGenerationMappingV3
+        | where IsLive == true
+) on NodeId
+| extend ClusterId = tolower(ClusterId)
+| join kind=inner includeCluster on ClusterId
+| join kind=anti excludeCluster on ClusterId
+| join kind=inner hint.strategy=broadcast (
+        cluster('cirrus.kusto.windows.net').database('cirrus').Region
+        | distinct RegionName, FabricRegionName
+    ) on  $left.RegionId == $right.FabricRegionName
+| extend Region = RegionName, ExperimentName = includeExperimentName
+| distinct ClusterId, Region, NodeId, RackLocation, ExperimentName
+| project Region, ClusterId, NodeId, Rack = RackLocation, ExperimentName

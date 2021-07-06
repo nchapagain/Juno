@@ -207,7 +207,7 @@ namespace Juno.Execution.Client
             using (HttpResponseMessage response = ExecutionClientTests.CreateResponseMessage(HttpStatusCode.OK))
             {
                 GoalBasedSchedule executionGoal = this.mockFixture.Create<GoalBasedSchedule>();
-                Item<GoalBasedSchedule> executionGoalItem = new Item<GoalBasedSchedule>(executionGoal.ExecutionGoalId, executionGoal);
+                Item<GoalBasedSchedule> executionGoalItem = new Item<GoalBasedSchedule>(Guid.NewGuid().ToString(), executionGoal);
 
                 string teamName = executionGoal.TeamName;
                 this.mockRestClient.Setup(client => client.PostAsync(
@@ -230,8 +230,8 @@ namespace Juno.Execution.Client
             using (HttpResponseMessage response = ExecutionClientTests.CreateResponseMessage(HttpStatusCode.OK))
             {
                 GoalBasedSchedule executionGoal = this.mockFixture.Create<GoalBasedSchedule>();
-                string teamName = executionGoal.TeamName;
-                string templateId = executionGoal.ExecutionGoalId;
+                string teamName = Uri.EscapeUriString(executionGoal.TeamName);
+                string templateId = Guid.NewGuid().ToString();
                 this.mockRestClient.Setup(client => client.PostAsync(
                         It.IsAny<Uri>(),
                         It.IsAny<HttpContent>(),
@@ -245,11 +245,6 @@ namespace Juno.Execution.Client
                 ExecutionGoalSummary executionGoalMetadata = this.mockFixture.Create<ExecutionGoalSummary>();
                 ExecutionGoalParameter executionGoalParameters =
                     new ExecutionGoalParameter(
-                        templateId,
-                        executionGoal.ExperimentName,
-                        executionGoal.TeamName,
-                        executionGoal.Owner,
-                        executionGoal.Enabled,
                         executionGoalMetadata.ParameterNames.TargetGoals,
                         executionGoal.Parameters);
                 this.executionClient.CreateExecutionGoalFromTemplateAsync(executionGoalParameters, templateId, executionGoal.TeamName, CancellationToken.None)
@@ -263,29 +258,25 @@ namespace Juno.Execution.Client
             using (HttpResponseMessage response = ExecutionClientTests.CreateResponseMessage(HttpStatusCode.OK))
             {
                 GoalBasedSchedule executionGoal = this.mockFixture.Create<GoalBasedSchedule>();
-                string teamName = executionGoal.TeamName;
-                string templateId = executionGoal.ExecutionGoalId;
+                string teamName = Uri.EscapeUriString(executionGoal.TeamName);
+                string templateId = Guid.NewGuid().ToString();
+                string executionGoalId = Guid.NewGuid().ToString();
                 this.mockRestClient.Setup(client => client.PutAsync(
                         It.IsAny<Uri>(),
                         It.IsAny<HttpContent>(),
                         It.IsAny<CancellationToken>()))
                     .Callback<Uri, HttpContent, CancellationToken>((uri, content, token) =>
                     {
-                        Assert.IsTrue(uri.PathAndQuery.Equals($"/api/executionGoals/{templateId}?teamName={teamName}"));
+                        Assert.IsTrue(uri.PathAndQuery.Equals($"/api/executionGoals/{templateId}?teamName={teamName}&executionGoalId={executionGoalId}"));
                     })
                     .Returns(Task.FromResult(response));
 
                 ExecutionGoalSummary executionGoalMetadata = this.mockFixture.Create<ExecutionGoalSummary>();
                 ExecutionGoalParameter executionGoalParameters =
                     new ExecutionGoalParameter(
-                        templateId,
-                        executionGoal.ExperimentName,
-                        executionGoalMetadata.ParameterNames.TeamName,
-                        executionGoal.Owner,
-                        executionGoal.Enabled,
                         executionGoalMetadata.ParameterNames.TargetGoals,
                         executionGoal.Parameters);
-                this.executionClient.UpdateExecutionGoalFromTemplateAsync(executionGoalParameters, templateId, executionGoal.TeamName, CancellationToken.None)
+                this.executionClient.UpdateExecutionGoalFromTemplateAsync(executionGoalParameters, templateId, executionGoalId, executionGoal.TeamName, CancellationToken.None)
                     .GetAwaiter().GetResult();
             }
         }
@@ -295,8 +286,9 @@ namespace Juno.Execution.Client
         {
             using (HttpResponseMessage response = ExecutionClientTests.CreateResponseMessage(HttpStatusCode.OK))
             {
-                GoalBasedSchedule executionGoal = FixtureExtensions.CreateExecutionGoalFromTemplate(teamName: "Team Name With Spaces");
-                Item<GoalBasedSchedule> executionGoalItem = new Item<GoalBasedSchedule>(executionGoal.ExecutionGoalId, executionGoal);
+                Dictionary<string, IConvertible> metadata = new Dictionary<string, IConvertible>() { { ExecutionGoalMetadata.TeamName, "team name with spaces" } };
+                GoalBasedSchedule executionGoal = FixtureExtensions.CreateExecutionGoalFromTemplate(metadata: metadata);
+                Item<GoalBasedSchedule> executionGoalItem = new Item<GoalBasedSchedule>(Guid.NewGuid().ToString(), executionGoal);
                 string teamName = Uri.EscapeUriString(executionGoal.TeamName);
                 this.mockRestClient.Setup(client => client.PutAsync(
                         It.IsAny<Uri>(),
@@ -665,6 +657,26 @@ namespace Juno.Execution.Client
                     experimentId,
                     CancellationToken.None,
                     status: statuses)
+                    .GetAwaiter().GetResult();
+            }
+        }
+
+        [Test]
+        public void ExecutionClientCallsTheExpectedApiToGetExperimentSummary()
+        {
+            using (HttpResponseMessage response = ExecutionClientTests.CreateResponseMessage(HttpStatusCode.OK))
+            {
+                this.mockRestClient.Setup(client => client.GetAsync(
+                        It.IsAny<Uri>(),
+                        It.IsAny<CancellationToken>(),
+                        It.IsAny<HttpCompletionOption>()))
+                    .Callback<Uri, CancellationToken, HttpCompletionOption>((uri, token, option) =>
+                    {
+                        Assert.IsTrue(uri.AbsolutePath.Equals($"/api/experimentSummary/"));
+                    })
+                    .Returns(Task.FromResult(response));
+
+                this.executionClient.GetExperimentSummaryAsync(CancellationToken.None)
                     .GetAwaiter().GetResult();
             }
         }
@@ -1378,7 +1390,7 @@ namespace Juno.Execution.Client
             using (HttpResponseMessage response = ExecutionClientTests.CreateResponseMessage(HttpStatusCode.NoContent))
             {
                 GoalBasedSchedule executionGoal = this.mockFixture.Create<GoalBasedSchedule>();
-                Item<GoalBasedSchedule> executionGoalItem = new Item<GoalBasedSchedule>(executionGoal.ExecutionGoalId, executionGoal);
+                Item<GoalBasedSchedule> executionGoalItem = new Item<GoalBasedSchedule>(Guid.NewGuid().ToString(), executionGoal);
 
                 this.mockRestClient.Setup(client => client.PostAsync(
                         It.IsAny<Uri>(),

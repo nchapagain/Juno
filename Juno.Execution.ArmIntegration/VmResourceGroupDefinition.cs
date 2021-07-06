@@ -5,7 +5,6 @@
     using System.Diagnostics.CodeAnalysis;
     using Juno.Contracts;
     using Microsoft.Azure.CRC.Extensions;
-    using Microsoft.Azure.Management.TrafficManager.Fluent.TrafficManagerEndpoint.Definition;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Converters;
     using Newtonsoft.Json.Linq;
@@ -14,12 +13,9 @@
     /// <summary>
     /// ARM Resource group definition.
     /// </summary>
-    [SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "Need to modify VMs.")]
     [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
     public class VmResourceGroupDefinition : ResourceState
     {
-        private string resourceNamePrefix;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="VmResourceGroupDefinition"/> class.
         /// </summary>
@@ -29,9 +25,6 @@
         /// <param name="stepId">Step Id</param>
         /// <param name="vmSpecs">Virtual machine specifications</param>
         /// <param name="region">Region aka. location</param>
-        /// <param name="clusterId">Cluster Id</param>
-        /// <param name="tipSessionId">Tip session id</param>
-        /// <param name="nodeId">Node id</param>
         /// <param name="tags">Tag for VM resource group</param>
         /// <param name="platform">OS platform the VM uses</param>
         public VmResourceGroupDefinition(
@@ -41,13 +34,10 @@
             string stepId,
             IList<AzureVmSpecification> vmSpecs,
             string region,
-            string clusterId = null,
-            string tipSessionId = null,
-            string nodeId = null,
             IDictionary<string, string> tags = null,
             string platform = VmPlatform.WinX64)
         {
-            this.Initialize(environment, subscriptionId, experimentId, stepId, vmSpecs, region, clusterId, tipSessionId, nodeId, tags, platform);
+            this.Initialize(environment, subscriptionId, experimentId, stepId, vmSpecs, region, tags, platform);
         }
 
         /// <summary>
@@ -57,6 +47,12 @@
         public VmResourceGroupDefinition()
         {
         }
+
+        /// <summary>
+        /// Gets or sets the resource name prefix in the resource group.
+        /// </summary>
+        [JsonProperty]
+        public string ResourceNamePrefix { get; set; }
 
         /// <summary>
         /// Gets the environment in which the VMs will run (e.g. juno-dev01, juno-prod01).
@@ -81,24 +77,6 @@
         /// </summary>
         [JsonProperty]
         public string ExperimentId { get; set; }
-
-        /// <summary>
-        /// Get or set tip session Id.
-        /// </summary>
-        [JsonProperty]
-        public string TipSessionId { get; set; }
-
-        /// <summary>
-        /// Get or set cluster Id.
-        /// </summary>
-        [JsonProperty]
-        public string ClusterId { get; set; }
-
-        /// <summary>
-        /// Get or set node Id.
-        /// </summary>
-        [JsonProperty]
-        public string NodeId { get; set; }
 
         /// <summary>
         /// Get or set region
@@ -182,21 +160,28 @@
 
             var vmDefinition = new VmDefinition
             {
-                Name = $"{this.resourceNamePrefix}-{vmCount}",
+                Name = $"{this.ResourceNamePrefix}-{vmCount}",
                 AdminUserName = VmAdminAccounts.Default,
-                AdminPasswordSecretName = $"{this.resourceNamePrefix}-{vmCount}-pw",
-                AdminSshPublicKeySecretName = $"{this.resourceNamePrefix}-{vmCount}-pub",
-                AdminSshPrivateKeySecretName = $"{this.resourceNamePrefix}-{vmCount}-pem",
+                AdminPasswordSecretName = $"{this.ResourceNamePrefix}-{vmCount}-pw",
+                AdminSshPublicKeySecretName = $"{this.ResourceNamePrefix}-{vmCount}-pub",
+                AdminSshPrivateKeySecretName = $"{this.ResourceNamePrefix}-{vmCount}-pem",
                 ImageReference = imageReference,
                 OsDiskStorageAccountType = vmSpec.OsDiskStorageAccountType,
                 VirtualMachineSize = vmSpec.VmSize,
-                DeploymentName = $"deployment-{this.resourceNamePrefix}-{vmCount}",
+                DeploymentName = $"deployment-{this.ResourceNamePrefix}-{vmCount}",
                 VirtualDisks = VmDisk.CreateVirtualMachineDisk(vmSpec.DataDiskCount, vmSpec.DataDiskSku, vmSpec.DataDiskSizeInGB, vmSpec.DataDiskStorageAccountType),
                 BootstrapState = new ResourceState()
                 {
-                    DeploymentName = $"bootstrap-{this.resourceNamePrefix}-{vmCount}"
+                    DeploymentName = $"bootstrap-{this.ResourceNamePrefix}-{vmCount}"
                 },
                 EnableAcceleratedNetworking = vmSpec.EnableAcceleratedNetworking,
+                // The subnet is 10.0.0.0/23. We start at 10.0.1.x to avoid Azure reserved ipAddresses.
+                // Read https://docs.microsoft.com/en-us/azure/virtual-network/virtual-networks-faq
+                PrivateIPAddress = $"10.0.1.{vmCount}",
+                NodeId = vmSpec.NodeId,
+                ClusterId = vmSpec.ClusterId,
+                TipSessionId = vmSpec.TipSessionId,
+                Role = vmSpec.Role
             };
             this.VirtualMachines.Add(vmDefinition);
         }
@@ -208,9 +193,6 @@
             string stepId,
             IList<AzureVmSpecification> vmSpecs,
             string region,
-            string clusterId,
-            string tipSessionId,
-            string nodeId,
             IDictionary<string, string> tags,
             string platform)
         {
@@ -224,10 +206,7 @@
             this.SubscriptionId = subscriptionId;
             this.StepId = stepId;
             this.ExperimentId = experimentId;
-            this.ClusterId = clusterId;
-            this.TipSessionId = tipSessionId;
             this.Region = region;
-            this.NodeId = nodeId;
             this.Tags = tags;
             this.Platform = platform;
             this.DeletionState = CleanupState.NotStarted;
@@ -243,13 +222,13 @@
 
             // Naming best practices
             // https://docs.microsoft.com/en-us/azure/cloud-adoption-framework/ready/azure-best-practices/naming-and-tagging#naming-and-tagging-resources
-            this.resourceNamePrefix = this.StepId.Replace("-", string.Empty, StringComparison.OrdinalIgnoreCase).Substring(0, 11);
-            this.Name = $"rg-{this.resourceNamePrefix}";
-            this.NetworkSecurityGroupName = $"nsg-{this.resourceNamePrefix}";
-            this.VirtualNetworkName = $"vnet-{this.resourceNamePrefix}";
-            this.SubnetName = $"subnet-{this.resourceNamePrefix}";
-            this.KeyVaultName = $"kv-{this.resourceNamePrefix}";
-            this.DeploymentName = $"deployment-{this.resourceNamePrefix}";
+            this.ResourceNamePrefix = this.StepId.Replace("-", string.Empty, StringComparison.OrdinalIgnoreCase).Substring(0, 11);
+            this.Name = $"rg-{this.ResourceNamePrefix}";
+            this.NetworkSecurityGroupName = $"nsg-{this.ResourceNamePrefix}";
+            this.VirtualNetworkName = $"vnet-{this.ResourceNamePrefix}";
+            this.SubnetName = $"subnet-{this.ResourceNamePrefix}";
+            this.KeyVaultName = $"kv-{this.ResourceNamePrefix}";
+            this.DeploymentName = $"deployment-{this.ResourceNamePrefix}";
             this.VirtualMachines = new List<VmDefinition>();
 
             for (int vmCount = 0; vmCount < vmSpecs.Count; vmCount++)

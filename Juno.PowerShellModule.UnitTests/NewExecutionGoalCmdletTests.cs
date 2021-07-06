@@ -198,7 +198,7 @@
                 return this.FormatOutput(content);
             }
 
-            protected override Task<ExecutionGoalParameter> CreateExecutionGoalParametersAsync()
+            protected override Task<ExecutionGoalParameter> GetParameterFileAsync()
             {
                 return Task.FromResult(this.ExecutionGoalParameter);
             }

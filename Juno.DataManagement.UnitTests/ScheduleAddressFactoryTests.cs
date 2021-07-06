@@ -24,7 +24,7 @@
         {
             GoalBasedSchedule component = this.mockFixture.Create<GoalBasedSchedule>();
             string teamName = component.TeamName;
-            string executionGoalId = component.ExecutionGoalId;
+            string executionGoalId = Guid.NewGuid().ToString();
 
             CosmosAddress address = ScheduleAddressFactory.CreateExecutionGoalAddress(teamName, executionGoalId);
 

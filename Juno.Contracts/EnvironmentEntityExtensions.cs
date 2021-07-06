@@ -391,15 +391,17 @@
         /// Optional parameter defines a reference node to use as a starting place for the selection of other nodes that must have
         /// the defined affinity to it.
         /// </param>
+        /// <param name="countPerGroup">Count of nodes per group. Only used in validation so that request will be rejected if withAffinityToNodes already have counts larger than required amount.</param>
         public static EnvironmentEntity GetNode(
-            this IEnumerable<EnvironmentEntity> entities, NodeAffinity nodeAffinity, string environmentGroup, params EnvironmentEntity[] withAffinityToNodes)
+            this IEnumerable<EnvironmentEntity> entities, NodeAffinity nodeAffinity, string environmentGroup, int countPerGroup = 1, params EnvironmentEntity[] withAffinityToNodes)
         {
             entities.ThrowIfNull(nameof(entities));
             withAffinityToNodes?.ThrowIfInvalid(
                 nameof(withAffinityToNodes),
-                (affinityNodes) => !affinityNodes.Select(e => e.EnvironmentGroup).Distinct().Contains(environmentGroup),
-                $"Invalid environment group specified. The affinity nodes provided already have a node in the environment group '{environmentGroup}'. " +
-                $"There cannot be any nodes with unique environment groups that thus match the affinity criteria.");
+                (affinityNodes) => !(affinityNodes.Where(e => e.EnvironmentGroup == environmentGroup).Distinct().Count() >= countPerGroup),
+                $"Invalid environment group specified. " +
+                $"The affinity nodes provided already have {withAffinityToNodes.Where(e => e.EnvironmentGroup == environmentGroup).Distinct().Count()} node in the environment group '{environmentGroup}'. " +
+                $"which is larger or eqaul to the TipSessionCountPerGroup defined '{countPerGroup}'.");
 
             EnvironmentEntity matchingNode = null;
 
@@ -417,7 +419,6 @@
                         // - Nodes cannot be in the same group as the affinity reference nodes.
                         matchingNode = nodeEntities
                            ?.NotMatching(withAffinityToNodes)
-                           ?.NotInSameGroupAs(withAffinityToNodes)
                            ?.Shuffle()
                            ?.FirstOrDefault(node => node.EnvironmentGroup.Equals(environmentGroup, StringComparison.OrdinalIgnoreCase));
 
@@ -432,7 +433,6 @@
                         // - Best Match = Nodes associated with the rack having the most nodes
                         matchingNode = nodeEntities
                             ?.NotMatching(withAffinityToNodes)
-                            ?.NotInSameGroupAs(withAffinityToNodes)
                             ?.InSameClusterAs(withAffinityToNodes)
                             ?.InSameRackAs(withAffinityToNodes)
                             ?.GroupBy(node => node.RackLocation())
@@ -449,7 +449,6 @@
                         // - Best Match = Nodes associated with the rack having the most nodes
                         matchingNode = nodeEntities
                             ?.NotMatching(withAffinityToNodes)
-                            ?.NotInSameGroupAs(withAffinityToNodes)
                             ?.InSameClusterAs(withAffinityToNodes)
                             ?.Shuffle()
                             ?.FirstOrDefault(node => node.EnvironmentGroup.Equals(environmentGroup, StringComparison.OrdinalIgnoreCase));
@@ -463,7 +462,6 @@
                         // - Best Match = Nodes associated with the cluster having the most nodes
                         matchingNode = nodeEntities
                             ?.NotMatching(withAffinityToNodes)
-                            ?.NotInSameGroupAs(withAffinityToNodes)
                             ?.NotInSameClusterAs(withAffinityToNodes)
                             ?.GroupBy(node => node.ClusterName())
                             ?.BestMatch(environmentGroup);

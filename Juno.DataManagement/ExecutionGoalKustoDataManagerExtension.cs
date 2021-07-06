@@ -57,7 +57,7 @@
             return experimentStatuses;
         }
 
-        internal static IList<TargetGoalTimeline> ParseExecutionGoalTimeline(this DataTable dataTable, Goal targetGoal, string executionGoalId, string experimentName, string teamName, string environment)
+        internal static IList<TargetGoalTimeline> ParseExecutionGoalTimeline(this DataTable dataTable, TargetGoal targetGoal, string executionGoalId, string teamName, string environment, string experimentName)
         {
             IList<TargetGoalTimeline> targetGoalTimelines = new List<TargetGoalTimeline>();
             string cronExpression = string.Empty;

@@ -7,4 +7,4 @@ let junoOFRs = cluster('azurecrc.westus2.kusto.windows.net').database('JunoInges
     | project TIMESTAMP = ofrStartTime, tipNodeSessionId, nodeId, experimentName = junoExperimentName, experimentId = junoExperimentId, environment;
 junoOFRs
 | where environment == "$environmentSetting$"
-| where experimentName in ($JunoExperimentName$);
+| where experimentName == "$JunoExperimentName$";

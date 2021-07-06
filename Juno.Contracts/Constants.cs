@@ -1,6 +1,5 @@
 ﻿namespace Juno.Contracts
 {
-    using System;
     using System.Collections.Generic;
 
     /// <summary>
@@ -108,6 +107,163 @@
     }
 
     /// <summary>
+    /// Constants that define experiment metadata property names.
+    /// </summary>
+    public static class MetadataProperty
+    {
+        /// <summary>
+        /// The ID of an agent in the system.
+        /// </summary>
+        public const string AgentId = "agentId";
+
+        /// <summary>
+        /// The type of an agent (e.g. HostAgent, GuestAgent).
+        /// </summary>
+        public const string AgentType = "agentType";
+
+        /// <summary>
+        /// The name of the cluster in which the Juno experiment is running.
+        /// </summary>
+        public const string ClusterName = "clusterName";
+
+        /// <summary>
+        /// The VM container ID.
+        /// </summary>
+        public const string ContainerId = "containerId";
+
+        /// <summary>
+        /// Context information associated with the experiment.
+        /// </summary>
+        public const string Context = "context";
+
+        /// <summary>
+        /// Metadata property defines whether auto-triage diagnostics should be enabled on the
+        /// experiment.
+        /// </summary>
+        public const string EnableDiagnostics = "enableDiagnostics";
+
+        /// <summary>
+        /// The experiment group (e.g. Group A, Group B).
+        /// </summary>
+        public const string ExperimentGroup = "experimentGroup";
+
+        /// <summary>
+        /// The unique ID of the experiment instance.
+        /// </summary>
+        public const string ExperimentId = "experimentId";
+
+        /// <summary>
+        /// The unique ID of the experiment step instance.
+        /// </summary>
+        public const string ExperimentStepId = "experimentStepId";
+
+        /// <summary>
+        /// Metadata property defines the type of experiment (e.g. QoS, Production).
+        /// </summary>
+        public const string ExperimentType = "experimentType";
+
+        /// <summary>
+        /// Metadata property defines the generation of hardware for which the experiment
+        /// is associated (e.g. Gen4, Gen5, Gen6, Gen7).
+        /// </summary>
+        public const string Generation = "generation";
+
+        /// <summary>
+        /// The experiment group (e.g. Group A, Group B).
+        /// </summary>
+        public const string GroupId = "groupId";
+
+        /// <summary>
+        /// Metadata property that defines the type of impact (or potential impact)
+        /// associated with the experiment (e.g. None, Impactful).
+        /// </summary>
+        public const string ImpactType = "impactType";
+
+        /// <summary>
+        /// Metadata property defines the ID of the node/blade on which the experiment
+        /// will run (e.g. 50654 for Gen6 Intel, 50657 for Gen7 Intel).
+        /// </summary>
+        public const string NodeCpuId = "nodeCpuId";
+
+        /// <summary>
+        /// The unique ID of the physical blade/node on which a Juno agent is running.
+        /// </summary>
+        public const string NodeId = "nodeId";
+
+        /// <summary>
+        /// The unique ID/name of the physical blade/node on which a Juno agent is running.
+        /// </summary>
+        public const string NodeName = "nodeName";
+
+        /// <summary>
+        /// Metadata property defines the payload that is being applied as part of the
+        /// experiment (e.g. MCU2021.1).
+        /// </summary>
+        public const string Payload = "payload";
+
+        /// <summary>
+        /// Metadata property defines the type of payload that is being applied as part of the
+        /// experiment (e.g. MicrocodeUpdate).
+        /// </summary>
+        public const string PayloadType = "payloadType";
+
+        /// <summary>
+        /// Metadata property defines the version of payload Pilotfish package that contains the payload
+        /// being applied as part of the experiment.
+        /// </summary>
+        public const string PayloadPFVersion = "payloadPFVersion";
+
+        /// <summary>
+        /// Metadata property defines the version of payload that is being applied as part of the
+        /// experiment.
+        /// </summary>
+        public const string PayloadVersion = "payloadVersion";
+
+        /// <summary>
+        /// Metadata property that defines the recommendation ID of the experiment.
+        /// </summary>
+        public const string RecommendationId = "recommendationId";
+
+        /// <summary>
+        /// Metadata property that defines the revision of the experiment.
+        /// </summary>
+        public const string Revision = "revision";
+
+        /// <summary>
+        /// Metadata property that defines the tenant ID of the experiment.
+        /// </summary>
+        public const string TenantId = "tenantId";
+
+        /// <summary>
+        /// The ID of the TiP node session (typically a Guid).
+        /// </summary>
+        public const string TipSessionId = "tipSessionId";
+
+        /// <summary>
+        /// The virtual machine name on which a Juno agent is running.
+        /// </summary>
+        public const string VirtualMachineName = "virtualMachineName";
+
+        /// <summary>
+        /// Metadata property that defines the workload that will run on the guest
+        /// or host as part of the experiment (e.g. PERF-IO-FIO-V1).
+        /// </summary>
+        public const string Workload = "workload";
+
+        /// <summary>
+        /// Metadata property that defines the type of workload that will run on the guest
+        /// or host as part of the experiment (e.g. VirtualClient).
+        /// </summary>
+        public const string WorkloadType = "workloadType";
+
+        /// <summary>
+        /// Metadata property that defines the version of the workload that will run on the guest
+        /// or host as part of the experiment.
+        /// </summary>
+        public const string WorkloadVersion = "workloadVersion";
+    }
+
+    /// <summary>
     /// Constants associated with experiment work notice metadata.
     /// </summary>
     public static class NoticeMetadataKey
@@ -155,5 +311,51 @@
         /// Name of the attribute containing the email address of the experiment owner
         /// </summary>
         public const string Owner = "owner";
+
+        /// <summary>
+        /// Name of the metadata that refernces the team name of the execution goal.
+        /// </summary>
+        public const string TeamName = "teamName";
+
+        /// <summary>
+        /// Name of the metadata that references the version of the execution goal.
+        /// </summary>
+        public const string Version = "version";
+
+        /// <summary>
+        /// the id of the tenant that the execution goal belongs to.
+        /// </summary>
+        public const string TenantId = "tenantId";
+
+        /// <summary>
+        /// The parameter key for the experiment name
+        /// </summary>
+        public const string ExperimentName = "experiment.name";
+
+        /// <summary>
+        /// The tempalte in which the execution goal was created from.
+        /// </summary>
+        public const string ExecutionGoalTemplateId = "executionGoalTemplateId";
+
+        /// <summary>
+        /// Metadata that is required by the Execution Goal.
+        /// </summary>
+        public static readonly string[] RequiredMetadata = { ExecutionGoalMetadata.Owner, ExecutionGoalMetadata.Version, ExecutionGoalMetadata.TeamName, ExecutionGoalMetadata.TenantId };
+
+        /// <summary>
+        /// Metadata that is required by the Execution Goal Parameter.
+        /// </summary>
+        public static readonly string[] RequiredParameterMetadata = { ExecutionGoalMetadata.Owner, ExecutionGoalMetadata.Version, ExecutionGoalMetadata.TeamName, ExecutionGoalMetadata.TenantId, ExecutionGoalMetadata.ExperimentName };
+    }
+
+    /// <summary>
+    /// Parameters that are found in target goals.
+    /// </summary>
+    public static class TargetGoalParameters
+    {
+        /// <summary>
+        /// The parameter key for the workload
+        /// </summary>
+        public const string Workload = "metadata.workload";
     }
 }

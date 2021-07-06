@@ -133,12 +133,12 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\5.0.200\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\5.0.300\\RuntimeIdentifierGraph.json"
         }
       }
     },
     "C:\\Users\\PX-01\\source\\repos\\CSI-CRC-AIR\\src\\Microsoft.Azure.CRC\\Microsoft.Azure.CRC.Common\\Microsoft.Azure.CRC.Common.csproj": {
-      "version": "1.2.0",
+      "version": "1.3.0",
       "restore": {
         "projectUniqueName": "C:\\Users\\PX-01\\source\\repos\\CSI-CRC-AIR\\src\\Microsoft.Azure.CRC\\Microsoft.Azure.CRC.Common\\Microsoft.Azure.CRC.Common.csproj",
         "projectName": "Microsoft.Azure.CRC.Common",
@@ -241,7 +241,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\5.0.200\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\5.0.300\\RuntimeIdentifierGraph.json"
         }
       },
       "runtimes": {
@@ -367,7 +367,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\5.0.200\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\5.0.300\\RuntimeIdentifierGraph.json"
         }
       },
       "runtimes": {

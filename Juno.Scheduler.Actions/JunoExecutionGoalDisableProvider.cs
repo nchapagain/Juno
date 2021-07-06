@@ -42,7 +42,7 @@
                 targetGoal.Enabled = false;
                     
                 await timerDataManager.UpdateTargetGoalTriggerAsync(targetGoal, cancellationToken).ConfigureDefaults();
-                telemetryContext.AddContext(SchedulerEventProperty.TargetGoal, targetGoal.TargetGoal);
+                telemetryContext.AddContext(SchedulerEventProperty.TargetGoal, targetGoal.Name);
             }
         }
     }

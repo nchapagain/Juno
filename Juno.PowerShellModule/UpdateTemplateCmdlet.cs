@@ -9,6 +9,7 @@
     using Juno.Api.Client;
     using Juno.Contracts;
     using Microsoft.Azure.CRC.Contracts;
+    using Microsoft.Azure.CRC.Extensions;
     using Microsoft.Azure.CRC.Rest;
     using Newtonsoft.Json;
     using Polly;
@@ -93,16 +94,37 @@
             return JsonConvert.DeserializeObject<Item<GoalBasedSchedule>>(File.ReadAllTextAsync(filePath).GetAwaiter().GetResult());
         }
 
+        private static Item<GoalBasedSchedule> MergeItemTemplateSchedule(Item<GoalBasedSchedule> item, Item<GoalBasedSchedule> definition)
+        {
+            item.ThrowIfNull(nameof(item));
+
+            Item<GoalBasedSchedule> result = new Item<GoalBasedSchedule>(item.Id, definition.Definition);
+            result.SetETag(item.GetETag());
+
+            return result;
+        }
+
+        private async Task<Item<GoalBasedSchedule>> GetCurrentItemTemplateAsync(string teamName, string templateId)
+        {
+            HttpResponseMessage response = await this.GetExecutionGoalTemplateListAsync(teamName, templateId, View.Full).ConfigureAwait(false);
+
+            response.ThrowOnError<ExperimentException>();
+
+            return await response.Content.ReadAsJsonAsync<Item<GoalBasedSchedule>>().ConfigureAwait(false);
+        }
+
         private async Task<HttpResponseMessage> UpdateTemplateAsync(string filePath)
         {
             using (CancellationTokenSource source = new CancellationTokenSource())
             {
-                Item<GoalBasedSchedule> executionGoalTemplate = this.GetTemplateFromFile(filePath);
+                Item<GoalBasedSchedule> executionGoalTemplateFromFile = this.GetTemplateFromFile(filePath);
+                Item<GoalBasedSchedule> currentItem = await this.GetCurrentItemTemplateAsync(executionGoalTemplateFromFile.Definition.TeamName, executionGoalTemplateFromFile.Id).ConfigureAwait(false);
+                Item<GoalBasedSchedule> combinedItemGoalBasedSchedule = UpdateTemplateCmdlet.MergeItemTemplateSchedule(currentItem, executionGoalTemplateFromFile);
 
                 HttpResponseMessage responseMessage = null;
                 await this.RetryPolicy.ExecuteAsync(async () =>
                 {
-                    responseMessage = await this.ExperimentsClient.UpdateExecutionGoalTemplateAsync(executionGoalTemplate, source.Token).ConfigureAwait(false);
+                    responseMessage = await this.ExperimentsClient.UpdateExecutionGoalTemplateAsync(combinedItemGoalBasedSchedule, source.Token).ConfigureAwait(false);
                 }).ConfigureAwait(false);   
 
                 return responseMessage;

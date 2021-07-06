@@ -341,7 +341,7 @@
         /// <param name="telemetryContext">The telemetry event context instance.</param>
         /// <param name="agentId">
         /// Defines the ID of a Juno agent. Note that in the Juno system, the ID of an agent follows a prescriptive format.
-        /// For agents that run on physical blades/nodes the format is as follows: "{clusterName},{nodeId},{tipSessionId}". 
+        /// For agents that run on physical blades/nodes the format is as follows: "{clusterName},{nodeId},{tipSessionId}".
         /// For agents that run on virtual machines the format is as follows: "{clusterName},{nodeId},{vmName},{tipSessionId}".
         /// </param>
         public static EventContext AddContext(this EventContext telemetryContext, AgentIdentification agentId)
@@ -497,7 +497,7 @@
         }
 
         /// <summary>
-        /// Logs the ScheduleContext and GoalComponent 
+        /// Logs the ScheduleContext and GoalComponent
         /// </summary>
         /// <param name="telemetryContext">The telemetry event context instance.</param>
         /// <param name="context">Provides context to the scheduler provider instance.</param>
@@ -508,9 +508,9 @@
             if (context != null)
             {
                 telemetryContext
-                    .AddContext("targetGoal", context.TargetGoalTrigger.TargetGoal)
-                    .AddContext("executionGoal", context.ExecutionGoal.Name)
-                    .AddContext("experimentName", context.ExecutionGoal.ExperimentName)
+                    .AddContext("id", context.ExecutionGoal.Id)
+                    .AddContext("targetGoal", context.TargetGoalTrigger.Name)
+                    .AddContext("experimentName", context.ExecutionGoal.Definition.ExperimentName)
                     .AddContext("componentType", component.Type);
             }
 
@@ -527,13 +527,13 @@
             telemetryContext.ThrowIfNull(nameof(telemetryContext));
             targetGoals.ThrowIfNull(nameof(targetGoals));
 
-            telemetryContext.AddContext(nameof(targetGoals), targetGoals.Select(tg => tg.TargetGoal));
+            telemetryContext.AddContext(nameof(targetGoals), targetGoals.Select(tg => tg.Name));
 
             return telemetryContext;
         }
 
         /// <summary>
-        /// Logs the ScheduleContext and Goal 
+        /// Logs the ScheduleContext and Goal
         /// </summary>
         /// <param name="telemetryContext">The telemetry event context instance.</param>
         /// <param name="context">Provides context to the scheduler provider instance.</param>
@@ -545,13 +545,36 @@
                 if (context != null)
                 {
                     telemetryContext
-                        .AddContext("executionGoal", context.ExecutionGoal.Name)
-                        .AddContext("experimentName", context.ExecutionGoal.ExperimentName)
-                        .AddContext("goalName", goal.Name);
+                        .AddContext("id", context.ExecutionGoal.Id)
+                        .AddContext("targetGoal", context.TargetGoalTrigger.Name)
+                        .AddContext("name", context.ExecutionGoal.Definition.ExperimentName)
+                        .AddContext("goal", goal.Name);
                 }
 
                 return telemetryContext;
             }
+        }
+
+        /// <summary>
+        /// Extension adds context information defined in the experiment component to the telemetry
+        /// <see cref="ExperimentSummary"/> instance.
+        /// </summary>
+        /// <param name="telemetryContext">The telemetry event context instance.</param>
+        /// <param name="summaries">Experiment Summaries.</param>
+        public static EventContext AddContext(this EventContext telemetryContext, IEnumerable<ExperimentSummary> summaries)
+        {
+            telemetryContext.ThrowIfNull(nameof(telemetryContext));
+
+            if (summaries != null)
+            {
+                telemetryContext
+                    .AddContext("summariesCount", summaries.Count())
+                    .AddContext("experimentName", summaries.FirstOrDefault().ExperimentName)
+                    .AddContext("revision", summaries.FirstOrDefault().Revision)
+                    .AddContext("progress", summaries.FirstOrDefault().Progress.ToString());
+            }
+
+            return telemetryContext;
         }
 
         /// <summary>

@@ -79,7 +79,6 @@
             this.mockAgentId = "Cluster01,Node01,VM01,TiPSession01";
         }
 
-        // Constructor Unit Tests
         [Test]
         public void ControllerContructorsValidateParameters()
         {
@@ -117,6 +116,16 @@
         public async Task ControllerCreatesTheExpectedExperimentInstance()
         {
             Experiment expectedExperiment = this.mockExperiment.Inlined();
+
+            // Notes:
+            // We do not have a consensus on where the recommendation ID should be created or the format of it. We are
+            // leaving this here for reference as we come back to this so that we do not lose track of the work we did
+            // to integrate it and can simply refactor that to match the requisite semantics in the future.
+            //
+            // The controller adds a recommendation ID to the experiment metadata. So that we can
+            // do an equality comparison at the end we have to ensure the metatdata will match.
+            // expectedExperiment.AddRecommendationId();
+
             await this.controller.CreateExperimentAsync(this.mockExperiment, CancellationToken.None);
 
             this.mockDependencies.DataManager.Verify(
@@ -165,6 +174,28 @@
         {
             Assert.ThrowsAsync<ArgumentException>(async () => await this.controller.CreateExperimentAsync(null, It.IsAny<CancellationToken>()));
         }
+
+        // Notes:
+        // We do not have a consensus on where the recommendation ID should be created or the format of it. We are
+        // leaving this here for reference as we come back to this so that we do not lose track of the work we did
+        // to integrate it and can simply refactor that to match the requisite semantics in the future.
+        ////[Test]
+        ////public async Task ControllerAddsARecommendationIdToExperimentsDuringCreation()
+        ////{
+        ////    bool confirmed = false;
+        ////    Assert.IsFalse(this.mockExperiment.Metadata.ContainsKey(MetadataProperty.RecommendationId));
+
+        ////    this.mockDependencies.DataManager
+        ////            .Setup(mgr => mgr.CreateExperimentAsync(It.IsAny<Experiment>(), It.IsAny<CancellationToken>()))
+        ////            .Callback<Experiment, CancellationToken>((experiment, token) =>
+        ////            {
+        ////                confirmed = experiment.Metadata.ContainsKey(MetadataProperty.RecommendationId);
+        ////            });
+
+        ////    await this.controller.CreateExperimentAsync(this.mockExperiment, CancellationToken.None);
+
+        ////    Assert.IsTrue(confirmed);
+        ////}
 
         [Test]
         public async Task ControllerCreatesTheExpectedExperimentSharedContext()

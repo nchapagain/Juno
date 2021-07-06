@@ -119,7 +119,7 @@
             {
                 Item<GoalBasedSchedule> goalBasedScheduleFromFile = this.GetExecutionGoalFromFile(filePath);
 
-                Item<GoalBasedSchedule> currentItem = await this.GetCurrentItemGoalExecutionAsync(goalBasedScheduleFromFile.Definition.TeamName, goalBasedScheduleFromFile.Definition.ExecutionGoalId).ConfigureAwait(false);
+                Item<GoalBasedSchedule> currentItem = await this.GetCurrentItemGoalExecutionAsync(goalBasedScheduleFromFile.Definition.TeamName, goalBasedScheduleFromFile.Id).ConfigureAwait(false);
 
                 Item<GoalBasedSchedule> combinedItemGoalBasedSchedule = UpdateExecutionGoalCmdlet.MergeItemGoalBasedSchedule(currentItem, goalBasedScheduleFromFile);
 

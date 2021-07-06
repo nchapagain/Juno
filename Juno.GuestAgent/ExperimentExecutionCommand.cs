@@ -113,6 +113,7 @@
 
                 AgentIdentification agentId = new AgentIdentification(this.AgentId);
                 this.InitializeTelemetry(agentId, this.VmSku, this.Region);
+                this.InitializeDebugLogging(this.Settings);
                 this.InitializeLogging(this.Settings);
                 this.Logger.LogTelemetry($"{this.agentType}Starting", LogLevel.Information, new EventContext(Guid.NewGuid()));
                 IServiceCollection dependencies = this.SetupDependencies(agentId, configuration);
@@ -161,19 +162,28 @@
             AadPrincipalSettings agentPrincipal = settings.AgentSettings.AadPrincipals.Get(Setting.GuestAgent);
             IAzureKeyVault keyVaultClient = HostDependencies.CreateKeyVaultClient(agentPrincipal, settings.KeyVaultSettings.Get(Setting.Default));
 
-            AppInsightsSettings appInsightsTelemetrySettings = settings.AppInsightsSettings.Get(Setting.Telemetry);
-            AppInsightsSettings appInsightsTracingSettings = settings.AppInsightsSettings.Get(Setting.Tracing);
             EventHubSettings eventHubTelemetrySettings = settings.EventHubSettings.Get(Setting.AgentTelemetry);
-
             this.Logger = HostDependencies.CreateLogger(
                this.agentType.ToString(),
-               appInsightsTelemetrySettings,
-               appInsightsTracingSettings,
-               eventHubTelemetrySettings,
+               eventHubTelemetrySettings: eventHubTelemetrySettings,
                keyVaultClient: keyVaultClient,
                enableDiagnostics: true);
 
-            // Enable logging at the entry point level.
+            // Set Logger at main entry point.
+            Program.Logger = this.Logger;
+        }
+
+        private void InitializeDebugLogging(EnvironmentSettings settings)
+        {
+            AppInsightsSettings appInsightsTelemetrySettings = settings.AppInsightsSettings.Get(Setting.Telemetry);
+            AppInsightsSettings appInsightsTracingSettings = settings.AppInsightsSettings.Get(Setting.Tracing);
+
+            this.Logger = HostDependencies.CreateLogger(
+              this.agentType.ToString(),
+              appInsightsTelemetrySettings,
+              appInsightsTracingSettings);
+
+            // Set Logger at main entry point
             Program.Logger = this.Logger;
         }
 

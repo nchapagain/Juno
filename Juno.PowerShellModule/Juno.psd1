@@ -12,7 +12,7 @@
 # The module version should match the version.  The PowerShell.Module.Versioning.targets import
 # will update the ModuleVersion here to match the AssemblyVersion in the project so that the versions
 # always line up in the build output directory.
-ModuleVersion = '2.0.1'
+ModuleVersion = '2.1.1'
 
 NestedModules = @('.\Juno.PowerShellModule.dll')
 

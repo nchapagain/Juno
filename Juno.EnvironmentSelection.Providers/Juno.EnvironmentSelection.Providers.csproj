@@ -19,7 +19,7 @@
 		<RootNamespace>Juno.EnvironmentSelection</RootNamespace>
 		<PackageId>Juno.EnvironmentSelection.Providers</PackageId>
 		<Authors>crcteam@microsoft.com</Authors>
-		<AssemblyVersion>2.2.5</AssemblyVersion>
+		<AssemblyVersion>2.2.6</AssemblyVersion>
 		<Description>Providers for the environment selection service.</Description>
 	</PropertyGroup>
 	

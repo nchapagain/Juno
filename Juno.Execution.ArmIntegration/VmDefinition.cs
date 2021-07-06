@@ -4,9 +4,7 @@
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
     using System.Linq;
-    using Juno.Execution.ArmIntegration;
     using Microsoft.AspNetCore.Identity;
-    using Microsoft.Azure.CRC.Identity;
     using Newtonsoft.Json;
     using Newtonsoft.Json.Linq;
     using Newtonsoft.Json.Serialization;
@@ -70,6 +68,31 @@
         ///  Whether accelerated networking should be used on the VM
         /// </summary>
         public bool EnableAcceleratedNetworking { get; set; }
+
+        /// <summary>
+        /// TipSession id assciated with VM, if applicable.
+        /// </summary>
+        public string TipSessionId { get; set; }
+
+        /// <summary>
+        /// Node id assciated with VM, if applicable.
+        /// </summary>
+        public string NodeId { get; set; }
+
+        /// <summary>
+        /// Cluster id assciated with VM, if applicable.
+        /// </summary>
+        public string ClusterId { get; set; }
+
+        /// <summary>
+        /// PrivateIpAddress of the VM.
+        /// </summary>
+        public string PrivateIPAddress { get; set; }
+
+        /// <summary>
+        /// Role of the VM (server/client).
+        /// </summary>
+        public string Role { get; set; }
 
         /// <summary>
         /// Get or set bootstrap state

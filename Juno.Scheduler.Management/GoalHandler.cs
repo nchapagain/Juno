@@ -74,7 +74,7 @@
             {
                 List<Task<bool>> preconditionTasks = new List<Task<bool>>();
                 
-                bool isTargetGoal = goal.IsTargetGoal(scheduleContext.ExecutionGoal);
+                bool isTargetGoal = goal.IsTargetGoal(scheduleContext.ExecutionGoal.Definition);
                 foreach (Precondition precondition in goal.Preconditions)
                 {
                     // Timer logic is handled by GoalbasedScheulerExecution for target goals. Although control goals may still have this and need to be executed.

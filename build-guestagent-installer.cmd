@@ -13,10 +13,8 @@ echo --------------------------------------------------
 call dotnet publish "%~dp0Juno.GuestAgent.Installer\Juno.GuestAgent.Installer.csproj" -r linux-x64 -c Debug -p:PublishSingleFile=true -p:PublishTrimmed=true -p:TrimUnusedDependencies=true && echo: || Goto :Error
 call dotnet publish "%~dp0Juno.GuestAgent.Installer\Juno.GuestAgent.Installer.csproj" -r linux-arm64 -c Debug -p:PublishSingleFile=true -p:PublishTrimmed=true -p:TrimUnusedDependencies=true && echo: || Goto :Error
 call dotnet publish "%~dp0Juno.GuestAgent.Installer\Juno.GuestAgent.Installer.csproj" -r win-x64 -c Debug -p:PublishSingleFile=true -p:PublishTrimmed=true -p:TrimUnusedDependencies=true && echo: || Goto :Error
+call dotnet publish "%~dp0Juno.GuestAgent.Installer\Juno.GuestAgent.Installer.csproj" -r win-arm64 -c Debug -p:PublishSingleFile=true -p:PublishTrimmed=true -p:TrimUnusedDependencies=true && echo: || Goto :Error
 
-rem Note: There is currently no support for SingleFile/win-arm64. This is here to be ready for when support
-rem is added in the future.
-rem call dotnet publish "%~dp0Juno.GuestAgent.Installer\Juno.GuestAgent.Installer.csproj" -r win-arm64 -c Debug -p:PublishSingleFile=true -p:PublishTrimmed=true -p:TrimUnusedDependencies=true && echo: || Goto :Error
 Goto :Finish
 
 :Error

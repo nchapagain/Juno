@@ -10,6 +10,7 @@
     using Juno.Contracts.Configuration;
     using Juno.Providers;
     using Juno.Scheduler.Preconditions.Manager;
+    using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Moq;
@@ -41,8 +42,7 @@
                  @"Configuration"))
                 .AddJsonFile($"juno-dev01.environmentsettings.json")
                 .Build();
-
-            this.mockContext = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), this.mockFixture.Create<TargetGoalTrigger>(), this.configuration);
+            this.mockContext = new ScheduleContext(new Item<GoalBasedSchedule>("id", this.mockFixture.Create<GoalBasedSchedule>()), this.mockFixture.Create<TargetGoalTrigger>(), this.configuration);
         }
 
         [Test]

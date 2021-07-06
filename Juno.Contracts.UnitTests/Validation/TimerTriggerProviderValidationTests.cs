@@ -51,14 +51,13 @@
         [Test]
         public void TargetGoalValidationFailsForMissingTimerTriggerPrecondtion()
         {
-            GoalBasedSchedule invalidExecutionGoal = this.mockFixture.Create<GoalBasedSchedule>();
+            GoalBasedSchedule invalidExecutionGoal = this.CreateExecutionGoalWithGivenPrecondition(this.successfulExperimentPrecondition);
+
             ValidationResult result = TimerTriggerProviderRules.Instance.Validate(invalidExecutionGoal);
 
             Assert.IsNotNull(result);
             Assert.IsFalse(result.IsValid);
             Assert.IsTrue(result.ValidationErrors.Count() == 1);
-            string error = result.ValidationErrors.First();
-            Assert.AreEqual($"TargetGoal: Goal Name must contain a Precondition of type {ContractExtension.TimerTriggerType}", error);
         }
 
         [Test]
@@ -100,27 +99,19 @@
             Assert.AreEqual($"The cron expression in the {ContractExtension.TimerTriggerType} precondition in the Target Goal: TargetGoal1 is invalid: Invalid crontab expression: What Is A cron expression?", error);
         }
 
-        private GoalBasedSchedule CreateExecutionGoalWithGivenPrecondition(Precondition timerTriggerPrecondition, Precondition successfulExperimentPrecondition)
+        private GoalBasedSchedule CreateExecutionGoalWithGivenPrecondition(params Precondition[] preconditions)
         {
             GoalBasedSchedule mockSchedule = this.mockFixture.Create<GoalBasedSchedule>();
             return new GoalBasedSchedule(
                     mockSchedule.ExperimentName,
-                    mockSchedule.ExecutionGoalId,
-                    mockSchedule.Name,
-                    mockSchedule.TeamName,
                     mockSchedule.Description,
-                    mockSchedule.ScheduleMetadata,
-                    mockSchedule.Enabled,
-                    mockSchedule.Version,
                     mockSchedule.Experiment,
-                    new List<Goal>
+                    new List<TargetGoal>
                     {
-                    new Goal(
+                    new (
                         name: "TargetGoal1",
-                        preconditions: new List<Precondition>()
-                        {
-                            timerTriggerPrecondition, successfulExperimentPrecondition
-                        },
+                        true,
+                        preconditions: new List<Precondition>(preconditions),
                         actions: new List<ScheduleAction>()
                         {
                             this.mockFixture.Create<ScheduleAction>()

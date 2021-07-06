@@ -43,7 +43,9 @@
                 foreach (string queryParameter in queryParameters)
                 {
                     JunoParameter container = component.Parameters.GetValue<JunoParameter>(queryParameter);
-                    queries.Add(queryParameter, container.Definition as EnvironmentQuery);
+                    EnvironmentQuery query = container.Definition as EnvironmentQuery;
+                    query.OverwriteQueryparameters(component.Parameters);
+                    queries.Add(queryParameter, query);
                 }
 
                 IExperimentClient client = this.Services.GetService<IExperimentClient>();

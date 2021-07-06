@@ -8,6 +8,7 @@
     using Juno.Contracts;
     using Juno.DataManagement.Cosmos;
     using Juno.Extensions.Telemetry;
+    using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Azure.CRC.Extensions;
     using Microsoft.Azure.CRC.Repository;
     using Microsoft.Azure.CRC.Repository.Cosmos;
@@ -43,7 +44,7 @@
         protected ILogger Logger { get; }
 
         /// <see cref="IScheduleTimerDataManager.CreateTargetGoalsAsync"/>
-        public async Task CreateTargetGoalsAsync(GoalBasedSchedule executionGoal, CancellationToken cancellationToken)
+        public async Task CreateTargetGoalsAsync(Item<GoalBasedSchedule> executionGoal, CancellationToken cancellationToken)
         {
             executionGoal.ThrowIfNull(nameof(executionGoal));
 
@@ -52,7 +53,7 @@
             await this.Logger.LogTelemetryAsync($"{nameof(ScheduleTimerDataManager)}.CreateTargetGoals", telemetryContext, async () =>
             {
                 IDictionary<CosmosTableAddress, TargetGoalTableEntity> entities = new Dictionary<CosmosTableAddress, TargetGoalTableEntity>();
-                foreach (Goal targetGoal in executionGoal.TargetGoals)
+                foreach (TargetGoal targetGoal in executionGoal.Definition.TargetGoals)
                 {
                     // Ask if its appropiate to ask the validate method here instead of rewriting the validation criteria.
                     targetGoal.ThrowIfInvalid(nameof(targetGoal), tg =>
@@ -67,7 +68,7 @@
                     });
 
                     TargetGoalTableEntity entity = targetGoal.ToTableEntity(executionGoal);
-                    CosmosTableAddress address = ScheduleAddressFactory.CreateTargetGoalTriggerAddress(executionGoal.Version, entity.RowKey);
+                    CosmosTableAddress address = ScheduleAddressFactory.CreateTargetGoalTriggerAddress(executionGoal.Definition.Version, entity.RowKey);
                     entities.Add(address, entity);
                 }
 
@@ -152,7 +153,7 @@
         }
 
         /// <inheritdoc/>
-        public async Task UpdateTargetGoalTriggersAsync(GoalBasedSchedule executionGoal, CancellationToken token)
+        public async Task UpdateTargetGoalTriggersAsync(Item<GoalBasedSchedule> executionGoal, CancellationToken token)
         {
             executionGoal.ThrowIfNull(nameof(executionGoal));
 
@@ -161,21 +162,21 @@
             await this.Logger.LogTelemetryAsync($"{nameof(ScheduleTimerDataManager)}.CreateTargetGoals", telemetryContext, async () =>
             {
                 IEnumerable<TargetGoalTableEntity> originalEntities = await this.TableStore.GetEntitiesAsync<TargetGoalTableEntity>(
-                    ScheduleAddressFactory.CreateTargetGoalTriggerAddress(executionGoal.Version), 
+                    ScheduleAddressFactory.CreateTargetGoalTriggerAddress(executionGoal.Definition.Version), 
                     token).ConfigureDefaults();
 
-                originalEntities = originalEntities.Where(entity => entity.ExecutionGoal == executionGoal.ExecutionGoalId);
+                originalEntities = originalEntities.Where(entity => entity.ExecutionGoal == executionGoal.Id);
 
                 IList<Task> deleteTasks = new List<Task>();
                 foreach (TargetGoalTableEntity targetGoal in originalEntities)
                 {
-                    CosmosTableAddress address = ScheduleAddressFactory.CreateTargetGoalTriggerAddress(executionGoal.Version, targetGoal.RowKey);
+                    CosmosTableAddress address = ScheduleAddressFactory.CreateTargetGoalTriggerAddress(executionGoal.Definition.Version, targetGoal.RowKey);
                     deleteTasks.Add(this.TableStore.DeleteEntityAsync<TargetGoalTableEntity>(address, token));
                 }
 
                 await Task.WhenAll(deleteTasks.ToArray()).ConfigureDefaults();
                 IList<TargetGoalTableEntity> newEntities = new List<TargetGoalTableEntity>();
-                foreach (Goal targetGoal in executionGoal.TargetGoals)
+                foreach (TargetGoal targetGoal in executionGoal.Definition.TargetGoals)
                 {
                     targetGoal.ThrowIfInvalid(nameof(targetGoal), tg =>
                     {
@@ -194,7 +195,7 @@
                 IDictionary<CosmosTableAddress, TargetGoalTableEntity> addDictionry = new Dictionary<CosmosTableAddress, TargetGoalTableEntity>();
                 foreach (TargetGoalTableEntity entity in newEntities)
                 {
-                    addDictionry.Add(ScheduleAddressFactory.CreateTargetGoalTriggerAddress(executionGoal.Version, entity.RowKey), entity);
+                    addDictionry.Add(ScheduleAddressFactory.CreateTargetGoalTriggerAddress(executionGoal.Definition.Version, entity.RowKey), entity);
                 }
 
                 if (addDictionry.Any())

@@ -18,6 +18,16 @@
         }
 
         /// <summary>
+        /// The name of the target goal
+        /// </summary>
+        public string Name { get; set; }
+
+        /// <summary>
+        /// The name of the team that owns the target goal.
+        /// </summary>
+        public string TeamName { get; set; }
+
+        /// <summary>
         /// Timer Trigger for the Target Goal
         /// </summary>
         public string CronExpression { get; set; }
@@ -26,16 +36,6 @@
         /// Whether or not the Target Goal is enabled
         /// </summary>
         public bool Enabled { get; set; }
-
-        /// <summary>
-        /// The Name of the Experiment that the target goal resides
-        /// </summary>
-        public string ExperimentName { get; set; }
-
-        /// <summary>
-        /// Team name that authored Target goalS
-        /// </summary>
-        public string TeamName { get; set; }
         
         /// <summary>
         /// Version of Schedule

@@ -1,22 +1,23 @@
 ﻿namespace Juno.Scheduler.Preconditions
 {
     using System;
-    using System.Data;
+    using System.Collections.Generic;
+    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using Juno.Contracts;
-    using Juno.Contracts.Configuration;
+    using Juno.DataManagement;
     using Juno.Extensions.Telemetry;
     using Juno.Providers;
-    using Juno.Scheduler.Preconditions.Manager;
     using Microsoft.Azure.CRC.Extensions;
     using Microsoft.Azure.CRC.Telemetry;
     using Microsoft.Extensions.DependencyInjection;
-    using static Juno.Scheduler.Preconditions.Manager.KustoDataTableExtension;
+    using Newtonsoft.Json;
+    using Newtonsoft.Json.Linq;
 
     /// <summary>
     /// Provider who evaluates whether a Target Goal 
-    /// has executed a given amount of successful experiments
+    /// has executed a given amount of successful experiments including in-progress experiments.
     /// This is designed to be used in a target goal Precondition.
     /// CONDITION: Target # of successful experiments less than Acutal # of successful experiments
     /// </summary>
@@ -42,24 +43,7 @@
         /// Get the query that can be used to discover the number of successful experiments
         /// have been launched for a target goal.
         /// </summary>
-        protected string Query { get; }
-
-        /// <inheritdoc/>
-        public override Task ConfigureServicesAsync(GoalComponent component, ScheduleContext scheduleContext)
-        {
-            component.ThrowIfNull(nameof(component));
-            scheduleContext.ThrowIfNull(nameof(scheduleContext));
-
-            if (!this.Services.TryGetService<IKustoManager>(out IKustoManager kustoManager))
-            {
-                kustoManager = KustoManager.Instance;
-                kustoManager.SetUp(scheduleContext.Configuration);
-
-                this.Services.AddSingleton<IKustoManager>(kustoManager);
-            }
-
-            return Task.CompletedTask;
-        }
+        private string Query { get; }
 
         /// <summary>
         /// Determines if the given target goal has reached the number of successful completed 
@@ -77,50 +61,54 @@
             bool conditionSatisfied = true;
             if (!cancellationToken.IsCancellationRequested)
             {
+                string query = this.ReplaceQueryParameters(scheduleContext, component);
+                telemetryContext.AddContext(SchedulerEventProperty.KustoQuery, query);
+
+                SuccessfulExperiments successfulExperiments = await this.GetSuccessfulExperimentsAsync(query, cancellationToken)
+                    .ConfigureDefaults();
+
                 int targetExperiments = component.Parameters.GetValue<int>(Parameters.TargetExperiments);
+                int successfulExperimentsCount = successfulExperiments == null ? 0 : successfulExperiments.Count;
+                conditionSatisfied = successfulExperimentsCount < targetExperiments;
 
-                IKustoManager kustoManager = this.Services.GetService<IKustoManager>();
-
-                EnvironmentSettings settings = EnvironmentSettings.Initialize(scheduleContext.Configuration);
-                settings.ThrowIfNull(nameof(settings));
-
-                KustoSettings kustoSettings = settings.KustoSettings.Get(Setting.AzureCM);
-                kustoSettings.ThrowIfNull(nameof(kustoSettings));
-
-                string resolvedQuery = this.ReplaceQueryParameters(scheduleContext, component, settings.Environment);
-                telemetryContext.AddContext(SchedulerEventProperty.KustoQuery, resolvedQuery);
-
-                DataTable response = await kustoManager.GetKustoResponseAsync(
-                    string.Concat(CacheKeys.SuccssfulExperiments, scheduleContext.TargetGoalTrigger.TargetGoal),
-                    kustoSettings, 
-                    resolvedQuery).ConfigureDefaults();
-
-                if (response.Rows.Count != 0)
-                {
-                    int successfulExperiments = response.ParseSingleRowSingleKustoColumn(KustoColumn.ExperimentCount);
-
-                    conditionSatisfied = successfulExperiments < targetExperiments;
-
-                    telemetryContext.AddContext(SchedulerEventProperty.TargetExperiments, targetExperiments);
-                    telemetryContext.AddContext(SchedulerEventProperty.SuccessfulExperimentsCount, successfulExperiments);
-                    telemetryContext.AddContext(EventProperty.Count, successfulExperiments);
-                    telemetryContext.AddContext(SchedulerEventProperty.Threshold, targetExperiments);
-                }
+                telemetryContext.AddContext(SchedulerEventProperty.TargetExperiments, targetExperiments);
+                telemetryContext.AddContext(SchedulerEventProperty.SuccessfulExperimentsCount, successfulExperimentsCount);
+                telemetryContext.AddContext(EventProperty.Count, successfulExperimentsCount);
+                telemetryContext.AddContext(SchedulerEventProperty.Threshold, targetExperiments);
             }
 
             return conditionSatisfied;
         }
 
-        private string ReplaceQueryParameters(ScheduleContext scheduleContext, Precondition component, string environment)
+        private string ReplaceQueryParameters(ScheduleContext scheduleContext, Precondition component)
         {
             int daysAgo = component.Parameters.GetValue<int>(Parameters.DaysAgo, SuccessfulExperimentsProvider.DefaultDaysAgo);
             string resolvedQuery = string.Copy(this.Query);
 
-            resolvedQuery = resolvedQuery.Replace(Constants.StartTime, $"now(-{daysAgo}d)", StringComparison.Ordinal);
-            resolvedQuery = resolvedQuery.Replace(Constants.Environment, environment, StringComparison.Ordinal);
-            resolvedQuery = resolvedQuery.Replace(Constants.TargetGoal, scheduleContext.TargetGoalTrigger.TargetGoal, StringComparison.Ordinal);
-
+            resolvedQuery = resolvedQuery.Replace(Constants.DaysAgo, $"-{daysAgo}", StringComparison.Ordinal);
+            resolvedQuery = resolvedQuery.Replace(Constants.TargetGoal, scheduleContext.TargetGoalTrigger.Name, StringComparison.Ordinal);
+            resolvedQuery = resolvedQuery.Replace(Constants.ExecutionGoalId, scheduleContext.ExecutionGoal.Id, StringComparison.OrdinalIgnoreCase);
             return resolvedQuery;
+        }
+
+        private async Task<SuccessfulExperiments> GetSuccessfulExperimentsAsync(string query, CancellationToken cancellationToken)
+        {
+            IExperimentDataManager experimentDataManager = this.Services.GetService<IExperimentDataManager>();
+            IEnumerable<JObject> queryResult = await experimentDataManager.QueryExperimentsAsync(query, cancellationToken).ConfigureDefaults();
+
+            List<SuccessfulExperiments> successfulExperimentsCounts = new List<SuccessfulExperiments>();
+            foreach (var item in queryResult)
+            {
+                successfulExperimentsCounts.Add(item.ToObject<SuccessfulExperiments>());
+            }
+
+            return successfulExperimentsCounts.FirstOrDefault();
+        }
+
+        internal class SuccessfulExperiments
+        {
+            [JsonProperty("Count")]
+            public int Count { get; set; }
         }
 
         /// <summary>
@@ -137,9 +125,9 @@
         /// </summary>
         private class Constants
         {
-            public const string Environment = "$environment$";
-            public const string TargetGoal = "$targetGoal$";
-            public const string StartTime = "$startTime$";
+            public const string DaysAgo = "@daysAgo";
+            public const string TargetGoal = "@targetGoal";
+            public const string ExecutionGoalId = "@executionGoalId";
         }
     }
 }

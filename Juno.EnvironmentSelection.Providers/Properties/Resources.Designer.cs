@@ -402,5 +402,21 @@ namespace Juno.EnvironmentSelection.Properties {
                 return ResourceManager.GetString("ZeroExecutionClusterSelectionQuery", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to // Filters to nodes that haven&apos;t run a given experiment successfully. Takes in the experiment name and 
+        ///// returns cluster id, node id
+        ///let includeExperimentName = $includeExperimentName$;
+        ///let includeCluster = datatable(ClusterId:string)[$includeCluster$];
+        ///let excludeCluster = datatable(ClusterId:string)[$excludeCluster$];
+        ///cluster(&apos;azurecrc.westus2.kusto.windows.net&apos;).database(&apos;JunoStaging&apos;).NewStagingExperiments
+        ///| where experimentName has includeExperimentName and experimentStatus == &apos;Succeeded&apos;
+        ///| jo [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string ZeroSuccessfulExecutionsOnNodeFilterQuery {
+            get {
+                return ResourceManager.GetString("ZeroSuccessfulExecutionsOnNodeFilterQuery", resourceCulture);
+            }
+        }
     }
 }

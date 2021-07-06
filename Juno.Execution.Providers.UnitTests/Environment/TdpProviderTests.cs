@@ -614,10 +614,7 @@
                     "TestExpId",
                     Guid.NewGuid().ToString(),
                     specList,
-                    "testRegion",
-                    "testCluster",
-                    "TestTipId",
-                    "TestNode");
+                    "testRegion");
                 return baseDefinition;
             }
 

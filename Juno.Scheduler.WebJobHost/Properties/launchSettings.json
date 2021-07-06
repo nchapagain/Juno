@@ -3,7 +3,8 @@
     "Juno.Scheduler.WebJobHost": {
       "commandName": "Project",
       "environmentVariables": {
-        "Key": "Value"
+        "ASPNETCORE_ENVIRONMENT_HOST_LOCAL": "true",
+        "ASPNETCORE_ENVIRONMENT": "juno-dev01"
       }
     }
   }

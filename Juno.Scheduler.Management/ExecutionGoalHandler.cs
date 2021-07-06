@@ -69,7 +69,7 @@
 
             await this.Logger.LogTelemetryAsync($"{typeof(ExecutionGoalHandler).Name}.ExecuteExecutionGoal", telemetryContext, async () =>
             {
-                telemetryContext.AddContext(nameof(executionGoal), executionGoal.Name);
+                telemetryContext.AddContext(nameof(executionGoal.ExperimentName), executionGoal.ExperimentName);
 
                 try
                 {
@@ -78,7 +78,7 @@
 
                     if (!controlGoalsSatisfied)
                     {
-                        Goal targetGoal = executionGoal.GetGoal(scheduleContext.TargetGoalTrigger.TargetGoal);
+                        Goal targetGoal = executionGoal.GetGoal(scheduleContext.TargetGoalTrigger.Name);
                         await this.GoalHandler.ExecuteGoalAsync(targetGoal, scheduleContext, token).ConfigureDefaults();
                     }
                 }

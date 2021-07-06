@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "1CstSQZUA9TKrHyaJ3u/u0b7NoZChmym2hqyOsmW9IBHnbO0oqA8G7zSW3tvHjVS99zrNxKbz80Lt8Urjt5MTg==",
+  "dgSpecHash": "xS6063oI38rh69Fgi9hC5fRtBB5QKu7RTju70A3Y3c1BrYiVpJU3Mqdhj6mOcap3S2OotxxFLYCy6qEl9PuMjw==",
   "success": true,
   "projectFilePath": "C:\\Users\\PX-01\\source\\repos\\CSI-CRC-AIR\\src\\Juno\\Juno.GuestAgent.Installer\\Juno.GuestAgent.Installer.csproj",
   "expectedPackageFiles": [
@@ -290,7 +290,7 @@
     "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\system.io.abstractions\\13.2.25\\system.io.abstractions.13.2.25.nupkg.sha512",
     "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\system.io.compression\\4.3.0\\system.io.compression.4.3.0.nupkg.sha512",
     "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\system.io.filesystem\\4.3.0\\system.io.filesystem.4.3.0.nupkg.sha512",
-    "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\system.io.filesystem.accesscontrol\\4.7.0\\system.io.filesystem.accesscontrol.4.7.0.nupkg.sha512",
+    "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\system.io.filesystem.accesscontrol\\5.0.0\\system.io.filesystem.accesscontrol.5.0.0.nupkg.sha512",
     "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\system.io.filesystem.primitives\\4.3.0\\system.io.filesystem.primitives.4.3.0.nupkg.sha512",
     "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\system.io.pipelines\\4.5.2\\system.io.pipelines.4.5.2.nupkg.sha512",
     "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\system.linq\\4.3.0\\system.linq.4.3.0.nupkg.sha512",
@@ -354,7 +354,7 @@
     "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\system.text.encoding.codepages\\4.3.0\\system.text.encoding.codepages.4.3.0.nupkg.sha512",
     "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\system.text.encoding.extensions\\4.3.0\\system.text.encoding.extensions.4.3.0.nupkg.sha512",
     "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\system.text.encodings.web\\5.0.1\\system.text.encodings.web.5.0.1.nupkg.sha512",
-    "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\system.text.json\\5.0.0\\system.text.json.5.0.0.nupkg.sha512",
+    "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\system.text.json\\4.6.0\\system.text.json.4.6.0.nupkg.sha512",
     "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\system.text.regularexpressions\\4.3.0\\system.text.regularexpressions.4.3.0.nupkg.sha512",
     "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\system.threading\\4.3.0\\system.threading.4.3.0.nupkg.sha512",
     "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\system.threading.channels\\4.6.0\\system.threading.channels.4.6.0.nupkg.sha512",
@@ -374,15 +374,17 @@
     "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\system.xml.xpath\\4.3.0\\system.xml.xpath.4.3.0.nupkg.sha512",
     "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\system.xml.xpath.xdocument\\4.3.0\\system.xml.xpath.xdocument.4.3.0.nupkg.sha512",
     "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\windowsazure.storage\\9.3.3\\windowsazure.storage.9.3.3.nupkg.sha512",
-    "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\microsoft.netcore.app.runtime.linux-x64\\3.1.12\\microsoft.netcore.app.runtime.linux-x64.3.1.12.nupkg.sha512",
-    "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\microsoft.netcore.app.runtime.linux-arm64\\3.1.12\\microsoft.netcore.app.runtime.linux-arm64.3.1.12.nupkg.sha512",
-    "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\microsoft.netcore.app.host.linux-x64\\3.1.12\\microsoft.netcore.app.host.linux-x64.3.1.12.nupkg.sha512",
-    "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\microsoft.netcore.app.runtime.win-x64\\3.1.12\\microsoft.netcore.app.runtime.win-x64.3.1.12.nupkg.sha512",
-    "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.linux-arm64\\3.1.12\\microsoft.aspnetcore.app.runtime.linux-arm64.3.1.12.nupkg.sha512",
-    "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\3.1.12\\microsoft.aspnetcore.app.runtime.win-x64.3.1.12.nupkg.sha512",
-    "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\microsoft.netcore.app.host.linux-arm64\\3.1.12\\microsoft.netcore.app.host.linux-arm64.3.1.12.nupkg.sha512",
-    "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\microsoft.windowsdesktop.app.runtime.win-x64\\3.1.12\\microsoft.windowsdesktop.app.runtime.win-x64.3.1.12.nupkg.sha512",
-    "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.linux-x64\\3.1.12\\microsoft.aspnetcore.app.runtime.linux-x64.3.1.12.nupkg.sha512"
+    "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\microsoft.netcore.app.runtime.linux-x64\\5.0.3\\microsoft.netcore.app.runtime.linux-x64.5.0.3.nupkg.sha512",
+    "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\microsoft.netcore.app.runtime.linux-arm64\\5.0.3\\microsoft.netcore.app.runtime.linux-arm64.5.0.3.nupkg.sha512",
+    "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\microsoft.netcore.app.host.linux-x64\\5.0.3\\microsoft.netcore.app.host.linux-x64.5.0.3.nupkg.sha512",
+    "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\microsoft.netcore.app.runtime.win-x64\\5.0.3\\microsoft.netcore.app.runtime.win-x64.5.0.3.nupkg.sha512",
+    "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.linux-arm64\\5.0.3\\microsoft.aspnetcore.app.runtime.linux-arm64.5.0.3.nupkg.sha512",
+    "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\5.0.3\\microsoft.aspnetcore.app.runtime.win-x64.5.0.3.nupkg.sha512",
+    "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\microsoft.netcore.app.runtime.win-arm64\\5.0.3\\microsoft.netcore.app.runtime.win-arm64.5.0.3.nupkg.sha512",
+    "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\microsoft.netcore.app.host.linux-arm64\\5.0.3\\microsoft.netcore.app.host.linux-arm64.5.0.3.nupkg.sha512",
+    "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\microsoft.windowsdesktop.app.runtime.win-x64\\5.0.3\\microsoft.windowsdesktop.app.runtime.win-x64.5.0.3.nupkg.sha512",
+    "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-arm64\\5.0.3\\microsoft.aspnetcore.app.runtime.win-arm64.5.0.3.nupkg.sha512",
+    "C:\\Users\\PX-01\\source\\repos\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.linux-x64\\5.0.3\\microsoft.aspnetcore.app.runtime.linux-x64.5.0.3.nupkg.sha512"
   ],
   "logs": []
 }

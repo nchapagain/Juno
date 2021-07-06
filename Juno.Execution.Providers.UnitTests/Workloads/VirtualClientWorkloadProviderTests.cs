@@ -14,6 +14,7 @@
     using Juno.Contracts.Configuration;
     using Juno.Execution.AgentRuntime;
     using Juno.Execution.ArmIntegration;
+    using Juno.Execution.Providers.Workloads.VCContracts;
     using Juno.Providers;
     using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Azure.CRC.Extensions;
@@ -21,6 +22,7 @@
     using Microsoft.Azure.CRC.Telemetry;
     using Microsoft.Extensions.DependencyInjection;
     using Moq;
+    using Newtonsoft.Json;
     using NUnit.Framework;
 
     [TestFixture]
@@ -29,6 +31,7 @@
     {
         private static int currentProcessId = 1234;
 
+        private VmResourceGroupDefinition mockVmResourceGroup;
         private ProviderFixture mockFixture;
         private TestVirtualClientWorkloadProvider provider;
         private VirtualClientWorkloadProvider.State providerState;
@@ -46,6 +49,7 @@
 
             this.provider = new TestVirtualClientWorkloadProvider(this.mockFixture.Services);
             this.providerState = new VirtualClientWorkloadProvider.State();
+            this.mockVmResourceGroup = this.mockFixture.Create<VmResourceGroupDefinition>();
 
             this.mockFixture.Component.Parameters.Clear();
             this.mockFixture.Component.Parameters.AddRange(new Dictionary<string, IConvertible>
@@ -156,6 +160,7 @@
             IDictionary<string, string> expectedMetadata = new Dictionary<string, string>
             {
                 { "agentId", agentId.ToString() },
+                { "agentType", AgentType.GuestAgent.ToString() },
                 { "containerId", string.Empty },
                 { "tipSessionId", agentId.Context },
                 { "nodeId", agentId.NodeName },
@@ -167,6 +172,9 @@
                 { "virtualMachineName", agentId.VirtualMachineName },
                 { "clusterName", agentId.ClusterName }
             };
+
+            // All experiment metadata properteis are supplied to the Virtual Client as well.
+            expectedMetadata.AddRange(context.Experiment.Definition.Metadata.ToDictionary(m => m.Key, (entry) => entry.Value.ToString()));
 
             IDictionary<string, string> actualMetadata = TestVirtualClientWorkloadProvider2.CreateMetadata(context, component, agentId, telemetryContext);
 
@@ -200,7 +208,7 @@
             TestVirtualClientWorkloadProvider2 testProvider = new TestVirtualClientWorkloadProvider2(this.mockFixture.Services);
 
             using (IProcessProxy process = await testProvider.CreateProcessAsync(
-                this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), null, CancellationToken.None))
+                this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), "Specifications.json", "layout.json", CancellationToken.None))
             {
                 string expectedFileName = Path.Combine(DependencyPaths.NuGetPackages, @"virtualclient\1.2.3\content\win-x64\VirtualClient.exe");
                 string expectedWorkingDirectory = Path.GetDirectoryName(expectedFileName);
@@ -236,7 +244,7 @@
             TestVirtualClientWorkloadProvider2 testProvider = new TestVirtualClientWorkloadProvider2(this.mockFixture.Services);
 
             using (IProcessProxy process = await testProvider.CreateProcessAsync(
-                this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), null, CancellationToken.None))
+                this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), "Specifications.json", "layout.json", CancellationToken.None))
             {
                 string expectedFileName = Path.Combine(DependencyPaths.NuGetPackages, @"virtualclient\1.2.3\content\win-x64\VirtualClient.exe");
                 string expectedWorkingDirectory = Path.GetDirectoryName(expectedFileName);
@@ -272,7 +280,7 @@
             TestVirtualClientWorkloadProvider2 testProvider = new TestVirtualClientWorkloadProvider2(this.mockFixture.Services);
 
             using (IProcessProxy process = await testProvider.CreateProcessAsync(
-                this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), null, CancellationToken.None))
+                this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), "Specifications.json", "layout.json", CancellationToken.None))
             {
                 string expectedFileName = Path.Combine(DependencyPaths.NuGetPackages, @"virtualclient.arm64\1.2.3\content\win-arm64\VirtualClient.exe");
                 string expectedWorkingDirectory = Path.GetDirectoryName(expectedFileName);
@@ -309,7 +317,7 @@
             TestVirtualClientWorkloadProvider2 testProvider = new TestVirtualClientWorkloadProvider2(this.mockFixture.Services);
             Assert.ThrowsAsync<ProviderException>(
                 async () => 
-                await testProvider.CreateProcessAsync(this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), null, CancellationToken.None));
+                await testProvider.CreateProcessAsync(this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), "Specifications.json", "layout.json", CancellationToken.None));
         }
 
         [Test]
@@ -334,7 +342,7 @@
             });
             TestVirtualClientWorkloadProvider2 testProvider = new TestVirtualClientWorkloadProvider2(this.mockFixture.Services);
             Assert.ThrowsAsync<ProviderException>(
-                async () => await testProvider.CreateProcessAsync(this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), null, CancellationToken.None));
+                async () => await testProvider.CreateProcessAsync(this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), "Specifications.json", "layout.json", CancellationToken.None));
         }
 
         [Test]
@@ -358,7 +366,7 @@
             });
             TestVirtualClientWorkloadProvider2 testProvider = new TestVirtualClientWorkloadProvider2(this.mockFixture.Services);
             Assert.ThrowsAsync<ProviderException>(
-                async () => await testProvider.CreateProcessAsync(this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), null, CancellationToken.None));
+                async () => await testProvider.CreateProcessAsync(this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), "Specifications.json", "layout.json", CancellationToken.None));
         }
 
         [Test]
@@ -383,7 +391,7 @@
             TestVirtualClientWorkloadProvider2 testProvider = new TestVirtualClientWorkloadProvider2(this.mockFixture.Services);
 
             using (IProcessProxy process = await testProvider.CreateProcessAsync(
-                this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), null, CancellationToken.None))
+                this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), "Specifications.json", "layout.json", CancellationToken.None))
             {
                 string expectedFileName = DependencyPaths.NuGetPackages + "/virtualclient/1.2.3/content/linux-x64/VirtualClient";
                 string expectedWorkingDirectory = Path.GetDirectoryName(expectedFileName);
@@ -418,7 +426,7 @@
             {
                 this.mockFixture.Component.Parameters["command"] = entry.Key;
                 using (IProcessProxy process = await testProvider.CreateProcessAsync(
-                    this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), null, CancellationToken.None))
+                    this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), "Specifications.json", "layout.json", CancellationToken.None))
                 {
                     string expectedFileName = entry.Value;
                     string expectedWorkingDirectory = Path.GetDirectoryName(expectedFileName);
@@ -435,7 +443,7 @@
             TestVirtualClientWorkloadProvider2 testProvider = new TestVirtualClientWorkloadProvider2(this.mockFixture.Services);
 
             using (IProcessProxy process = await testProvider.CreateProcessAsync(
-                this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), null, CancellationToken.None))
+                this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), "Specifications.json", "layout.json", CancellationToken.None))
             {
                 TimeSpan expectedDuration = this.mockFixture.Component.Parameters.GetTimeSpanValue(StepParameters.Duration);
                 Assert.IsTrue(process.StartInfo.Arguments.Contains($"--timeout={expectedDuration.TotalMinutes}"));
@@ -448,7 +456,7 @@
             TestVirtualClientWorkloadProvider2 testProvider = new TestVirtualClientWorkloadProvider2(this.mockFixture.Services);
 
             using (IProcessProxy process = await testProvider.CreateProcessAsync(
-                this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), null, CancellationToken.None))
+                this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), "Specifications.json", "layout.json", CancellationToken.None))
             {
                 int expectedSeed = Guid.Parse(this.mockFixture.Context.Experiment.Id).GetHashCode();
                 Assert.IsTrue(process.StartInfo.Arguments.Contains($"--seed={expectedSeed}"));
@@ -484,7 +492,7 @@
                 .Verifiable();
 
             using (IProcessProxy process = await testProvider.CreateProcessAsync(
-                this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), null, CancellationToken.None))
+                this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), "Specifications.json", "layout.json", CancellationToken.None))
             {
                 Assert.IsTrue(process.StartInfo.Arguments.Contains($"--applicationInsightsInstrumentationKey={expectedKey}"));
                 Assert.IsTrue(process.StartInfo.Arguments.Contains($"--eventHubConnectionString={expectedConnectionString}"));
@@ -514,7 +522,7 @@
                 .Returns(Task.FromResult("AnySecret".ToSecureString()));
 
             ProviderException error = Assert.ThrowsAsync<ProviderException>(() => testProvider.CreateProcessAsync(
-                this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), null, CancellationToken.None));
+                this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), "Specifications.json", "layout.json", CancellationToken.None));
 
             Assert.IsNotNull(error);
             Assert.AreEqual(ErrorReason.InvalidUsage, error.Reason);
@@ -541,7 +549,7 @@
                 .Returns(Task.FromResult("AnySecret".ToSecureString()));
 
             ProviderException error = Assert.ThrowsAsync<ProviderException>(() => testProvider.CreateProcessAsync(
-                this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), null, CancellationToken.None));
+                this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), "Specifications.json", "layout.json", CancellationToken.None));
 
             Assert.IsNotNull(error);
             Assert.AreEqual(ErrorReason.InvalidUsage, error.Reason);
@@ -553,7 +561,7 @@
             TestVirtualClientWorkloadProvider2 testProvider = new TestVirtualClientWorkloadProvider2(this.mockFixture.Services);
 
             using (IProcessProxy process = await testProvider.CreateProcessAsync(
-                this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), null, CancellationToken.None))
+                this.mockFixture.Context, this.mockFixture.Component, new Dictionary<string, string>(), "Specifications.json", "layout.json", CancellationToken.None))
             {
                 string expectedFileName = Path.Combine(DependencyPaths.NuGetPackages, @"virtualclient\1.2.3\content\win-x64\VirtualClient.exe");
                 string expectedWorkingDirectory = Path.GetDirectoryName(expectedFileName);
@@ -589,7 +597,7 @@
             TestVirtualClientWorkloadProvider2 testProvider = new TestVirtualClientWorkloadProvider2(this.mockFixture.Services);
 
             using (IProcessProxy process = await testProvider.CreateProcessAsync(
-                this.mockFixture.Context, this.mockFixture.Component, expectedMetadata, null, CancellationToken.None))
+                this.mockFixture.Context, this.mockFixture.Component, expectedMetadata, "Specifications.json", "layout.json", CancellationToken.None))
             {
                 // Expected Format:
                 // --metadata=key1=value1,,,key2=value2,,,key3=value3
@@ -616,7 +624,43 @@
             await this.provider.ExecuteAsync(this.mockFixture.Context, this.mockFixture.Component, CancellationToken.None);
 
             this.mockFileInterface.Verify(file => file.WriteAllTextAsync(
+                It.IsRegex("Specifications.json"),
                 It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
+
+        [Test]
+        public async Task VirtualClientWorkloadProviderWritesLayoutFileWithExpectedContent()
+        {
+            // Move to step where VC is started.
+            this.providerState.DependenciesInstalled = true;
+            int index = 0;
+            foreach (VmDefinition vm in this.mockVmResourceGroup.VirtualMachines)
+            {
+                // Mock fixture creates invalid IP address which will fail validation, so overriding those.
+                index++;
+                vm.PrivateIPAddress = $"10.{index}.{index}.{index}";
+            }
+
+            this.mockFixture.DataClient
+                .Setup(c => c.GetOrCreateStateAsync<VmResourceGroupDefinition>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>(), It.IsAny<string>()))
+                .ReturnsAsync(this.mockVmResourceGroup);
+            await this.provider.ExecuteAsync(this.mockFixture.Context, this.mockFixture.Component, CancellationToken.None);
+            EnvironmentLayout layout;
+            this.mockFileInterface.Setup(file => file.WriteAllTextAsync(
+                It.IsRegex("layout.json"),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<string, string, CancellationToken>((filePath, content, token) =>
+            {
+                layout = JsonConvert.DeserializeObject<EnvironmentLayout>(content);
+                Assert.AreEqual(3, layout.Clients.Count());
+            })
+            .Returns(Task.CompletedTask);
+
+            this.mockFileInterface.Verify(file => file.WriteAllTextAsync(
+                It.IsRegex("layout.json"),
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
@@ -636,7 +680,7 @@
             await this.provider.ExecuteAsync(this.mockFixture.Context, this.mockFixture.Component, CancellationToken.None);
 
             this.mockFileInterface.Verify(file => file.WriteAllTextAsync(
-                It.IsAny<string>(),
+                It.IsRegex("Specifications.json"),
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()),
                 Times.Never);
@@ -658,7 +702,7 @@
             await this.provider.ExecuteAsync(this.mockFixture.Context, this.mockFixture.Component, CancellationToken.None);
 
             this.mockFileInterface.Verify(file => file.WriteAllTextAsync(
-                It.IsAny<string>(),
+                It.IsRegex("Specifications.json"),
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
@@ -683,7 +727,7 @@
             await this.provider.ExecuteAsync(this.mockFixture.Context, this.mockFixture.Component, CancellationToken.None);
 
             this.mockFileInterface.Verify(file => file.WriteAllTextAsync(
-                It.IsAny<string>(),
+                It.IsRegex("Specifications.json"),
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()),
                 Times.Never);
@@ -745,7 +789,7 @@
             string expectedContent = new { diskMapping = expectedDiskInfo }.ToJson();
 
             this.mockFileInterface.Verify(file => file.WriteAllTextAsync(
-                It.IsAny<string>(),
+                It.IsRegex("Specifications.json"),
                 It.Is<string>(content => content.RemoveWhitespaces() == expectedContent.RemoveWhitespaces()),
                 It.IsAny<CancellationToken>()),
                 Times.Once);
@@ -1086,7 +1130,7 @@
             }
 
             protected async override Task<IProcessProxy> CreateProcessAsync(
-                ExperimentContext context, ExperimentComponent component, IDictionary<string, string> metadata, string specificationFilePath, CancellationToken cancellationToken)
+                ExperimentContext context, ExperimentComponent component, IDictionary<string, string> metadata, string specificationFilePath, string layoutFilePath, CancellationToken cancellationToken)
             {
                 await Task.Delay(1);
                 return this.OnCreateProcess?.Invoke();
@@ -1110,9 +1154,9 @@
                 return VirtualClientWorkloadProvider.CreateMetadata(context, component, agentId, telemetryContext);
             }
 
-            public new Task<IProcessProxy> CreateProcessAsync(ExperimentContext context, ExperimentComponent component, IDictionary<string, string> metadata, string specificationFilePath, CancellationToken cancellationToken)
+            public new Task<IProcessProxy> CreateProcessAsync(ExperimentContext context, ExperimentComponent component, IDictionary<string, string> metadata, string specificationFilePath, string layoutFilePath, CancellationToken cancellationToken)
             {
-                return base.CreateProcessAsync(context, component, metadata, specificationFilePath, cancellationToken);
+                return base.CreateProcessAsync(context, component, metadata, specificationFilePath, layoutFilePath, cancellationToken);
             }
         }
 

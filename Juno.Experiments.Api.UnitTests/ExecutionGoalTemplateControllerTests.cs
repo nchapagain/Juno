@@ -28,7 +28,7 @@
         private ExecutionClient mockExecutionClient;
         private GoalBasedSchedule mockExecutionGoalTemplate;
         private Item<GoalBasedSchedule> mockExecutionGoalTemplateItem;
-        private Goal mockTargetGoal;
+        private TargetGoal mockTargetGoal;
 
         [SetUp]
         public void SetupTests()
@@ -44,8 +44,9 @@
 
             string cronExpression = "* * * * *";
 
-            this.mockTargetGoal = new Goal(
+            this.mockTargetGoal = new TargetGoal(
                 name: "TargetGoal",
+                true,
                 preconditions: new List<Precondition>()
                 {
                     new Precondition(
@@ -73,16 +74,11 @@
 
             this.mockExecutionGoalTemplate = new GoalBasedSchedule(
                 template.ExperimentName,
-                template.ExecutionGoalId,
-                template.Name,
-                template.TeamName,
                 template.Description,
-                template.ScheduleMetadata,
-                template.Enabled,
-                template.Version,
                 template.Experiment,
-                new List<Goal> { this.mockTargetGoal },
-                template.ControlGoals);
+                new List<TargetGoal> { this.mockTargetGoal },
+                template.ControlGoals,
+                template.Metadata);
 
             this.mockExecutionGoalTemplateItem = new Item<GoalBasedSchedule>(Guid.NewGuid().ToString(), this.mockExecutionGoalTemplate);
         }
@@ -133,7 +129,7 @@
 
             Assert.IsNotNull(result);
             Assert.AreEqual(StatusCodes.Status201Created, result.StatusCode);
-            Assert.AreEqual(this.mockExecutionGoalTemplate.ExecutionGoalId, (result.Value as Item<GoalBasedSchedule>).Definition.ExecutionGoalId);
+            Assert.AreEqual(this.mockExecutionGoalTemplateItem.Id, (result.Value as Item<GoalBasedSchedule>).Id);
         }
 
         [Test]
@@ -171,7 +167,7 @@
 
             Assert.IsNotNull(result);
             Assert.AreEqual(StatusCodes.Status200OK, result.StatusCode);
-            Assert.AreEqual(this.mockExecutionGoalTemplate.ExecutionGoalId, (result.Value as Item<GoalBasedSchedule>).Definition.ExecutionGoalId);
+            Assert.AreEqual(this.mockExecutionGoalTemplateItem.Id, (result.Value as Item<GoalBasedSchedule>).Id);
         }
 
         [Test]
@@ -290,11 +286,11 @@
         public async Task ControllerReturnsTheexpectedResponseWhenDeletingAnExecutionGoalTemplate()
         {
             this.mockDependencies.RestClient.Setup(client => client.DeleteAsync(
-                It.Is<Uri>(uri => uri.PathAndQuery == $"/api/executionGoalTemplates/{this.mockExecutionGoalTemplate.ExecutionGoalId}/?teamName={this.mockExecutionGoalTemplate.TeamName}"),
+                It.Is<Uri>(uri => uri.PathAndQuery == $"/api/executionGoalTemplates/{this.mockExecutionGoalTemplateItem.Id}/?teamName={this.mockExecutionGoalTemplate.TeamName}"),
                 It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)));
 
-            StatusCodeResult result = await this.controller.DeleteExecutionGoalTemplateAsync(this.mockExecutionGoalTemplate.ExecutionGoalId, this.mockExecutionGoalTemplate.TeamName, CancellationToken.None)
+            StatusCodeResult result = await this.controller.DeleteExecutionGoalTemplateAsync(this.mockExecutionGoalTemplateItem.Id, this.mockExecutionGoalTemplate.TeamName, CancellationToken.None)
                 as StatusCodeResult;
 
             Assert.IsNotNull(result);

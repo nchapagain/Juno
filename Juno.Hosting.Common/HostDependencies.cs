@@ -414,7 +414,7 @@
         /// </returns>
         public static ILogger CreateLogger(
             string categoryName,
-            string appInsightsInstrumentationKey = null, 
+            string appInsightsInstrumentationKey = null,
             string eventHubConnectionString = null,
             string eventHubName = null,
             bool enableDiagnostics = false,
@@ -740,6 +740,35 @@
             subscriptionIDs.ForEach(x => subscriptionManagers.Add(new SubscriptionManager(subscriptionSettings, x)));
 
             return subscriptionManagers;
+        }
+
+        /// <summary>
+        /// Creates an <see cref="IAnalysisCacheManager"/>.
+        /// </summary>
+        /// <param name="settings"></param>
+        /// <param name="keyVaultClient">Client for communications with Azure Key Vault.</param>
+        /// <param name="logger">A logger that can be used to capture telemetry for data manager operations.</param>
+        /// <returns>
+        /// Type: <see cref="IAnalysisCacheManager"/>
+        /// </returns>
+        public static IAnalysisCacheManager CreateAnalysisCacheManager(EnvironmentSettings settings, IAzureKeyVault keyVaultClient, ILogger logger = null)
+        {
+            settings.ThrowIfNull(nameof(settings));
+            keyVaultClient.ThrowIfNull(nameof(keyVaultClient));
+
+            CosmosClient cosmosClient = null;
+
+            CosmosSettings cosmosDbSettings = settings.CosmosSettings.Get("AnalysisCache");
+
+            using (SecureString accountKey = keyVaultClient.ResolveSecretAsync(cosmosDbSettings.AccountKey, CancellationToken.None)
+               .GetAwaiter().GetResult())
+            {
+                cosmosClient = new CosmosClient(cosmosDbSettings.Uri.AbsoluteUri, accountKey.ToOriginalString());
+            }
+
+            AzureCosmosDbStore cacheStore = new AzureCosmosDbStore(cosmosClient);
+
+            return new AnalysisCacheManager(cacheStore, logger: logger);
         }
     }
 }

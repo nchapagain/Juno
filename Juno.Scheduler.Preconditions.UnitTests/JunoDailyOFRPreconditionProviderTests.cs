@@ -43,7 +43,7 @@
                 .AddJsonFile($"juno-dev01.environmentsettings.json")
                 .Build();
 
-            this.mockContext = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), this.mockFixture.Create<TargetGoalTrigger>(), this.configuration);
+            this.mockContext = new ScheduleContext(new Item<GoalBasedSchedule>("id", this.mockFixture.Create<GoalBasedSchedule>()), this.mockFixture.Create<TargetGoalTrigger>(), this.configuration);
         }
 
         [Test]

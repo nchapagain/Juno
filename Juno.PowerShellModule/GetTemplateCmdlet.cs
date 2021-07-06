@@ -102,6 +102,7 @@
                     response.ThrowOnError<ExperimentException>();
 
                     returnValue = response.Content.ReadAsJsonAsync<Item<GoalBasedSchedule>>().GetAwaiter().GetResult();
+                    this.RemoveServerSideDataTags(returnValue as Item<GoalBasedSchedule>);
                 }
             }
 

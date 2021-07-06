@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using AutoFixture;
     using Microsoft.Azure.CRC.Contracts;
     using NUnit.Framework;
 
@@ -10,9 +11,30 @@
     [Category("Unit")]
     public class GoalBasedScheduleExtensionsTests
     {
+        private Fixture mockFixture;
+        private GoalBasedSchedule executionGoal;
+        private TargetGoal targetGoalTemplate;
+        private ScheduleAction actionTemplate;
+        private ExecutionGoalParameter executionGoalParameter;
+        private TargetGoalParameter targetGoalParamter;
+
         [SetUp]
         public void SetupTests()
         {
+            this.mockFixture = new Fixture();
+            this.mockFixture.SetUpGoalBasedScheduleMocks();
+
+            this.executionGoal = this.mockFixture.Create<GoalBasedSchedule>();
+            this.targetGoalTemplate = this.mockFixture.Create<TargetGoal>();
+            this.executionGoal.TargetGoals.Add(this.targetGoalTemplate);
+
+            this.actionTemplate = this.mockFixture.Create<ScheduleAction>();
+            this.targetGoalTemplate.Actions.Add(this.actionTemplate);
+
+            this.targetGoalParamter = new TargetGoalParameter(this.targetGoalTemplate.Name, true);
+            this.executionGoalParameter = new ExecutionGoalParameter(
+                new List<TargetGoalParameter>() { this.targetGoalParamter }, 
+                new Dictionary<string, IConvertible>() { { ExecutionGoalMetadata.ExperimentName, "experiment name" } });
         }
 
         [Test]
@@ -26,344 +48,141 @@
         [Test]
         public void InlinedReturnsExpectedResultWithoutSharedParameters()
         {
-            string owner = "Joe@microsoft.com";
-            GoalBasedSchedule executionGoalTemplate = FixtureExtensions.CreateExecutionGoalTemplate();
-            string targetGoalIdA = executionGoalTemplate.TargetGoals.Where(x => x.Name == "$.parameters.targetGoal1").FirstOrDefault().Id;
-            string targetGoalIdB = executionGoalTemplate.TargetGoals.Where(x => x.Name == "$.parameters.targetGoal2").FirstOrDefault().Id;
+            string expectedValue = Guid.NewGuid().ToString();
+            this.actionTemplate.Parameters.Add("test", "$.parameters.myparameter");
+            this.targetGoalParamter.Parameters.Add("myparameter", expectedValue);
 
-            IList<TargetGoalParameter> targetGoals = new List<TargetGoalParameter>()
-            {
-                new TargetGoalParameter(targetGoalIdA, "WorkloadA", new Dictionary<string, IConvertible>() { { "targetGoal1", "targetGoalOneParam" } }),
-                new TargetGoalParameter(targetGoalIdB, "WorkloadA", new Dictionary<string, IConvertible>() { { "targetGoal2", "targetGoalTwoParam" } })
-            };
+            this.executionGoal.Inlined(this.executionGoalParameter);
 
-            Dictionary<string, IConvertible> executionGoalMetadata = new Dictionary<string, IConvertible>()
-            {
-                { ExecutionGoalMetadata.Owner, owner },
-                { "newMetadataParam", "newMetadataValue" },
-                { ExecutionGoalMetadata.MonitoringEnabled, true }
-            };
+            string actualValue = this.actionTemplate.Parameters["test"].ToString();
 
-            ExecutionGoalParameter executionGoalParameter = new ExecutionGoalParameter(
-                "IdFromParameters",
-                "ExperimentName",
-                executionGoalTemplate.TeamName,
-                owner,
-                true,
-                targetGoals);
-
-            executionGoalTemplate.ScheduleMetadata.Add("newMetadataParam", "newMetadataValue");
-            GoalBasedSchedule actualResult = executionGoalTemplate.Inlined(executionGoalParameter);
-
-            GoalBasedSchedule expectedResult = new GoalBasedSchedule(
-                experimentName: "ExperimentName",
-                executionGoalId: "IdFromParameters",
-                name: "ExecutionGoalTemplate",
-                teamName: executionGoalTemplate.TeamName,
-                description: "description",
-                metadata: executionGoalMetadata,
-                enabled: true,
-                version: "2021-01-01",
-                experiment: actualResult.Experiment,
-                targetGoals: new List<Goal>()
-                {
-                    FixtureExtensions.CreateTargetGoal("targetGoalOneParam", targetGoalIdA),
-                    FixtureExtensions.CreateTargetGoal("targetGoalTwoParam", targetGoalIdB)
-                },
-                controlGoals: actualResult.ControlGoals,
-                parameters: null);
-
-            Assert.IsNotNull(actualResult);
-            Assert.AreEqual(expectedResult, actualResult);
+            Assert.AreEqual(expectedValue, actualValue);
         }
 
         [Test]
         public void InlinedReturnsExpectedResultWhenSharedParametersAreFilled()
         {
-            string expectedOwner = "Joe@microsoft.com";
-            string expectedExecutionGoal = "MyNewExecutionGoal";
-            string experimentNameInExecutionGoal = "MyNewExperimentName";
-            string expectedExperimentNameInTargetGoal = "myNewExperimentIsAwesome!!!!";
-            string expectedNodeCpuId = "MyNodeCpuID";
-            string expectedVmSku = "myVmSku";
-            string expectedGeneration = "Millennial";
-            string randomParameter = "thisParameterIsRandomlyAddedByUser";
-            string expectedTargetGoalName = Guid.NewGuid().ToString();
+            string expectedValue = Guid.NewGuid().ToString();
+            this.actionTemplate.Parameters.Add("test", "$.parameters.myparameter");
+            this.executionGoalParameter.SharedParameters.Add("myparameter", expectedValue);
 
-            GoalBasedSchedule executionGoalTemplate = GoalBasedScheduleExtensionsTests.GetExecutionGoalTemplateWithFiveWorkLoad();
+            this.executionGoal.Inlined(this.executionGoalParameter);
 
-            IList<TargetGoalParameter> targetGoals = new List<TargetGoalParameter>()
-            {
-                new TargetGoalParameter("1", "thisIsARandomWorkload", null),
-                new TargetGoalParameter("2", "thisIsARandomWorkload", null),
-                new TargetGoalParameter("3", "thisIsARandomWorkload", null),
-                new TargetGoalParameter("4", "thisIsARandomWorkload", null),
-                new TargetGoalParameter("5", "thisIsARandomWorkload", null),
-            };
+            string actualValue = this.actionTemplate.Parameters["test"].ToString();
 
-            var sharedParameters = new Dictionary<string, IConvertible>()
-            {
-                { "targetGoalName", expectedTargetGoalName },
-                { "targetInstances", "10" },
-                { "experiment.name", expectedExperimentNameInTargetGoal },
-                { "intelCpuId", expectedNodeCpuId },
-                { "vmSku", expectedVmSku },
-                { "generation", expectedGeneration },
-                { randomParameter, "ItShouldBeSkipped" }
-            };
+            Assert.AreEqual(expectedValue, actualValue);
+        }
 
-            ExecutionGoalParameter executionGoalParameter = new ExecutionGoalParameter(
-                expectedExecutionGoal,
-                experimentNameInExecutionGoal,
-                "TeamName",
-                expectedOwner,
-                false,
-                targetGoals,
-                sharedParameters);
+        [Test]
+        public void InlinedCopiesParametersFromTemplateIfNotPresentInExecutionGoalParameter()
+        {
+            string expectedKey = Guid.NewGuid().ToString();
+            string expectedValue = Guid.NewGuid().ToString();
+            this.executionGoal.Metadata.Add(expectedKey, expectedValue);
 
-            GoalBasedSchedule actualResult = executionGoalTemplate.Inlined(executionGoalParameter);
+            GoalBasedSchedule inlinedGoal = this.executionGoal.Inlined(this.executionGoalParameter);
 
-            Assert.IsNotNull(actualResult);
-            Assert.AreEqual(actualResult.ExecutionGoalId, expectedExecutionGoal);
-            Assert.AreEqual(actualResult.ExperimentName, experimentNameInExecutionGoal);
-            Assert.AreEqual(actualResult.TeamName, executionGoalParameter.TeamName);
-            Assert.IsTrue(actualResult.ScheduleMetadata.ContainsKey(ExecutionGoalMetadata.Owner));
-            Assert.AreEqual(actualResult.Owner, expectedOwner);
-            Assert.IsFalse(actualResult.Enabled);
-            Assert.IsNotEmpty(actualResult.TargetGoals);
-            Assert.AreEqual(actualResult.TargetGoals.Count, targetGoals.Count);
-            Assert.IsTrue(actualResult.ScheduleMetadata.ContainsKey(ExecutionGoalMetadata.MonitoringEnabled));
-            foreach (Goal targetGoal in actualResult.TargetGoals)
-            {
-                Assert.AreEqual(targetGoal.Name, expectedTargetGoalName);
-                Assert.AreEqual("thisIsARandomWorkload", targetGoal.GetWorkLoadFromTargetGoal());
+            Assert.IsTrue(inlinedGoal.Metadata.ContainsKey(expectedKey));
+            Assert.AreEqual(inlinedGoal.Metadata[expectedKey], expectedValue);
+        }
 
-                Dictionary<string, IConvertible> preconditionParameter = targetGoal.Preconditions.FirstOrDefault().Parameters;
-                Assert.IsTrue(!preconditionParameter.ContainsKey(randomParameter));
-                Assert.AreEqual(preconditionParameter["targetExperimentInstances"], "10");
+        [Test]
+        public void InlinedUsesEnabledFieldFromParametersAndNotTemplate()
+        {
+            this.executionGoal.TargetGoals.Clear();
+            this.executionGoal.TargetGoals.AddRange(Enumerable.Range(0, 5).Select(num => FixtureExtensions.CreateTargetGoal(enabled: false)));
 
-                Dictionary<string, IConvertible> actionsParameter = targetGoal.Actions.FirstOrDefault().Parameters;
-                Assert.IsTrue(!actionsParameter.ContainsKey(randomParameter));
-                Assert.AreEqual(actionsParameter["experiment.name"], expectedExperimentNameInTargetGoal);
-                Assert.AreEqual(actionsParameter["metadata.intelCpuId"], expectedNodeCpuId);
-                Assert.AreEqual(actionsParameter["metadata.generation"], expectedGeneration);
-                Assert.AreEqual(actionsParameter["vmSku"], expectedVmSku);
-            }
+            this.executionGoalParameter.TargetGoals.Clear();
+            this.executionGoalParameter.TargetGoals.AddRange(this.executionGoal.TargetGoals.Select(tg => new TargetGoalParameter(tg.Name, true)));
+
+            GoalBasedSchedule result = this.executionGoal.Inlined(this.executionGoalParameter);
+            Assert.IsTrue(result.TargetGoals.All(tg => tg.Enabled));
+        }
+
+        [Test]
+        public void InlinedDoesNotOverwriteExistingMetadata()
+        {
+            string expectedKey = Guid.NewGuid().ToString();
+            string expectedValue = Guid.NewGuid().ToString();
+            string nonExpectedValue = Guid.NewGuid().ToString();
+            this.executionGoal.Metadata.Add(expectedKey, nonExpectedValue);
+            this.executionGoalParameter.Metadata.Add(expectedKey, expectedValue);
+
+            GoalBasedSchedule inlinedGoal = this.executionGoal.Inlined(this.executionGoalParameter);
+
+            Assert.IsTrue(inlinedGoal.Metadata.ContainsKey(expectedKey));
+            Assert.AreEqual(inlinedGoal.Metadata[expectedKey], expectedValue);
         }
 
         [Test]
         public void SharedParameterInlinesOnlyForMissingTargetGoalParameters()
         {
-            string expectedOwner = "Joe@microsoft.com";
-            string expectedExecutionGoal = "MyNewExecutionGoal";
-            string workload = "thisIsARandomWorkload";
-            string experimentNameInExecutionGoal = "MyNewExperimentName";
-            string expectedExperimentNameInTargetGoal = "myNewExperimentIsAwesome!!!!";
-            string expectedNodeCpuId = "MyNodeCpuID";
-            string expectedVmSku = "myVmSku";
-            string expectedGeneration = "Millennial";
-            string randomParameter = "thisParameterIsRandomlyAddedByUser";
-            string expectedTargetGoalName = Guid.NewGuid().ToString();
+            string expectedValue = Guid.NewGuid().ToString();
+            string expectedValue2 = Guid.NewGuid().ToString();
+            this.actionTemplate.Parameters.Add("test", "$.parameters.myparameter");
+            this.actionTemplate.Parameters.Add("test2", "$.parameters.myotherparameter");
 
-            GoalBasedSchedule executionGoalTemplate = GoalBasedScheduleExtensionsTests.GetExecutionGoalTemplateWithFiveWorkLoad();
+            this.executionGoalParameter.SharedParameters.Add("myparameter", expectedValue);
+            this.executionGoalParameter.SharedParameters.Add("myotherparameter", expectedValue);
+            this.targetGoalParamter.Parameters.Add("myotherparameter", expectedValue2);
 
-            var targetGoalParameterWithSuppliedKeyValuesPairs = new TargetGoalParameter("3", workload, new Dictionary<string, IConvertible>()
-                {
-                    { "targetGoalName", Guid.NewGuid().ToString() },
-                    { "targetInstances", 15 },
-                    { "experiment.name", Guid.NewGuid().ToString() },
-                    { "intelCpuId", Guid.NewGuid().ToString() },
-                   // { "vmSku", expectedVmSku }, // expecting this key-value pair  to be supplied from shared parameter
-                   // { "generation", expectedGeneration }, // expecting this key-value pair to be supplied from shared parameter
-                    { "Gibberish", "ItShouldBeSkipped" }
-                });
+            this.executionGoal.Inlined(this.executionGoalParameter);
 
-            var targetGoalParameterWithNullOrEmptyValues = new TargetGoalParameter("4", workload, new Dictionary<string, IConvertible>()
-                {
-                    { "targetGoalName", null },
-                    { "targetInstances", string.Empty },
-                    { "experiment.name", " " },
-                    { "intelCpuId", "   " }
-                });
-
-            IList<TargetGoalParameter> targetGoals = new List<TargetGoalParameter>()
-            {
-                new TargetGoalParameter("1", workload, null),
-                new TargetGoalParameter("2", workload, null),
-                targetGoalParameterWithSuppliedKeyValuesPairs,
-                targetGoalParameterWithNullOrEmptyValues,
-                new TargetGoalParameter("10", workload, null) // Should not be present, since id: 10, doesn't exist.
-            };
-
-            var sharedParameters = new Dictionary<string, IConvertible>()
-            {
-                { "targetGoalName", expectedTargetGoalName },
-                { "targetInstances", "10" },
-                { "experiment.name", expectedExperimentNameInTargetGoal },
-                { "intelCpuId", expectedNodeCpuId },
-                { "vmSku", expectedVmSku },
-                { "generation", expectedGeneration },
-                { randomParameter, "ItShouldBeSkipped" }
-            };
-
-            ExecutionGoalParameter executionGoalParameter = new ExecutionGoalParameter(
-                expectedExecutionGoal,
-                experimentNameInExecutionGoal,
-                "TeamName",
-                expectedOwner,
-                true,
-                targetGoals,
-                sharedParameters);
-
-            GoalBasedSchedule actualResult = executionGoalTemplate.Inlined(executionGoalParameter);
-
-            Assert.IsNotNull(actualResult);
-            Assert.IsTrue(actualResult.Enabled);
-            Assert.IsNotEmpty(actualResult.TargetGoals);
-            Assert.AreEqual(actualResult.TargetGoals.Count, 4);
-
-            var targetGoalWithIdThree = actualResult.TargetGoals.Where(x => x.Id == "3");
-            Assert.IsNotEmpty(targetGoalWithIdThree);
-            foreach (Goal targetGoal in targetGoalWithIdThree)
-            {
-                Assert.AreEqual(targetGoal.Name, targetGoalParameterWithSuppliedKeyValuesPairs.Parameters["targetGoalName"]);
-                Assert.AreEqual(workload, targetGoal.GetWorkLoadFromTargetGoal());
-
-                Dictionary<string, IConvertible> preconditionParameter = targetGoal.Preconditions.FirstOrDefault().Parameters;
-                Assert.IsTrue(!preconditionParameter.ContainsKey(randomParameter));
-                Assert.AreEqual(preconditionParameter["targetExperimentInstances"], "15");
-
-                Dictionary<string, IConvertible> actionsParameter = targetGoal.Actions.FirstOrDefault().Parameters;
-                Assert.IsTrue(!actionsParameter.ContainsKey(randomParameter));
-                Assert.AreEqual(actionsParameter["experiment.name"], targetGoalParameterWithSuppliedKeyValuesPairs.Parameters["experiment.name"]);
-                Assert.AreEqual(actionsParameter["metadata.intelCpuId"], targetGoalParameterWithSuppliedKeyValuesPairs.Parameters["intelCpuId"]);
-                Assert.AreEqual(actionsParameter["metadata.generation"], expectedGeneration);
-                Assert.AreEqual(actionsParameter["vmSku"], expectedVmSku);
-            }
-
-            var targetGoalWithIdOneTwoFour = actualResult.TargetGoals.Where(x => x.Id != "3");
-            Assert.IsNotEmpty(targetGoalWithIdOneTwoFour);
-            foreach (Goal targetGoal in targetGoalWithIdOneTwoFour)
-            {
-                Assert.AreEqual(targetGoal.Name, expectedTargetGoalName);
-                Assert.AreEqual(workload, targetGoal.GetWorkLoadFromTargetGoal());
-
-                Dictionary<string, IConvertible> preconditionParameter = targetGoal.Preconditions.FirstOrDefault().Parameters;
-                Assert.IsTrue(!preconditionParameter.ContainsKey(randomParameter));
-                Assert.AreEqual(preconditionParameter["targetExperimentInstances"], "10");
-
-                Dictionary<string, IConvertible> actionsParameter = targetGoal.Actions.FirstOrDefault().Parameters;
-                Assert.IsTrue(!actionsParameter.ContainsKey(randomParameter));
-                Assert.AreEqual(actionsParameter["experiment.name"], expectedExperimentNameInTargetGoal);
-                Assert.AreEqual(actionsParameter["metadata.intelCpuId"], expectedNodeCpuId);
-                Assert.AreEqual(actionsParameter["metadata.generation"], expectedGeneration);
-                Assert.AreEqual(actionsParameter["vmSku"], expectedVmSku);
-            }
-        }
-
-        [Test]
-        public void GoalBasedScheduleInlinedForOneTargetGoalReturnsExpectedResult()
-        {
-            string owner = "Joe@microsoft.com";
-            GoalBasedSchedule executionGoalTemplate = FixtureExtensions.CreateExecutionGoalTemplate();
-            string targetGoalId = executionGoalTemplate.TargetGoals.Where(x => x.Name == "$.parameters.targetGoal1").FirstOrDefault().Id;
-
-            IList<TargetGoalParameter> targetGoals = new List<TargetGoalParameter>()
-            {
-                new TargetGoalParameter(targetGoalId, "WorkloadA", new Dictionary<string, IConvertible>() { { "targetGoal1", "IAmTargetGoalA" } }),
-                new TargetGoalParameter(targetGoalId, "WorkloadA", new Dictionary<string, IConvertible>() { { "targetGoal4", "IAmTargetGoalB" } }),
-                new TargetGoalParameter(targetGoalId, "WorkloadA", new Dictionary<string, IConvertible>() { { "targetGoal5", "IAmTargetGoalC" } })
-            };
-
-            Dictionary<string, IConvertible> executionGoalMetadata = new Dictionary<string, IConvertible>() 
-            { 
-                { ExecutionGoalMetadata.Owner, owner },
-                { ExecutionGoalMetadata.MonitoringEnabled, false }
-            };
-
-            ExecutionGoalParameter executionGoalParameter = new ExecutionGoalParameter(
-                "ThisIsNewExecutionGoalId",
-                "ThisIsNewExperimentName",
-                "ThisIsNewTeamName",
-                owner,
-                true,
-                targetGoals,
-                null,
-                false);
-
-            GoalBasedSchedule actualResult = executionGoalTemplate.Inlined(executionGoalParameter);
-
-            GoalBasedSchedule expectedResult = new GoalBasedSchedule(
-                experimentName: "ThisIsNewExperimentName",
-                executionGoalId: "ThisIsNewExecutionGoalId",
-                name: "ExecutionGoalTemplate",
-                teamName: "teamName",
-                description: "description",
-                metadata: executionGoalMetadata,
-                enabled: true,
-                version: "2021-01-01",
-                experiment: actualResult.Experiment,
-                targetGoals: new List<Goal>()
-                {
-                    FixtureExtensions.CreateTargetGoal("IAmTargetGoalA")
-                },
-                controlGoals: actualResult.ControlGoals,
-                parameters: null);
-
-            Assert.IsNotNull(actualResult);
-            Assert.AreEqual(expectedResult, actualResult);
+            string actualValue = this.actionTemplate.Parameters["test"].ToString();
+            string actualValue2 = this.actionTemplate.Parameters["test2"].ToString();
+            Assert.AreEqual(expectedValue, actualValue);
+            Assert.AreEqual(expectedValue2, actualValue2);
         }
 
         [Test]
         public void GetParametersFromTemplateReturnsExpectedValue()
         {
-            GoalBasedSchedule executionGoalTemplate = FixtureExtensions.CreateExecutionGoalTemplate();
-            string targetGoalIdA = executionGoalTemplate.TargetGoals.Where(x => x.Name == "$.parameters.targetGoal1").FirstOrDefault().Id;
-            string targetGoalIdB = executionGoalTemplate.TargetGoals.Where(x => x.Name == "$.parameters.targetGoal2").FirstOrDefault().Id;
+            this.executionGoal.Parameters.Add("myParameter", "$.parameters.replaceme");
+            ExecutionGoalParameter value = this.executionGoal.GetParametersFromTemplate();
 
-            ExecutionGoalParameter expectedResult = new ExecutionGoalParameter(
-                "$.parameters.executionGoalId",
-                "ExperimentName",
-                executionGoalTemplate.TeamName,
-                executionGoalTemplate.Owner,
-                executionGoalTemplate.Enabled,
-                new List<TargetGoalParameter>()
-                {
-                    new TargetGoalParameter(targetGoalIdA, "WorkloadA", new Dictionary<string, IConvertible>() { ["targetGoal1"] = string.Empty }),
-                    new TargetGoalParameter(targetGoalIdB, "WorkloadA", new Dictionary<string, IConvertible>() { ["targetGoal2"] = string.Empty })
-                });
-
-            ExecutionGoalParameter actualResult = executionGoalTemplate.GetParametersFromTemplate();
-            Assert.AreEqual(expectedResult, actualResult);
+            Assert.IsTrue(value.SharedParameters.ContainsKey("replaceme"));
         }
 
         [Test]
-        public void GetParamtersFromTemplateReturnsEmptyListWhenNoParametersArePresent()
+        public void GetParametersFromTemplateDoesNotDuplicateParameters()
         {
-            GoalBasedSchedule template = FixtureExtensions.CreateExecutionGoalFromTemplate();
-            string targetGoalId = template.TargetGoals.Where(x => x.Name == "TargetGoal1").FirstOrDefault().Id;
+            string parameterReference = "$.parameters.replaceme";
+            this.executionGoal.Parameters.Add("myParameter", parameterReference);
+            this.actionTemplate.Parameters.Add("myActionParameter", parameterReference);
 
-            ExecutionGoalParameter expectedResult = new ExecutionGoalParameter(
-                "MockExecutionGoal.json",
-                "MockExperiment",
-                template.TeamName,
-                template.Owner,
-                template.Enabled,
-                new List<TargetGoalParameter>()
-                {
-                    new TargetGoalParameter(targetGoalId, "WorkloadA", new Dictionary<string, IConvertible>())
-                },
-                template.Parameters);
+            ExecutionGoalParameter value = this.executionGoal.GetParametersFromTemplate();
 
-            ExecutionGoalParameter actualResult = template.GetParametersFromTemplate();
-            Assert.AreEqual(expectedResult, actualResult);
+            Assert.IsTrue(value.SharedParameters.ContainsKey("replaceme"));
+            Assert.IsFalse(value.TargetGoals.Any(tg => tg.Parameters.ContainsKey("replaceme")));
+        }
+
+        [Test]
+        public void GetParameterFromTemplateRetrievesTargetGoalSpecificParameters()
+        {
+            string parameterReference = "$.parameters.replaceme";
+            this.actionTemplate.Parameters.Add("myActionParameter", parameterReference);
+
+            ExecutionGoalParameter value = this.executionGoal.GetParametersFromTemplate();
+
+            Assert.IsFalse(value.SharedParameters.ContainsKey("replaceme"));
+            Assert.IsTrue(value.TargetGoals.Any(tg => tg.Parameters.ContainsKey("replaceme")));
+        }
+
+        [Test]
+        public void GetParametersFromTemplateReturnsEmptyListWhenNoParametersArePresent()
+        {
+            ExecutionGoalParameter value = this.executionGoal.GetParametersFromTemplate();
+
+            Assert.IsEmpty(value.SharedParameters);
+            Assert.IsTrue(value.TargetGoals.All(tg => !tg.Parameters.Any()));
         }
 
         [Test]
         public void GetWorkLoadFromTargetGoalReturnsProperTargetGoal()
         {
-            Goal template = FixtureExtensions.CreateTargetGoal();
-            Assert.AreEqual("WorkloadA", template.GetWorkLoadFromTargetGoal());
+            TargetGoal template = FixtureExtensions.CreateTargetGoal();
+            string expectedWorkload = template.Actions.SelectMany(a => a.Parameters).First(p => p.Key.Equals("metadata.workload")).Value.ToString();
+            Assert.AreEqual(expectedWorkload, template.GetWorkload());
         }
 
         [Test]
@@ -380,16 +199,16 @@
                     ["Parameter3"] = true
                 });
 
-            Goal template = new Goal(workingGoal.Name, workingGoal.Preconditions, new List<ScheduleAction>() { scheduleAction });
+            TargetGoal template = new (workingGoal.Name, true, workingGoal.Preconditions, new List<ScheduleAction>() { scheduleAction });
 
-            Assert.Throws<SchemaException>(() => template.GetWorkLoadFromTargetGoal());
+            Assert.Throws<SchemaException>(() => template.GetWorkload());
         }
 
         [Test]
         public void ExecutionGoalCannotBeInlinedWithoutAllTargetGoalParametersSpecified()
         {
             GoalBasedSchedule executionGoalTemplate = GoalBasedScheduleExtensionsTests.GetExecutionGoalTemplateWithFiveWorkLoad();
-            Goal oneTargetGoal = new Goal(executionGoalTemplate.TargetGoals.FirstOrDefault());
+            TargetGoal oneTargetGoal = new (executionGoalTemplate.TargetGoals.FirstOrDefault());
             executionGoalTemplate.TargetGoals.Clear();
             executionGoalTemplate.TargetGoals.Add(oneTargetGoal);
             ExecutionGoalParameter executionGoalParameter = executionGoalTemplate.GetParametersFromTemplate();
@@ -404,41 +223,6 @@
             executionGoalParameter.TargetGoals.FirstOrDefault().Parameters.Clear();
 
             Assert.Throws<SchemaException>(() => executionGoalTemplate.Inlined(executionGoalParameter));
-        }
-
-        [Test]
-        public void ExecutionGoalSummaryCanGetSharedParametersFromTemplate()
-        {
-            GoalBasedSchedule template = FixtureExtensions.CreateExecutionGoalFromTemplate();
-            var parameters = new Dictionary<string, IConvertible>()
-            {
-                { "experiment.name", "$.parameters.experiment.name" },
-                { "metadata.intelCpuId", "$.parameters.intelCpuId" },
-                { "vmSku", "$.parameters.vmSku" },
-                { "metadata.generation", "$.parameters.generation" }
-            };
-
-            GoalBasedSchedule goalBasedSchedule =
-                new GoalBasedSchedule(
-                    template.ExperimentName,
-                    template.ExecutionGoalId,
-                    template.Name,
-                    template.TeamName,
-                    template.Description,
-                    template.ScheduleMetadata,
-                    true,
-                    template.Version,
-                    template.Experiment,
-                    template.TargetGoals,
-                    template.ControlGoals,
-                    parameters);
-
-            var actualValue = goalBasedSchedule.GetSharedParametersFromTemplate();
-            List<string> expectedValue = parameters.Values.Select(x => x.ToString().Replace("$.parameters.", string.Empty)).ToList<string>();
-            expectedValue.Sort();
-
-            Assert.IsNotNull(actualValue);
-            Assert.AreEqual(actualValue.Keys, expectedValue);
         }
 
         [Test]
@@ -461,7 +245,7 @@
         public void GetGoalReturnsExpectedGoalWhenIsTargetGoalWithoutTeamNameSuffix()
         {
             string goalName = Guid.NewGuid().ToString();
-            List<Goal> targetGoals = new List<Goal>() { FixtureExtensions.CreateTargetGoal(goalName) };
+            List<TargetGoal> targetGoals = new List<TargetGoal>() { FixtureExtensions.CreateTargetGoal(goalName) };
             GoalBasedSchedule executionGoal = FixtureExtensions.CreateExecutionGoalFromTemplate(targetGoals: targetGoals);
 
             Goal actualGoal = executionGoal.GetGoal(goalName);
@@ -474,8 +258,9 @@
         {
             string goalName = Guid.NewGuid().ToString();
             string teamName = Guid.NewGuid().ToString();
-            List<Goal> targetGoals = new List<Goal>() { FixtureExtensions.CreateTargetGoal(goalName) };
-            GoalBasedSchedule executionGoal = FixtureExtensions.CreateExecutionGoalFromTemplate(teamName: teamName, targetGoals: targetGoals);
+            List<TargetGoal> targetGoals = new List<TargetGoal>() { FixtureExtensions.CreateTargetGoal(goalName) };
+            Dictionary<string, IConvertible> metadata = new Dictionary<string, IConvertible>() { { ExecutionGoalMetadata.TeamName, teamName } };
+            GoalBasedSchedule executionGoal = FixtureExtensions.CreateExecutionGoalFromTemplate(metadata: metadata, targetGoals: targetGoals);
 
             Goal actualGoal = executionGoal.GetGoal($"{goalName}-{teamName}");
             Assert.IsNotNull(actualGoal);
@@ -527,28 +312,22 @@
                 new Precondition("TimerTriggerProvider", new Dictionary<string, IConvertible>() { { "targetExperimentInstances", "$.parameters.targetInstances" } })
             };
 
-            List<Goal> targetGoals = new List<Goal>()
+            List<TargetGoal> targetGoals = new List<TargetGoal>()
             {
-                new Goal("$.parameters.targetGoalName", preconditions, scheduleActions, "1"),
-                new Goal("$.parameters.targetGoalName", preconditions, scheduleActions, "2"),
-                new Goal("$.parameters.targetGoalName", preconditions, scheduleActions, "3"),
-                new Goal("$.parameters.targetGoalName", preconditions, scheduleActions, "4"),
-                new Goal("$.parameters.targetGoalName", preconditions, scheduleActions, "5")
+                new ("$.parameters.targetGoalName", true, preconditions, scheduleActions, "1"),
+                new ("$.parameters.targetGoalName", true, preconditions, scheduleActions, "2"),
+                new ("$.parameters.targetGoalName", true, preconditions, scheduleActions, "3"),
+                new ("$.parameters.targetGoalName", true, preconditions, scheduleActions, "4"),
+                new ("$.parameters.targetGoalName", true, preconditions, scheduleActions, "5"),
             };
 
             return new GoalBasedSchedule(
                 template.ExperimentName,
-                template.ExecutionGoalId,
-                template.Name,
-                template.TeamName,
                 template.Description,
-                template.ScheduleMetadata,
-                template.Enabled,
-                template.Version,
                 template.Experiment,
                 targetGoals,
                 template.ControlGoals,
-                null);
+                template.Metadata);
         }
     }
 }

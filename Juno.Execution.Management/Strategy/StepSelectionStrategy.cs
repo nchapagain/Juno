@@ -20,6 +20,7 @@
                 new EvaluateConditionalFlowOnFailure(),
                 new RunDiagnosticsOnFailure(),
                 new RunCertificationOnFailure(),
+                new OverrideDefaultStrategy(),
 
                 // Important:
                 // Cleanup steps are added in this strategy. If it is undesirable for cleanup to

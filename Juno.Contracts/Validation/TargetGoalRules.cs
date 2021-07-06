@@ -34,23 +34,17 @@
             bool isValid = true;
 
             HashSet<string> workloads = new HashSet<string>();
-            foreach (Goal targetGoal in executionGoal.TargetGoals)
+            foreach (TargetGoal targetGoal in executionGoal.TargetGoals)
             {
-                // Keeping this filter so that we can support older version.
-                if (GoalBasedScheduleExtensions.IsExecutionGoalVersion20200727(executionGoal.Version))
-                {
-                    return new ValidationResult(isValid, validationErrors);
-                }
-
                 if (targetGoal.Preconditions.Count < 2)
                 {
-                    validationErrors.Add($"Target Goal: {targetGoal.Name} must contain a Precondition of type {ContractExtension.TimerTriggerType} and {ContractExtension.SuccessfulExperimentsProvider} for Execution Goal: {executionGoal.Name}");
+                    validationErrors.Add($"Target Goal: {targetGoal.Name} must contain a Precondition of type {ContractExtension.TimerTriggerType} and {ContractExtension.SuccessfulExperimentsProvider}");
                     isValid = false;
                 }
 
                 try
                 {
-                    string workload = targetGoal.GetWorkLoadFromTargetGoal();
+                    string workload = targetGoal.GetWorkload();
                     if (workloads.Contains(workload))
                     {
                         isValid = false;

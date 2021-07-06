@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.IO.Abstractions;
     using System.Linq;
@@ -19,6 +20,7 @@
     using Microsoft.Azure.CRC.Telemetry.Logging;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
+    using Common = Microsoft.Azure.CRC;
 
     /// <summary>
     /// Provider that starts VirtualClient on the host and monitors its lifetime.
@@ -33,6 +35,7 @@
         private const string HostWorkloadsPattern = "HostWorkloads.TipNode_*";
         private const string VirtualClientFileName = "VirtualClient.exe";
         private static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(20);
+        private static readonly TimeSpan ReevaluationExtension = TimeSpan.FromMinutes(5);
         private IFileSystem fileSystem;        
 
         /// <summary>
@@ -67,7 +70,7 @@
             component.ThrowIfNull(nameof(component));
             telemetryContext.ThrowIfNull(nameof(telemetryContext));
 
-            ExecutionResult result = new ExecutionResult(ExecutionStatus.InProgressContinue);
+            ExecutionResult result = new ExecutionResult(ExecutionStatus.InProgressContinue, extensionTimeout: HostWorkloadProvider.ReevaluationExtension);
 
             if (!cancellationToken.IsCancellationRequested)
             { 
@@ -205,18 +208,26 @@
 
         private static IDictionary<string, string> CreateMetadata(ExperimentContext context, AgentIdentification agentId)
         {
-            return new Dictionary<string, string>
+            IDictionary<string, string> metadata = new Dictionary<string, string>
             {
-                { Metadata.AgentId, agentId.ToString() },
-                { Metadata.TipSessionId, agentId.Context },
-                { Metadata.NodeId, agentId.NodeName },
-                { Metadata.NodeName, agentId.NodeName },
-                { Metadata.ExperimentId, context.Experiment.Id },
-                { Metadata.ExperimentStepId, context.ExperimentStep.Id },
-                { Metadata.ExperimentGroup, context.ExperimentStep.ExperimentGroup },
-                { Metadata.GroupId, context.ExperimentStep.ExperimentGroup },
-                { Metadata.ClusterName, agentId.ClusterName }
+                { MetadataProperty.AgentId, agentId.ToString() },
+                { MetadataProperty.AgentType, !string.IsNullOrWhiteSpace(agentId.VirtualMachineName) ? AgentType.GuestAgent.ToString() : AgentType.HostAgent.ToString() },
+                { MetadataProperty.TipSessionId, agentId.Context },
+                { MetadataProperty.NodeId, agentId.NodeName },
+                { MetadataProperty.NodeName, agentId.NodeName },
+                { MetadataProperty.ExperimentId, context.Experiment.Id },
+                { MetadataProperty.ExperimentStepId, context.ExperimentStep.Id },
+                { MetadataProperty.ExperimentGroup, context.ExperimentStep.ExperimentGroup },
+                { MetadataProperty.GroupId, context.ExperimentStep.ExperimentGroup },
+                { MetadataProperty.ClusterName, agentId.ClusterName }
             };
+
+            if (context.Experiment.Definition.Metadata?.Any() == true)
+            {
+                context.Experiment.Definition.Metadata.ToList().ForEach(kvPair => metadata[kvPair.Key] = kvPair.Value?.ToString());
+            }
+
+            return metadata;
         }
 
         private static int GenerateSeedFromExperimentId(string experimentId)
@@ -252,6 +263,7 @@
             });
         }
 
+        [SuppressMessage("Readability", "AZCA1006:PrefixStaticCallsWithClassName Rule", Justification = "Code analysis is mistaken here.")]
         private async Task<IProcessManager> CreateProcessAsync(ExperimentContext context, ExperimentComponent component, CancellationToken cancellationToken)
         {
             AgentIdentification agentId = this.Services.GetService<AgentIdentification>();
@@ -289,7 +301,7 @@
             this.Logger.LogTelemetry($"{nameof(HostWorkloadProvider)}.CommandPath", LogLevel.Information, EventContext.Persisted()
                 .AddContext("experimentId", context.ExperimentId)
                 .AddContext("commandFullPath", commandFullPath)
-                .AddContext("commandArguments", commandArguments));
+                .AddContext("commandArguments", Common.SensitiveData.ObscureSecrets(commandArguments)));
 
             return this.CreateBreakoutProcessManager(commandFullPath, commandArguments);
         }

@@ -78,7 +78,7 @@
                 response.ThrowOnError<ExperimentException>();
 
                 IEnumerable<Item<GoalBasedSchedule>> executionGoal = response.Content.ReadAsJsonAsync<IEnumerable<Item<GoalBasedSchedule>>>().GetAwaiter().GetResult();
-                returnValue = executionGoal.Select(i => new { i.Id, i.Definition.TeamName, ExperimentName = i.Definition.ExperimentName }).ToList();
+                returnValue = executionGoal.Select(i => new { i.Id, i.Definition.TeamName }).ToList();
             }
 
             // A specific Template Id and Team Name is provided 
@@ -92,7 +92,7 @@
                     response.ThrowOnError<ExperimentException>();
 
                     Item<GoalBasedSchedule> executionGoal = response.Content.ReadAsJsonAsync<Item<GoalBasedSchedule>>().GetAwaiter().GetResult();
-                    returnValue = new { Id = executionGoal.Id, TeamName = executionGoal.Definition.TeamName, ExperimentName = executionGoal.Definition.ExperimentName };
+                    returnValue = new { Id = executionGoal.Id, TeamName = executionGoal.Definition.TeamName };
                 }
 
                 // Full View is expected for the given templateId and Team Name
@@ -103,7 +103,8 @@
                     response.ThrowOnError<ExperimentException>();
 
                     Item<GoalBasedSchedule> executionGoal = response.Content.ReadAsJsonAsync<Item<GoalBasedSchedule>>().GetAwaiter().GetResult();
-                    returnValue = response.Content.ReadAsJsonAsync<Item<GoalBasedSchedule>>().GetAwaiter().GetResult();
+                    this.RemoveServerSideDataTags(executionGoal);
+                    returnValue = executionGoal;
                 }
             }
 

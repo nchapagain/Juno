@@ -20,6 +20,7 @@
         internal static readonly TimeSpan HwSkuTtl = TimeSpan.FromDays(1);
         internal static readonly TimeSpan MicrocodeTtl = TimeSpan.FromDays(1);
         internal static readonly TimeSpan CRPCheckTtl = TimeSpan.FromDays(1);
+        internal static readonly TimeSpan ZeroSuccessfulExecutionsOnNodeTtl = TimeSpan.FromHours(1);
         internal static readonly TimeSpan ZeroExecutionClusterSelectionTtl = TimeSpan.FromHours(1);
     }
 }

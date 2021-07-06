@@ -32,6 +32,7 @@
         /// <param name="clusterId">Cluster id</param>
         /// <param name="dataDisk">Data disks</param>
         /// <param name="enableAcceleratedNetworking">Should the VM use accelerated networking</param>
+        /// <param name="privateIPAddress">Private IP address of the VM.</param>
         public VmTemplateParameters(
             ParameterValue<string> location,
             ParameterValue<string> osDiskStorageAccountType,
@@ -41,6 +42,7 @@
             ParameterValue<string> subnetName,
             ParameterValue<string> networkSecurityGroupName,
             ParameterValue<string> virtualNetworkName,
+            ParameterValue<string> privateIPAddress,
             ParameterValue<string> adminUsername,
             KeyVaultSecretReference adminCredentialSecret,
             ParameterValue<string> tipSessionid = null,
@@ -57,6 +59,7 @@
             this.VirtualMachineName = virtualMachineName;
             this.NetworkSecurityGroupName = networkSecurityGroupName;
             this.VirtualNetworkName = virtualNetworkName;
+            this.PrivateIPAddress = privateIPAddress;
             this.AdminUserName = adminUsername;
 
             this.AdminCredentialSecretReference = adminCredentialSecret;
@@ -144,6 +147,11 @@
         /// Specifies if the VM should use accelerated networking
         /// </summary>
         public ParameterValue<bool> EnableAcceleratedNetworking { get; private set; }
+
+        /// <summary>
+        /// Private IP address of the network interface.
+        /// </summary>
+        public ParameterValue<string> PrivateIPAddress { get; private set; }
     }
 
     /// <summary>

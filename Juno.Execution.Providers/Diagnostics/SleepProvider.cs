@@ -23,6 +23,8 @@
     [ProviderInfo(Name = "Wait for a period of time", Description = "Waits/sleeps for a period of time before allowing the experiment workflow/steps to continue", FullDescription = "Step to wait/sleep for a period of time before allowing the experiment workflow/steps to continue. The following 'parameters' will be used creating experiment step: duration, option.")]
     public class SleepProvider : ExperimentProvider
     {
+        private static readonly TimeSpan ReevaluationExtension = TimeSpan.FromMinutes(1);
+
         /// <summary>
         /// Initializes a new instance of the <see cref="SleepProvider"/> class.
         /// </summary>
@@ -46,7 +48,7 @@
             component.ThrowIfNull(nameof(component));
             telemetryContext.ThrowIfNull(nameof(telemetryContext));
 
-            ExecutionResult result = new ExecutionResult(ExecutionStatus.InProgress);
+            ExecutionResult result = new ExecutionResult(ExecutionStatus.InProgress, extensionTimeout: SleepProvider.ReevaluationExtension);
 
             if (!cancellationToken.IsCancellationRequested)
             {

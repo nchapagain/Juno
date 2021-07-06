@@ -96,6 +96,11 @@
         public List<string> SupportedVmSkus { get; set; } = new List<string>();
 
         /// <summary>
+        /// Tag of the tip session on entity.
+        /// </summary>
+        public string NodeTag { get; set; }
+
+        /// <summary>
         /// The preferred VM SKU from the list of supported VM SKUs. This allows providers
         /// to apply different requirements (e.g. same VM SKU across the board) to the creation
         /// of VMs.
@@ -174,7 +179,8 @@
                 DeletedTimeUtc = DateTime.Parse(sessionEntity.Metadata.GetValue<string>(nameof(TipSession.DeletedTimeUtc))),
                 PreferredVmSku = sessionEntity.Metadata.GetValue<string>(nameof(TipSession.PreferredVmSku), string.Empty),
                 SupportedVmSkus = sessionEntity.Metadata.GetValue<string>(nameof(TipSession.SupportedVmSkus), string.Empty)
-                    .Split(new char[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries).ToList()
+                    .Split(new char[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries).ToList(),
+                NodeTag = sessionEntity.Metadata.GetValue<string>(nameof(TipSession.NodeTag), string.Empty)
             };
 
             return session;
@@ -199,6 +205,7 @@
             metadata.Add(nameof(TipSession.GroupName), this.GroupName);
             metadata.Add(nameof(TipSession.PreferredVmSku), this.PreferredVmSku);
             metadata.Add(nameof(TipSession.SupportedVmSkus), this.SupportedVmSkus != null ? string.Join(";", this.SupportedVmSkus) : string.Empty);
+            metadata.Add(nameof(TipSession.NodeTag), this.NodeTag);
 
             return metadata;
         }

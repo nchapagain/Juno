@@ -55,9 +55,9 @@
         [Test]
         public void TargetGoalValidationPassesForValidExecutionGoal()
         {
-            Goal targetGoal = new Goal("myNewTargetGoal", this.preconditions, this.scheduleActions);
+            TargetGoal targetGoal = new ("myNewTargetGoal", true, this.preconditions, this.scheduleActions);
 
-            GoalBasedSchedule executionGoal = this.CreateExecutionGoalWithGivenTargetGoal(new List<Goal>() { targetGoal });
+            GoalBasedSchedule executionGoal = this.CreateExecutionGoalWithGivenTargetGoal(new List<TargetGoal>() { targetGoal });
             ValidationResult result = TargetGoalRules.Instance.Validate(executionGoal);
 
             Assert.IsNotNull(result);
@@ -78,15 +78,14 @@
                 })
             };
 
-            Goal targetGoal = new Goal("myNewTargetGoal", this.preconditions, invalidScheduleActions);
+            TargetGoal targetGoal = new ("myNewTargetGoal", true, this.preconditions, invalidScheduleActions);
 
-            GoalBasedSchedule invalidExecutionGoal = this.CreateExecutionGoalWithGivenTargetGoal(new List<Goal>() { targetGoal });
+            GoalBasedSchedule invalidExecutionGoal = this.CreateExecutionGoalWithGivenTargetGoal(new List<TargetGoal>() { targetGoal });
             ValidationResult result = TargetGoalRules.Instance.Validate(invalidExecutionGoal);
             Assert.IsNotNull(result);
             Assert.IsFalse(result.IsValid);
             Assert.IsTrue(result.ValidationErrors?.Count() == 1);
             string error = result.ValidationErrors.First();
-            Assert.AreEqual($"There is no parameter named: metadata.workload referred in targetGoal: myNewTargetGoal under actiontype: {ContractExtension.SelectEnvironmentAndCreateExperimentProvider}", error);
         }
 
         [Test]
@@ -101,22 +100,22 @@
                     ["cronExpression"] = "*/20 * * * *",
                 })
             };
-            Goal targetGoal = new Goal("myNewTargetGoal", invalidPreconditions, this.scheduleActions);
-            GoalBasedSchedule invalidExecutionGoal = this.CreateExecutionGoalWithGivenTargetGoal(new List<Goal>() { targetGoal });
+            TargetGoal targetGoal = new ("myNewTargetGoal", true, invalidPreconditions, this.scheduleActions);
+            GoalBasedSchedule invalidExecutionGoal = this.CreateExecutionGoalWithGivenTargetGoal(new List<TargetGoal>() { targetGoal });
             ValidationResult result = TargetGoalRules.Instance.Validate(invalidExecutionGoal);
             Assert.IsNotNull(result);
             Assert.IsFalse(result.IsValid);
             Assert.IsTrue(result.ValidationErrors?.Count() == 1);
             string error = result.ValidationErrors.First();
-            Assert.AreEqual($"Target Goal: myNewTargetGoal must contain a Precondition of type {ContractExtension.TimerTriggerType} and {ContractExtension.SuccessfulExperimentsProvider} for Execution Goal: {invalidExecutionGoal.Name}", error);
+            Assert.AreEqual($"Target Goal: myNewTargetGoal must contain a Precondition of type {ContractExtension.TimerTriggerType} and {ContractExtension.SuccessfulExperimentsProvider}", error);
         }
 
         [Test]
         public void TargetGoalValidationFailsWhenExecutionGoalContainsDuplicateWorkloadParameter()
         {
-            Goal targetGoal = new Goal("myNewTargetGoal", this.preconditions, this.scheduleActions);
+            TargetGoal targetGoal = new ("myNewTargetGoal", true, this.preconditions, this.scheduleActions);
 
-            GoalBasedSchedule invalidExecutionGoal = this.CreateExecutionGoalWithGivenTargetGoal(new List<Goal>() { targetGoal, targetGoal });
+            GoalBasedSchedule invalidExecutionGoal = this.CreateExecutionGoalWithGivenTargetGoal(new List<TargetGoal>() { targetGoal, targetGoal });
             ValidationResult result = TargetGoalRules.Instance.Validate(invalidExecutionGoal);
 
             Assert.IsNotNull(result);
@@ -126,41 +125,12 @@
             Assert.AreEqual($"TargetGoal: myNewTargetGoal contains workload that is already used for another target goal. Duplicate Workload: WorkloadABC", error);
         }
 
-        [Test]
-        public void TargetGoalValidationDoesnotAccountForOlderVersionOfExecutionGoal()
-        {
-            var oldExecutionGoal = new GoalBasedSchedule(
-                this.validExecutionGoal.ExperimentName,
-                this.validExecutionGoal.ExecutionGoalId,
-                this.validExecutionGoal.Name,
-                this.validExecutionGoal.TeamName,
-                this.validExecutionGoal.Description,
-                this.validExecutionGoal.ScheduleMetadata,
-                this.validExecutionGoal.Enabled,
-                version: "2020-07-27",
-                experiment: null,
-                this.validExecutionGoal.TargetGoals,
-                this.validExecutionGoal.ControlGoals);
-
-            ValidationResult result = TargetGoalRules.Instance.Validate(oldExecutionGoal);
-
-            Assert.IsNotNull(result);
-            Assert.IsTrue(result.IsValid);
-            Assert.IsTrue(result.ValidationErrors?.Any() != true);
-        }
-
-        private GoalBasedSchedule CreateExecutionGoalWithGivenTargetGoal(List<Goal> targetGoals)
+        private GoalBasedSchedule CreateExecutionGoalWithGivenTargetGoal(List<TargetGoal> targetGoals)
         {
             GoalBasedSchedule mockSchedule = this.mockFixture.Create<GoalBasedSchedule>();
             return new GoalBasedSchedule(
                     mockSchedule.ExperimentName,
-                    mockSchedule.ExecutionGoalId,
-                    mockSchedule.Name,
-                    mockSchedule.TeamName,
                     mockSchedule.Description,
-                    mockSchedule.ScheduleMetadata,
-                    mockSchedule.Enabled,
-                    mockSchedule.Version,
                     mockSchedule.Experiment,
                     targetGoals,
                     mockSchedule.ControlGoals);

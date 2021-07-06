@@ -41,8 +41,12 @@
         /// <param name="dataDiskSizeInGB">Data disk size in GB</param>
         /// <param name="dataDiskStorageAccountType">Data disk storage account type</param>
         /// <param name="enableAcceleratedNetworking">should the VM use accelerated networking?</param>
+        /// <param name="nodeId">Node Id.</param>
+        /// <param name="tipSessionId">Tip session id the vm is on.</param>
+        /// <param name="clusterId">ClusterId the VM is on.</param>
         /// <param name="sigImageReference">Image reference for shared image gallery</param>
         /// <param name="dataDiskSku">Data disk sku</param>
+        /// <param name="role">Role of the VM.</param>
         [JsonConstructor]
         public AzureVmSpecification(
             string osDiskStorageAccountType,
@@ -56,7 +60,11 @@
             int? dataDiskSizeInGB = null,
             string dataDiskStorageAccountType = null,
             bool enableAcceleratedNetworking = false,
-            string sigImageReference = null)
+            string nodeId = null,
+            string tipSessionId = null,
+            string clusterId = null,
+            string sigImageReference = null,
+            string role = null)
         {
             this.OsDiskStorageAccountType = osDiskStorageAccountType;
             this.VmSize = vmSize;
@@ -83,6 +91,11 @@
             this.DataDiskSku = dataDiskSku;
             this.DataDiskStorageAccountType = dataDiskStorageAccountType;
             this.EnableAcceleratedNetworking = enableAcceleratedNetworking;
+
+            this.NodeId = nodeId;
+            this.ClusterId = clusterId;
+            this.TipSessionId = tipSessionId;
+            this.Role = role;
         }
 
         /// <summary>
@@ -150,6 +163,30 @@
         /// </summary>
         [JsonProperty(Required = Required.Default)]
         public bool EnableAcceleratedNetworking { get; }
+
+        /// <summary>
+        /// Cluster id assciated with VM, if applicable.
+        /// </summary>
+        [JsonProperty(Required = Required.Default)]
+        public string ClusterId { get; }
+
+        /// <summary>
+        /// Tip Session id assciated with VM, if applicable.
+        /// </summary>
+        [JsonProperty(Required = Required.Default)]
+        public string TipSessionId { get; set; }
+
+        /// <summary>
+        /// Node id assciated with VM, if applicable.
+        /// </summary>
+        [JsonProperty(Required = Required.Default)]
+        public string NodeId { get; set; }
+
+        /// <summary>
+        /// Role of the VM.
+        /// </summary>
+        [JsonProperty(Required = Required.Default)]
+        public string Role { get; set; }
 
         /// <summary>
         ///  Get or set data storage account type 

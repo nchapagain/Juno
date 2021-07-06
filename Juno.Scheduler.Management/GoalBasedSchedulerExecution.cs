@@ -129,18 +129,15 @@ namespace Juno.Scheduler.Management
 
         private async Task ExecuteScheduleAsync(TargetGoalTrigger targetGoal, CancellationToken token)
         {
-            GoalBasedSchedule executionGoal = await this.GetExecutionGoalAsync(targetGoal, token).ConfigureDefaults();
+            Item<GoalBasedSchedule> executionGoal = await this.GetExecutionGoalAsync(targetGoal, token).ConfigureDefaults();
             ScheduleContext scheduleContext = new ScheduleContext(executionGoal, targetGoal, this.Configuration);
-            await this.ExecutionGoalHandler.ExecuteExecutionGoalAsync(executionGoal, scheduleContext, token).ConfigureDefaults();
+            await this.ExecutionGoalHandler.ExecuteExecutionGoalAsync(executionGoal.Definition, scheduleContext, token).ConfigureDefaults();
         }
 
-        private async Task<GoalBasedSchedule> GetExecutionGoalAsync(TargetGoalTrigger targetGoal, CancellationToken token)
+        private Task<Item<GoalBasedSchedule>> GetExecutionGoalAsync(TargetGoalTrigger targetGoal, CancellationToken token)
         {
             IScheduleDataManager dataManager = this.Services.GetService<IScheduleDataManager>();
-            Item<GoalBasedSchedule> executionGoalItem = await dataManager.GetExecutionGoalAsync(targetGoal.ExecutionGoal, targetGoal.TeamName, token)
-                .ConfigureDefaults();
-
-            return executionGoalItem.Definition;
+            return dataManager.GetExecutionGoalAsync(targetGoal.ExecutionGoal, targetGoal.TeamName, token);
         }
 
         /// <summary>

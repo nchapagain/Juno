@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Text;
+    using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Azure.CRC.Extensions;
     using Microsoft.Extensions.Configuration;
 
@@ -18,7 +19,7 @@
         /// <param name="executionGoal">A instance of an execution ogal.</param>
         /// <param name="targetGoal">An instance of a target goal.</param>
         /// <param name="configuration">Configuration for the current runtime environment.</param>
-        public ScheduleContext(GoalBasedSchedule executionGoal, TargetGoalTrigger targetGoal, IConfiguration configuration)
+        public ScheduleContext(Item<GoalBasedSchedule> executionGoal, TargetGoalTrigger targetGoal, IConfiguration configuration)
         {
             executionGoal.ThrowIfNull(nameof(executionGoal));
             targetGoal.ThrowIfNull(nameof(targetGoal));
@@ -33,7 +34,7 @@
         /// <summary>
         /// Current Execution Goal
         /// </summary>
-        public GoalBasedSchedule ExecutionGoal { get; }
+        public Item<GoalBasedSchedule> ExecutionGoal { get; }
 
         /// <summary>
         /// Current Target Goal

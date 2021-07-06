@@ -25,18 +25,13 @@
         /// TimerTrigger Preconditon.
         /// </summary>
         /// <param name="executionGoal">Execution Goal to validate.</param>
-        /// <returns><see cref="ValidationResult"/></returns>
+        /// <returns>A validation result that offers if the contract is valid and the reson why not if so.</returns>
         public ValidationResult Validate(GoalBasedSchedule executionGoal)
         {
             executionGoal.ThrowIfNull(nameof(executionGoal));
 
             List<string> validationErrors = new List<string>();
             bool isValid = true;
-
-            if (GoalBasedScheduleExtensions.IsExecutionGoalVersion20200727(executionGoal.Version))
-            {
-                return new ValidationResult(isValid, validationErrors);
-            }
 
             foreach (Goal targetGoal in executionGoal.TargetGoals)
             {

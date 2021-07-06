@@ -5,6 +5,7 @@
     using System.Net.Http;
     using Juno.Api.Client;
     using Juno.Contracts;
+    using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Azure.CRC.Extensions;
     using Microsoft.Azure.CRC.Rest;
     using Newtonsoft.Json;
@@ -52,24 +53,13 @@
         public string TeamName { get; set; }
 
         /// <summary>
-        /// Pulls out the parameters from an execution goal summary object.
+        /// Pulls out the parameters from an execution goal schedule object.
         /// </summary>
-        protected virtual dynamic GetParametersFromSummary(ExecutionGoalSummary executionGoalSummary, bool isTest = false)
+        protected virtual dynamic GetParametersFromGoalBasedSchedule(Item<GoalBasedSchedule> goalBasedScheduleItem)
         {
-            executionGoalSummary.ThrowIfNull(nameof(executionGoalSummary));
+            goalBasedScheduleItem.ThrowIfNull(nameof(goalBasedScheduleItem));
 
-            JArray targetGoals = JArray.Parse(JsonConvert.SerializeObject(executionGoalSummary.ParameterNames.TargetGoals));
-            foreach (var item in targetGoals.Children())
-            {
-                var itemProperties = item.Children<JProperty>();
-                item["parameters"]["targetGoalName"] = isTest ? null : string.Concat(item["workload"], "_", Guid.NewGuid());
-            }
-
-            JObject sharedParameters = JObject.Parse(JsonConvert.SerializeObject(executionGoalSummary.ParameterNames.SharedParameters));
-
-            dynamic parameters = new JObject();
-            parameters.SharedParameters = sharedParameters;
-            parameters.TargetGoals = targetGoals;
+            ExecutionGoalParameter parameters = GoalBasedScheduleExtensions.GetParametersFromTemplate(goalBasedScheduleItem.Definition);
 
             return parameters;
         }
@@ -96,10 +86,10 @@
             base.ProcessRecord();
             this.ValidateParameters();
 
-            HttpResponseMessage response = this.GetExecutionGoalTemplateListAsync(this.TeamName, this.TemplateId).GetAwaiter().GetResult();
+            HttpResponseMessage response = this.GetExecutionGoalTemplateListAsync(this.TeamName, this.TemplateId, View.Full).GetAwaiter().GetResult();
             response.ThrowOnError<ExperimentException>();
 
-            var responseContent = this.GetParametersFromSummary(response.Content.ReadAsJsonAsync<ExecutionGoalSummary>().GetAwaiter().GetResult());
+            var responseContent = this.GetParametersFromGoalBasedSchedule(response.Content.ReadAsJsonAsync<Item<GoalBasedSchedule>>().GetAwaiter().GetResult());
 
             this.WriteResultsAsJson(responseContent);
         }

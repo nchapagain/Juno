@@ -1,7 +1,6 @@
 ﻿namespace Juno.Contracts
 {
     using System;
-    using System.Collections.Generic;
     using System.Text;
     using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Azure.CRC.Extensions;
@@ -22,34 +21,31 @@
         public TargetGoalTrigger(
             string id,
             string executionGoal,
-            string targetGoal,
+            string name,
             string cronExpression,
             bool enabled,
-            string experimentName,
-            string teamName,
             string version,
+            string teamName,
             DateTime created,
             DateTime lastModified)
             : base(id, created, lastModified)
         {
             executionGoal.ThrowIfNullOrWhiteSpace(nameof(executionGoal));
-            targetGoal.ThrowIfNullOrWhiteSpace(nameof(targetGoal));
+            name.ThrowIfNullOrWhiteSpace(nameof(name));
             cronExpression.ThrowIfNullOrWhiteSpace(nameof(cronExpression));
-            experimentName.ThrowIfNullOrWhiteSpace(nameof(experimentName));
-            teamName.ThrowIfNullOrWhiteSpace(nameof(teamName));
             version.ThrowIfNullOrWhiteSpace(nameof(version));
+            teamName.ThrowIfNullOrWhiteSpace(nameof(teamName));
 
             this.ExecutionGoal = executionGoal;
-            this.TargetGoal = targetGoal;
+            this.Name = name;
             this.CronExpression = cronExpression;
             this.Enabled = enabled;
-            this.ExperimentName = experimentName;
-            this.TeamName = teamName;
             this.Version = version;
+            this.TeamName = teamName;
         }
 
         /// <summary>
-        /// Name of Execution Goal the target goal resides in
+        /// Id of Execution Goal the target goal resides in
         /// </summary>
         [JsonProperty("executionGoal", Required = Required.Always)]
         public string ExecutionGoal { get; }
@@ -57,8 +53,8 @@
         /// <summary>
         /// Name of Target Goal
         /// </summary>
-        [JsonProperty("targetGoal", Required = Required.Always)]
-        public string TargetGoal { get; }
+        [JsonProperty("name", Required = Required.Always)]
+        public string Name { get; }
         
         /// <summary>
         /// How often the Target Goal should be executed
@@ -73,22 +69,16 @@
         public bool Enabled { get; set; }
 
         /// <summary>
-        /// Name of Overall Experiment that the Execution Goal resides in
-        /// </summary>
-        [JsonProperty("experimentName", Required = Required.Always)]
-        public string ExperimentName { get; }
-
-        /// <summary>
-        /// Team name that authored the Target Goal
-        /// </summary>
-        [JsonProperty("teamName", Required = Required.Always)]
-        public string TeamName { get; }
-
-        /// <summary>
         /// Version of the Execution Goal
         /// </summary>
         [JsonProperty("version", Required = Required.Always)]
         public string Version { get; }
+
+        /// <summary>
+        /// Identifies the team that owns the target goal.
+        /// </summary>
+        [JsonProperty("teamName", Required = Required.Always)]
+        public string TeamName { get; }
 
         /// <inheritdoc/>
         public override int GetHashCode()
@@ -96,7 +86,7 @@
             if (this.hashCode == null)
             {
                 this.hashCode = new StringBuilder(base.GetHashCode().ToString())
-                    .AppendProperties(this.ExperimentName, this.ExecutionGoal, this.TargetGoal)
+                    .AppendProperties(this.TeamName, this.ExecutionGoal, this.Name)
                     .ToString().GetHashCode(StringComparison.OrdinalIgnoreCase);
             }
 

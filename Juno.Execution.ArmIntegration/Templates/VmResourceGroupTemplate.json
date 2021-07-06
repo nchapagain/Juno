@@ -35,13 +35,13 @@
   },
   "variables": {
     "addressPrefixes": [
-      "10.0.3.0/24"
+      "10.0.0.0/23"
     ],
     "subnets": [
       {
         "name": "[parameters('subnetName')]",
         "properties": {
-          "addressPrefix": "10.0.3.0/24",
+          "addressPrefix": "10.0.0.0/23",
           "networkSecurityGroup": {
             "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroupName'))]"
           }

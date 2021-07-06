@@ -1933,7 +1933,7 @@
           "lib/netstandard1.3/System.Xml.XPath.XDocument.dll": {}
         }
       },
-      "Microsoft.Azure.CRC.Common/1.2.0": {
+      "Microsoft.Azure.CRC.Common/1.3.0": {
         "type": "project",
         "framework": ".NETStandard,Version=v2.1",
         "dependencies": {
@@ -1952,7 +1952,7 @@
         "type": "project",
         "framework": ".NETStandard,Version=v2.1",
         "dependencies": {
-          "Microsoft.Azure.CRC.Common": "1.2.0",
+          "Microsoft.Azure.CRC.Common": "1.3.0",
           "Microsoft.Extensions.Logging": "5.0.0",
           "Newtonsoft.Json": "12.0.3",
           "System.Text.Encodings.Web": "5.0.1"
@@ -6829,7 +6829,7 @@
         "system.xml.xpath.xdocument.nuspec"
       ]
     },
-    "Microsoft.Azure.CRC.Common/1.2.0": {
+    "Microsoft.Azure.CRC.Common/1.3.0": {
       "type": "project",
       "path": "../../Microsoft.Azure.CRC/Microsoft.Azure.CRC.Common/Microsoft.Azure.CRC.Common.csproj",
       "msbuildProject": "../../Microsoft.Azure.CRC/Microsoft.Azure.CRC.Common/Microsoft.Azure.CRC.Common.csproj"
@@ -6844,7 +6844,7 @@
     ".NETStandard,Version=v2.1": [
       "AsyncFixer >= 1.1.6",
       "Microsoft.Azure.CRC.CodeAnalysis >= 1.3.0",
-      "Microsoft.Azure.CRC.Common >= 1.2.0",
+      "Microsoft.Azure.CRC.Common >= 1.3.0",
       "Microsoft.Azure.CRC.Contracts >= 0.0.1",
       "Microsoft.CodeAnalysis.Analyzers >= 2.9.5",
       "Microsoft.CodeAnalysis.CSharp.Workspaces >= 2.10.0",
@@ -6993,7 +6993,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\5.0.200\\RuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\5.0.300\\RuntimeIdentifierGraph.json"
       }
     }
   }

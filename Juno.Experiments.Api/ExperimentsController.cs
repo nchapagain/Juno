@@ -43,7 +43,7 @@
     ///
     /// Kestrel Web Server (Self-Hosting)
     /// https://docs.microsoft.com/en-us/aspnet/core/fundamentals/servers/kestrel?view=aspnetcore-2.1
-    /// 
+    ///
     /// Async/Await/ConfigureAwait Overview
     /// https://www.skylinetechnologies.com/Blog/Skyline-Blog/December_2018/async-await-configureawait
     /// </remarks>
@@ -56,6 +56,7 @@
         /// The name of the API.
         /// </summary>
         public const string ApiName = "ExperimentApi";
+
         private const string V1 = "v1";
 
         /// <summary>
@@ -97,7 +98,7 @@
         /// <param name="cancel">True to cancel the experiment.</param>
         /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
         /// <response code="204">No Content. The experiment instance was deleted successfully.</response>
-        /// <response code="500">Internal Server Error. An unexpected error occurred on the server.</response> 
+        /// <response code="500">Internal Server Error. An unexpected error occurred on the server.</response>
         [HttpPut("{experimentId}")]
         [Description("Cancels an existing experiment in the system.")]
         [ApiExplorerSettings(GroupName = ExperimentsController.V1)]
@@ -135,7 +136,6 @@
                 }
 
                 return this.NoContent();
-
             }).ConfigureDefaults();
         }
 
@@ -148,7 +148,7 @@
         /// <param name="validate">True to have the experiment validated but not submitted.</param>
         /// <response code="201">Created. The experiment instance was created successfully.</response>
         /// <response code="400">Bad Request. The schema of the experiment is invalid.</response>
-        /// <response code="500">Internal Server Error. An unexpected error occurred on the server.</response> 
+        /// <response code="500">Internal Server Error. An unexpected error occurred on the server.</response>
         [HttpPost]
         [Consumes("application/json")]
         [Description("Creates a new experiment instance in the system.")]
@@ -178,7 +178,7 @@
         /// <param name="workQueue">Optional. The name of the queue to which the notice-of-work should be posted.</param>
         /// <response code="201">Created. The experiment instance was created successfully.</response>
         /// <response code="400">Bad Request. The schema of the experiment is invalid.</response>
-        /// <response code="500">Internal Server Error. An unexpected error occurred on the server.</response> 
+        /// <response code="500">Internal Server Error. An unexpected error occurred on the server.</response>
         [HttpPost("template")]
         [Consumes("application/json")]
         [Description("Creates a new experiment instance in the system.")]
@@ -343,6 +343,12 @@
                     .ConfigureDefaults();
 
                 telemetryContext.AddContext(response);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return await ExperimentsController.CreateErrorResponseAsync(response).ConfigureDefaults();
+                }
+
                 ExperimentMetadataInstance metadataInstance = JsonConvert.DeserializeObject<ExperimentMetadataInstance>(await response.Content.ReadAsStringAsync()
                     .ConfigureDefaults());
 
@@ -397,7 +403,6 @@
                         providersList.Add(provider);
                     }
                 }
-
             }
             catch (Exception ex)
             {

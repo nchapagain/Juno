@@ -24,11 +24,14 @@
     [ExecutionConstraints(SupportedStepType.EnvironmentSetup, SupportedStepTarget.ExecuteRemotely)]
     [SupportedParameter(Name = StepParameters.NodeAffinity, Type = typeof(NodeAffinity), Required = false)]
     [SupportedParameter(Name = StepParameters.IsAmberNodeRequest, Type = typeof(bool), Required = false)]
+    [SupportedParameter(Name = StepParameters.Count, Type = typeof(int), Required = false)]
+    [SupportedParameter(Name = StepParameters.NodeTag, Type = typeof(string), Required = false)]
     [ProviderInfo(Name = "Create TiP sessions", Description = "Create TiP sessions for the all experiment groups to isolate physical nodes/blades in the Azure fleet", FullDescription = "Step to create TiP sessions associated with an experiment. Once a set of clusters that have physical nodes whose characteristics match the requirements of the experiment has been identified, is to estable TiP sessions to the nodes so that an experiment can be run. The node to which the change will be applied is called a `treatment group`.")]
     public partial class TipCreationProvider2 : ExperimentProvider
     {
         // The timeout for the entirety of the TiP creation process.
         private static readonly TimeSpan DefaultTimeout = TimeSpan.FromHours(2);
+        private static readonly TimeSpan ReevaluationExtension = TimeSpan.FromMinutes(1);
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TipCreationProvider"/> class.
@@ -37,7 +40,7 @@
         public TipCreationProvider2(IServiceCollection services)
             : base(services)
         {
-            this.TelemetryEventNamePrefix = nameof(TipCreationProvider);
+            this.TelemetryEventNamePrefix = nameof(TipCreationProvider2);
         }
 
         /// <summary>
@@ -76,7 +79,7 @@
             component.ThrowIfNull(nameof(component));
             telemetryContext.ThrowIfNull(nameof(telemetryContext));
 
-            ExecutionResult result = new ExecutionResult(ExecutionStatus.InProgress);
+            ExecutionResult result = new ExecutionResult(ExecutionStatus.InProgress, extensionTimeout: TipCreationProvider2.ReevaluationExtension);
             this.EntityManager = this.Services.GetService<EntityManager>();
             this.TipClient = this.Services.GetService<ITipClient>();
 
@@ -87,7 +90,8 @@
                     ?? new State
                     {
                         Timeout = timeout,
-                        StepTimeout = DateTime.UtcNow.Add(timeout)
+                        StepTimeout = DateTime.UtcNow.Add(timeout),
+                        CountPerGroup = component.Parameters.GetValue<int>(StepParameters.Count, 1)
                     };
 
                 await this.EntityManager.LoadEntityPoolAsync(context.Experiment.Id, cancellationToken).ConfigureDefaults();
@@ -124,7 +128,8 @@
                         ?.Where(node => !node.Discarded())
                         ?.Where(node => node.TipSessionStatus() == TipSessionStatus.Created.ToString());
 
-                    if (nodesWithTipSessions.Count() == environmentGroups.Count())
+                    // This if statement checks for success criteria.
+                    if (nodesWithTipSessions.Count() == environmentGroups.Count() * state.CountPerGroup)
                     {
                         // We have successfully created the TiP sessions necessary for all environment
                         // groups in the experiment.
@@ -153,7 +158,7 @@
                 }
                 catch (TimeoutException)
                 {
-                    await this.DeleteTipSessionsAsync(this.GetTipNodeSessionsCreated(), telemetryContext, cancellationToken)
+                    await this.DeleteTipSessionsAsync(this.GetTipNodeSessions(TipSessionStatus.Created, TipSessionStatus.Creating, TipSessionStatus.Pending), telemetryContext, cancellationToken)
                         .ConfigureDefaults();
 
                     throw;
@@ -163,7 +168,7 @@
                     // If we cannot meet the requirements of the node affinity with the pool of entities we have,
                     // we need to request any TiP sessions that we did successfully create to be deleted.
                     await this.DeleteTipSessionsAsync(
-                        this.GetTipNodeSessionsCreated(),
+                        this.GetTipNodeSessions(TipSessionStatus.Created, TipSessionStatus.Creating, TipSessionStatus.Pending),
                         telemetryContext,
                         cancellationToken).ConfigureDefaults();
 
@@ -179,6 +184,7 @@
                     await this.Logger.LogTelemetryAsync($"{this.TelemetryEventNamePrefix}.Entities", LogLevel.Information, relatedContext)
                         .ConfigureDefaults();
 
+                    this.TagTipSessions(component);
                     await this.EntityManager.SaveEntityPoolAsync(context.Experiment.Id, cancellationToken).ConfigureDefaults();
                     await this.EntityManager.SaveEntitiesProvisionedAsync(context.Experiment.Id, cancellationToken).ConfigureDefaults();
                     await this.SaveStateAsync(context, state, cancellationToken).ConfigureDefaults();
@@ -186,6 +192,27 @@
             }
 
             return result;
+        }
+
+        private void TagTipSessions(ExperimentComponent component)
+        {
+            string tags = component.Parameters.GetValue<string>(StepParameters.NodeTag, string.Empty);
+            List<string> tagList = tags.Split(',', ';').ToList();
+
+            IEnumerable<EnvironmentEntity> tipSessions = this.EntityManager.EntitiesProvisioned.GetTipSessions()
+                .OrderBy(t => t.Metadata[nameof(TipSession.GroupName)])
+                .ThenBy(t => t.Metadata[nameof(TipSession.NodeId)]);
+            IEnumerable<EnvironmentEntity> nodes = this.EntityManager.EntitiesProvisioned.GetNodes()
+                .OrderBy(t => t.Metadata[nameof(TipSession.GroupName)])
+                .ThenBy(t => t.Id);
+            if ((tipSessions.Count() == nodes.Count()) && (nodes.Count() == tagList.Count))
+            {
+                for (int index = 0; index < tipSessions.Count(); index++)
+                {
+                    tipSessions.ElementAt(index).Metadata[nameof(TipSession.NodeTag)] = tagList[index];
+                    nodes.ElementAt(index).Metadata[nameof(TipSession.NodeTag)] = tagList[index];
+                }
+            }
         }
 
         private static void ThrowOnAllOptionsExpended(NodeAffinity nodeAffinity)
@@ -251,10 +278,10 @@
             }).ConfigureDefaults();
         }
 
-        private IEnumerable<EnvironmentEntity> GetTipNodeSessionsCreated()
+        private IEnumerable<EnvironmentEntity> GetTipNodeSessions(params TipSessionStatus[] tipSesstionStatus)
         {
             return this.EntityManager.EntityPool.GetNodes()
-                ?.Where(node => node.TipSessionStatus() == TipSessionStatus.Created.ToString());
+                ?.Where(node => tipSesstionStatus.Select(s => s.ToString()).Contains(node.TipSessionStatus(), StringComparer.OrdinalIgnoreCase));
         }
 
         private IEnumerable<EnvironmentEntity> GetTipNodeSessionsCreatedButDiscarded()
@@ -376,7 +403,7 @@
                 ?.Where(node => !node.Discarded())
                 ?.Where(node => node.TipSessionStatus() == TipSessionStatus.Created.ToString());
 
-            IEnumerable<EnvironmentEntity> candidateNodes = this.SelectCandidateNodes(nodeAffinity, tipNodesAcquired?.ToArray());
+            IEnumerable<EnvironmentEntity> candidateNodes = this.SelectCandidateNodes(nodeAffinity, state.CountPerGroup, tipNodesAcquired?.ToArray());
 
             if (candidateNodes?.Any() != true)
             {
@@ -398,7 +425,7 @@
                 // Once we've marked the nodes in the pool that were successfully established but
                 // that cannot be used because of the inability to meet the requirements of the node affinity for all
                 // environment groups, we will attempt to select a new group of candidate nodes.
-                candidateNodes = this.SelectCandidateNodes(nodeAffinity);
+                candidateNodes = this.SelectCandidateNodes(nodeAffinity, state.CountPerGroup);
             }
 
             if (candidateNodes?.Any() != true)
@@ -422,7 +449,7 @@
             }
         }
 
-        private IEnumerable<EnvironmentEntity> SelectCandidateNodes(NodeAffinity nodeAffinity, params EnvironmentEntity[] withAffinityToNodes)
+        private IEnumerable<EnvironmentEntity> SelectCandidateNodes(NodeAffinity nodeAffinity, int countPerGroup, params EnvironmentEntity[] withAffinityToNodes)
         {
             // If there are no TiP session creation requests in progress, select nodes from the whole pool and
             // start the requests.
@@ -430,22 +457,39 @@
                 .Distinct()
                 .OrderBy(group => group);
 
-            if (withAffinityToNodes?.Any() == true)
+            Dictionary<string, int> remainingNodesList = new Dictionary<string, int>();
+            
+            foreach (string group in environmentGroups)
             {
-                environmentGroups = environmentGroups.Except(withAffinityToNodes.Select(node => node.EnvironmentGroup), StringComparer.OrdinalIgnoreCase);
+                if (withAffinityToNodes?.Any() == true)
+                {
+                    if (countPerGroup > withAffinityToNodes.Where(n => n.EnvironmentGroup == group).Count())
+                    {
+                        remainingNodesList.Add(group, countPerGroup - withAffinityToNodes.Where(n => n.EnvironmentGroup == group).Count());
+                    }
+                }
+                else
+                {
+                    remainingNodesList.Add(group, countPerGroup);
+                }
             }
 
             List<EnvironmentEntity> candidateNodes = new List<EnvironmentEntity>();
-            foreach (string group in environmentGroups)
-            {
-                EnvironmentEntity candidateNode = this.EntityManager.EntityPool.GetNode(
-                    nodeAffinity,
-                    group,
-                    candidateNodes.Union(withAffinityToNodes).ToArray());
 
-                if (candidateNode != null)
+            foreach (KeyValuePair<string, int> group in remainingNodesList)
+            {
+                for (int count = 0; count < group.Value; count++)
                 {
-                    candidateNodes.Add(candidateNode);
+                    EnvironmentEntity candidateNode = this.EntityManager.EntityPool.GetNode(
+                        nodeAffinity,
+                        group.Key,
+                        countPerGroup,
+                        candidateNodes.Union(withAffinityToNodes).ToArray());
+
+                    if (candidateNode != null)
+                    {
+                        candidateNodes.Add(candidateNode);
+                    }
                 }
             }
 
@@ -456,6 +500,8 @@
         {
             [JsonIgnore]
             public bool IsTimeoutExpired => DateTime.UtcNow > this.StepTimeout;
+
+            public int CountPerGroup { get; set; }
 
             public int Attempts { get; set; }
 

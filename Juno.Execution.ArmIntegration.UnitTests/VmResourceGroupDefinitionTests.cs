@@ -42,9 +42,7 @@ namespace Juno.Execution.ArmIntegration
                 this.experimentId,
                 this.stepId,
                 specs,
-                "west2",
-                this.clusterId,
-                this.tipSessionId);
+                "west2");
         }
 
         [Test]

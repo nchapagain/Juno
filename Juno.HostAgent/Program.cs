@@ -237,18 +237,13 @@
 
         private static void InitializeLogging(EnvironmentSettings settings)
         {
-            AppInsightsSettings appInsightsTelemetrySettings = settings.AppInsightsSettings.Get(Setting.Telemetry);
-            AppInsightsSettings appInsightsTracingSettings = settings.AppInsightsSettings.Get(Setting.Tracing);
-
             AadPrincipalSettings agentPrincipal = settings.AgentSettings.AadPrincipals.Get(Setting.HostAgent);
             IAzureKeyVault keyVaultClient = HostDependencies.CreateKeyVaultClient(agentPrincipal, settings.KeyVaultSettings.Get(Setting.Default));
+            
             EventHubSettings eventHubTelemetrySettings = settings.EventHubSettings.Get(Setting.AgentTelemetry);
-
             Program.logger = HostDependencies.CreateLogger(
                Program.AgentType.ToString(),
-               appInsightsTelemetrySettings,
-               appInsightsTracingSettings,
-               eventHubTelemetrySettings,
+               eventHubTelemetrySettings: eventHubTelemetrySettings,
                keyVaultClient: keyVaultClient,
                enableDiagnostics: true);
         }

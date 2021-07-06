@@ -103,6 +103,11 @@
         /// </summary>
         public Mock<IExperimentClient> ExperimentClient { get; set; }
 
+        /// <summary>
+        /// A mock <see cref="IAnalysisCacheManager"/> instance.
+        /// </summary>
+        public Mock<IAnalysisCacheManager> AnalysisCacheManager { get; set; }
+
         private void Initialize(MockBehavior mockBehavior)
         {
             this.CertificateManager = new Mock<ICertificateManager>(mockBehavior);
@@ -116,6 +121,7 @@
             this.Logger = new Mock<ILogger>(mockBehavior);
             this.RestClient = new Mock<IRestClient>(mockBehavior);
             this.ExperimentClient = new Mock<IExperimentClient>(mockBehavior);
+            this.AnalysisCacheManager = new Mock<IAnalysisCacheManager>(mockBehavior);
 
             string configurationFilePath = Path.Combine(
                 Path.GetDirectoryName(FixtureDependencies.testAssembly.Location),

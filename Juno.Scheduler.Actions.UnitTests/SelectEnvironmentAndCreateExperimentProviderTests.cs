@@ -15,9 +15,11 @@
     using Juno.EnvironmentSelection.NodeSelectionFilters;
     using Juno.Providers;
     using Microsoft.AspNetCore.Mvc;
+    using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Moq;
+    using Newtonsoft.Json;
     using NuGet.Protocol;
     using NUnit.Framework;
 
@@ -53,10 +55,8 @@
             this.mockFixture.SetupEnvironmentSelectionMocks();
             this.mockFixture.SetupExperimentMocks();
 
-            this.mockContext = new ScheduleContext(
-                this.mockFixture.Create<GoalBasedSchedule>(), 
-                this.mockFixture.Create<TargetGoalTrigger>(), 
-                new Mock<IConfiguration>().Object);
+            Mock<IConfiguration> mockConfiguration = new Mock<IConfiguration>();
+            this.mockContext = new ScheduleContext(new Item<GoalBasedSchedule>("id", this.mockFixture.Create<GoalBasedSchedule>()), this.mockFixture.Create<TargetGoalTrigger>(), mockConfiguration.Object);
 
             this.mockQuery = this.mockFixture.Create<EnvironmentQuery>();
 
@@ -245,7 +245,7 @@
 
             if (expectedContent != null)
             {
-                mockResponse.Content = new StringContent(expectedContent.ToJson());
+                mockResponse.Content = new StringContent(JsonConvert.SerializeObject(expectedContent));
             }
 
             return mockResponse;

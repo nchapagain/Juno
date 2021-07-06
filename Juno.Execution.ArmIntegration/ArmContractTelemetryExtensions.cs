@@ -39,8 +39,8 @@
                     name = resourceGroup.Name,
                     subscriptionId = resourceGroup.SubscriptionId,
                     region = resourceGroup.Region,
-                    cluster = resourceGroup.ClusterId,
-                    tipSessionId = resourceGroup.TipSessionId,
+                    cluster = string.Join(',', resourceGroup.VirtualMachines?.Select(vm => vm?.ClusterId)?.Distinct() ?? new List<string>()),
+                    tipSessionId = string.Join(',', resourceGroup.VirtualMachines?.Select(vm => vm?.TipSessionId)?.Distinct() ?? new List<string>()),
                     deploymentName = resourceGroup.DeploymentName,
                     subnetName = resourceGroup.SubnetName,
                     vmNetworkName = resourceGroup.VirtualNetworkName,
@@ -81,7 +81,10 @@
                     deploymentCorrelationId = virtualMachine.CorrelationId,
                     deploymentId = virtualMachine.DeploymentId,
                     deploymentName = virtualMachine.DeploymentName,
-                    deploymentState = virtualMachine.State
+                    deploymentState = virtualMachine.State,
+                    role = virtualMachine.Role,
+                    tipSessionId = virtualMachine.TipSessionId,
+                    nodeId = virtualMachine.NodeId
                 });
             }
 

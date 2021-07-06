@@ -19,38 +19,37 @@
         /// <summary>
         /// Initializes a new instance of the <see cref="TargetGoalParameter"/> class.
         /// </summary>
-        /// <param name="id">Unique ID that seperates the Target goals within Execution Goal</param>
-        /// <param name="workload"> Workload specfied for each target goal</param>
+        /// <param name="name">The name of the target goal.</param>
+        /// <param name="enabled">True/false if the target goal is enabled.</param>
         /// <param name="parameters">Parameters associated with the Target Goal.</param>
         [JsonConstructor]
-        public TargetGoalParameter(string id, string workload, IDictionary<string, IConvertible> parameters = null)
+        public TargetGoalParameter(string name, bool enabled, IDictionary<string, IConvertible> parameters = null)
         {
-            workload.ThrowIfNullOrWhiteSpace(nameof(workload));
-            id.ThrowIfNullOrWhiteSpace(nameof(id));
+            name.ThrowIfNullOrWhiteSpace(nameof(name));
 
-            this.Id = id;
-            this.Workload = workload;
+            this.Name = name;
+            this.Enabled = enabled;
             this.Parameters = parameters == null
-                ? new Dictionary<string, IConvertible>()
-                : new Dictionary<string, IConvertible>(parameters);
+                ? new Dictionary<string, IConvertible>(StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, IConvertible>(parameters, StringComparer.OrdinalIgnoreCase);
         }
-
-        /// <summary>
-        /// Unique ID of the Target Goal
-        /// </summary>
-        [JsonProperty(PropertyName = "id", Required = Required.Always, Order = 1)]
-        public string Id { get; }
 
         /// <summary>
         /// Designated workload of the Target Goal
         /// </summary>
-        [JsonProperty(PropertyName = "workload", Required = Required.Always, Order = 2)]
-        public string Workload { get; }
+        [JsonProperty(PropertyName = "name", Required = Required.Always, Order = 10)]
+        public string Name { get; }
+
+        /// <summary>
+        /// True/False if the target goal is enabled.
+        /// </summary>
+        [JsonProperty(PropertyName = "enabled", Required = Required.Always, Order = 20)]
+        public bool Enabled { get; }
 
         /// <summary>
         /// Dictonary parameters of the Target Goal
         /// </summary>
-        [JsonProperty(PropertyName = "parameters", Required = Required.Default, Order = 3)]
+        [JsonProperty(PropertyName = "parameters", Required = Required.Default, Order = 30)]
         [JsonConverter(typeof(ParameterDictionaryJsonConverter))]
         public IDictionary<string, IConvertible> Parameters { get; }
 
@@ -83,8 +82,8 @@
             if (this.hashCode == null)
             {
                 this.hashCode = new StringBuilder()
-                    .Append(this.Workload)
-                    .Append(this.Id)
+                    .Append(this.Name)
+                    .Append(this.Enabled)
                     .AppendParameters(this.Parameters)
                     .ToString().ToUpperInvariant().GetHashCode(StringComparison.OrdinalIgnoreCase);
             }

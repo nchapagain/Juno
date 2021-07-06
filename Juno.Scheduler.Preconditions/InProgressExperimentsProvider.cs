@@ -21,7 +21,7 @@
     /// This is designed to be used in a target goal Precondition.
     /// CONDITION: Target # of in progress experiments less than Actual # of in progress experiments
     /// </summary>
-    [SupportedParameter(Name = Parameters.TargetExperimentsInstances, Type = typeof(int), Required = true)]
+    [SupportedParameter(Name = Parameters.TargetExperimentInstances, Type = typeof(int), Required = true)]
     public class InProgressExperimentsProvider : PreconditionProvider
     {
         /// <summary>
@@ -36,7 +36,7 @@
             this.Query = query;
         }
 
-        private string Query { get; set; }
+        private string Query { get; }
 
         /// <summary>
         /// Determines if the given target goal has reached the number of InProgress experiments.
@@ -51,13 +51,13 @@
 
             if (!cancellationToken.IsCancellationRequested)
             {
-                this.ReplaceQueryParameters(scheduleContext);
-                telemetryContext.AddContext(SchedulerEventProperty.KustoQuery, this.Query);
+                string query = this.ReplaceQueryParameters(scheduleContext);
+                telemetryContext.AddContext(SchedulerEventProperty.KustoQuery, query);
 
-                InProgressExperiments inProgressExperiments = await this.InProgressExperimentsAsync(cancellationToken)
+                InProgressExperiments inProgressExperiments = await this.InProgressExperimentsAsync(query, cancellationToken)
                     .ConfigureDefaults();
 
-                int targetExperimentIntances = component.Parameters.GetValue<int>(Parameters.TargetExperimentsInstances);
+                int targetExperimentIntances = component.Parameters.GetValue<int>(Parameters.TargetExperimentInstances);
                 conditionSatisfied = inProgressExperiments == null || inProgressExperiments.Count < targetExperimentIntances;
 
                 telemetryContext.AddContext(SchedulerEventProperty.TargetExperiments, targetExperimentIntances);
@@ -67,15 +67,17 @@
             return conditionSatisfied;
         }
 
-        private void ReplaceQueryParameters(ScheduleContext scheduleContext)
+        private string ReplaceQueryParameters(ScheduleContext scheduleContext)
         {
-            this.Query = this.Query.Replace(Constants.TargetGoal, scheduleContext.TargetGoalTrigger.TargetGoal, StringComparison.Ordinal);
+            string query = this.Query.Replace(Constants.TargetGoal, scheduleContext.TargetGoalTrigger.Name, StringComparison.Ordinal);
+            query = query.Replace(Constants.ExecutionGoalId, scheduleContext.ExecutionGoal.Id, StringComparison.Ordinal);
+            return query;
         }
 
-        private async Task<InProgressExperiments> InProgressExperimentsAsync(CancellationToken cancellationToken)
+        private async Task<InProgressExperiments> InProgressExperimentsAsync(string query, CancellationToken cancellationToken)
         {
             IExperimentDataManager experimentDataManager = this.Services.GetService<IExperimentDataManager>();
-            IEnumerable<JObject> queryResult = await experimentDataManager.QueryExperimentsAsync(this.Query, cancellationToken).ConfigureDefaults();
+            IEnumerable<JObject> queryResult = await experimentDataManager.QueryExperimentsAsync(query, cancellationToken).ConfigureDefaults();
 
             List<InProgressExperiments> inProgressExperimentsCounts = new List<InProgressExperiments>();
             foreach (var item in queryResult)
@@ -86,18 +88,18 @@
             return inProgressExperimentsCounts.FirstOrDefault();
         }
 
-        /// <summary>
-        /// Supported parameter string literals
-        /// </summary>
-        internal class Parameters
-        {
-            public const string TargetExperimentsInstances = nameof(Parameters.TargetExperimentsInstances);
-        }
-
         internal class InProgressExperiments
         {
             [JsonProperty("Count")]
             public int Count { get; set; }
+        }
+
+        /// <summary>
+        /// Supported parameter string literals
+        /// </summary>
+        private class Parameters
+        {
+            public const string TargetExperimentInstances = nameof(Parameters.TargetExperimentInstances);
         }
 
         /// <summary>
@@ -106,6 +108,7 @@
         private class Constants
         {
             public const string TargetGoal = "@targetGoal";
+            public const string ExecutionGoalId = "@executionGoalId";
         }
     }
 }

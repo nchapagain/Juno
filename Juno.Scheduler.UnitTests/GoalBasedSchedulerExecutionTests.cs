@@ -61,7 +61,7 @@
             string expectedExecutionGoalId = Guid.NewGuid().ToString();
             string expectedTeamName = Guid.NewGuid().ToString();
 
-            TargetGoalTrigger targetGoal = new ("id", expectedExecutionGoalId, "target goal", "* * * * *", true, "experimentName", expectedTeamName, "version", DateTime.UtcNow, DateTime.UtcNow);
+            TargetGoalTrigger targetGoal = new ("id", expectedExecutionGoalId, "target goal", "* * * * *", true, expectedTeamName, "version", DateTime.UtcNow, DateTime.UtcNow);
             this.mockTimerDataManager.Setup(mgr => mgr.GetTargetGoalTriggersAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<TargetGoalTrigger>() { targetGoal });
 
@@ -82,7 +82,7 @@
         [Test]
         public async Task TriggerScheduleAsyncDoesNotTriggerNotEnabledTargetGoals()
         {
-            TargetGoalTrigger targetGoal = new ("id", "execgoal", "target goal", "* * * * *", false, "experimentName", "teamName", "version", DateTime.UtcNow, DateTime.UtcNow);
+            TargetGoalTrigger targetGoal = new ("id", "execgoal", "target goal", "* * * * *", false, "teamName", "version", DateTime.UtcNow, DateTime.UtcNow);
             this.mockTimerDataManager.Setup(mgr => mgr.GetTargetGoalTriggersAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<TargetGoalTrigger>() { targetGoal });
             
@@ -96,7 +96,7 @@
         public async Task TriggerScheduleAsyncDoesNotTriggerNotEligibleTargetGoals()
         {
             // Cron expression definition: https://crontab.guru/#0_0_31_2_*
-            TargetGoalTrigger targetGoal = new ("id", "execgoal", "target goal", "0 0 31 2 *", true, "experimentName", "teamName", "version", DateTime.UtcNow, DateTime.UtcNow);
+            TargetGoalTrigger targetGoal = new ("id", "execgoal", "target goal", "0 0 31 2 *", true, "teamName", "version", DateTime.UtcNow, DateTime.UtcNow);
             this.mockTimerDataManager.Setup(mgr => mgr.GetTargetGoalTriggersAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<TargetGoalTrigger>() { targetGoal });
 
@@ -117,8 +117,8 @@
                 return Task.CompletedTask;
             };
 
-            TargetGoalTrigger targetGoal = new ("id", expectedExecutionGoal.ExecutionGoalId, "target goal", "* * * * *", 
-                true, "experimentName", expectedExecutionGoal.TeamName, "version", DateTime.UtcNow, DateTime.UtcNow);
+            TargetGoalTrigger targetGoal = new ("id", Guid.NewGuid().ToString(), "target goal", "* * * * *", 
+                true, expectedExecutionGoal.TeamName, "version", DateTime.UtcNow, DateTime.UtcNow);
             
             this.mockTimerDataManager.Setup(mgr => mgr.GetTargetGoalTriggersAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<TargetGoalTrigger>() { targetGoal });

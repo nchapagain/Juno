@@ -62,9 +62,9 @@
         {
             Assert.DoesNotThrow(() => new StringBuilder().AppendComponents(new List<TargetGoalParameter>
             {
-                new TargetGoalParameter("1", "Workload.Any", null),
-                new TargetGoalParameter("1", "Workload.Any", new Dictionary<string, IConvertible>()),
-                new TargetGoalParameter("1", "Workload.Any", new Dictionary<string, IConvertible>()
+                new TargetGoalParameter("1", true, null),
+                new TargetGoalParameter("1", true, new Dictionary<string, IConvertible>()),
+                new TargetGoalParameter("1", true, new Dictionary<string, IConvertible>()
                 {
                     ["Value"] = "valuetesting"  
                 })
@@ -156,10 +156,10 @@
 
             Assert.IsFalse(experiment.IsDiagnosticsEnabled());
 
-            experiment.Metadata[Experiment.EnableDiagnostics] = false;
+            experiment.Metadata[MetadataProperty.EnableDiagnostics] = false;
             Assert.IsFalse(experiment.IsDiagnosticsEnabled());
 
-            experiment.Metadata[Experiment.EnableDiagnostics] = true;
+            experiment.Metadata[MetadataProperty.EnableDiagnostics] = true;
             Assert.IsTrue(experiment.IsDiagnosticsEnabled());
         }
 

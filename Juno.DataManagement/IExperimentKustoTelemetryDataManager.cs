@@ -26,6 +26,6 @@
         /// <param name="executionGoal"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        Task<IList<TargetGoalTimeline>> GetExecutionGoalTimelineAsync(GoalBasedSchedule executionGoal, CancellationToken cancellationToken);
+        Task<IList<TargetGoalTimeline>> GetExecutionGoalTimelineAsync(Item<GoalBasedSchedule> executionGoal, CancellationToken cancellationToken);
     }
 }

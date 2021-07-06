@@ -9,6 +9,7 @@
     using global::Kusto.Cloud.Platform.Utils;
     using Juno.Contracts;
     using Juno.DataManagement.Cosmos;
+    using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Azure.CRC.Repository;
     using Microsoft.Azure.CRC.Repository.Cosmos;
     using Microsoft.Extensions.Logging.Abstractions;
@@ -38,20 +39,7 @@
             this.mockTargetGoal = this.mockFixture.Create<TargetGoalTrigger>();
             this.mockTableEntities = new List<TargetGoalTableEntity>()
             {
-                new TargetGoalTableEntity
-                {
-                    Id = this.mockTableEntity.Id,
-                    PartitionKey = this.mockTableEntity.PartitionKey,
-                    RowKey = this.mockTableEntity.RowKey,
-                    CronExpression = this.mockTableEntity.CronExpression,
-                    Enabled = this.mockTableEntity.Enabled,
-                    ExperimentName = this.mockTableEntity.ExperimentName,
-                    TeamName = this.mockTableEntity.TeamName,
-                    ExecutionGoal = this.mockTableEntity.ExecutionGoal,
-                    Created = DateTime.UtcNow.AddSeconds(-10),
-                    Timestamp = DateTime.UtcNow.AddSeconds(-10),
-                    ETag = DateTime.UtcNow.ToString("o")
-                }
+                this.mockTableEntity
             };
 
             this.mockTableStore = new Mock<ITableStore<CosmosTableAddress>>();
@@ -61,8 +49,8 @@
         [Test]
         public void ScheduleTimerDataManagerCreatesExpectedTargetGoals()
         {
-            Goal targetGoal = FixtureExtensions.CreateTargetGoal();
-            GoalBasedSchedule executionGoal = FixtureExtensions.CreateExecutionGoalFromTemplate(targetGoals: new List<Goal>() { targetGoal });
+            TargetGoal targetGoal = FixtureExtensions.CreateTargetGoal();
+            Item<GoalBasedSchedule> executionGoal = new Item<GoalBasedSchedule>(Guid.NewGuid().ToString(), FixtureExtensions.CreateExecutionGoalFromTemplate(targetGoals: new List<TargetGoal>() { targetGoal }));
 
             TargetGoalTableEntity expectedEntity = FixtureExtensions.CreateTargetTableEntityFromTemplates(executionGoal, targetGoal);
             IDictionary<CosmosTableAddress, TargetGoalTableEntity> expectedDictionary = new Dictionary<CosmosTableAddress, TargetGoalTableEntity>()
@@ -164,8 +152,8 @@
         [Test]
         public void UpdateTargetGoalsAyncUpdatesExpectedTargetGoals()
         {
-            Goal targetGoal = FixtureExtensions.CreateTargetGoal();
-            GoalBasedSchedule executionGoal = FixtureExtensions.CreateExecutionGoalFromTemplate(targetGoals: new List<Goal>() { targetGoal });
+            TargetGoal targetGoal = FixtureExtensions.CreateTargetGoal();
+            Item<GoalBasedSchedule> executionGoal = new Item<GoalBasedSchedule>(Guid.NewGuid().ToString(), FixtureExtensions.CreateExecutionGoalFromTemplate(targetGoals: new List<TargetGoal>() { targetGoal }));
 
             TargetGoalTableEntity expectedEntity = FixtureExtensions.CreateTargetTableEntityFromTemplates(executionGoal, targetGoal);
             IDictionary<CosmosTableAddress, TargetGoalTableEntity> expectedDictionary = new Dictionary<CosmosTableAddress, TargetGoalTableEntity>()
@@ -194,13 +182,13 @@
         [Test]
         public void ScheduleTimerDataManagerDeletesExpectedTargetGoals()
         {
-            Goal targetGoal = FixtureExtensions.CreateTargetGoal();
-            GoalBasedSchedule executionGoal = FixtureExtensions.CreateExecutionGoalFromTemplate(targetGoals: new List<Goal>() { targetGoal });
+            TargetGoal targetGoal = FixtureExtensions.CreateTargetGoal();
+            Item<GoalBasedSchedule> executionGoal = new Item<GoalBasedSchedule>(Guid.NewGuid().ToString(), FixtureExtensions.CreateExecutionGoalFromTemplate(targetGoals: new List<TargetGoal>() { targetGoal }));
 
             TargetGoalTableEntity expectedEntity = FixtureExtensions.CreateTargetTableEntityFromTemplates(executionGoal, targetGoal);
-            string id = executionGoal.ExecutionGoalId;
+            string id = executionGoal.Id;
             IList<TargetGoalTableEntity> targetGoals = new List<TargetGoalTableEntity>() { expectedEntity };
-            executionGoal.TargetGoals.ForEach(goal => targetGoals.Add(goal.ToTableEntity(executionGoal)));
+            executionGoal.Definition.TargetGoals.ForEach(goal => targetGoals.Add(goal.ToTableEntity(executionGoal)));
 
             this.mockTableStore.Setup(mgr => mgr.GetEntitiesAsync<TargetGoalTableEntity>(It.IsAny<CosmosTableAddress>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(targetGoals as IEnumerable<TargetGoalTableEntity>));

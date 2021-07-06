@@ -33,7 +33,7 @@
         /// <summary>
         /// Default absolute eviction policy for items retrieved from Kusto
         /// </summary>
-        private readonly TimeSpan defaultTTL = TimeSpan.FromMinutes(30);
+        private readonly TimeSpan defaultTTL = TimeSpan.FromHours(1);
 
         /// <summary>
         /// The retry policy to use with the Kusto client call to the Kusto cluster.

@@ -11,11 +11,13 @@
     using Juno.Extensions.Telemetry;
     using Juno.Providers;
     using Juno.Scheduler.Preconditions.Manager;
-    using Kusto.Cloud.Platform.Utils;
+    using Kusto.Data.Exceptions;
     using Microsoft.Azure.CRC.Extensions;
     using Microsoft.Azure.CRC.Telemetry;
+    using Microsoft.Azure.CRC.Telemetry.Logging;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Logging;
 
     /// <summary>
     /// A <see cref="PreconditionProvider"/> that evaluates if an experiment
@@ -71,7 +73,8 @@
 
             if (!cancellationToken.IsCancellationRequested)
             {
-                string experimentNames = this.GetExperimentNames(scheduleContext);
+                TargetGoal targetGoal = scheduleContext.ExecutionGoal.Definition.GetGoal(scheduleContext.TargetGoalTrigger.Name) as TargetGoal;
+                string experimentNames = scheduleContext.ExecutionGoal.Definition.ExperimentName;
                 int ofrThreshold = component.Parameters.GetValue<int>(Parameters.ExperimentOFRThreshold);
                 string resolvedQuery = this.ReplaceQueryParameters(scheduleContext, experimentNames);
 
@@ -79,18 +82,26 @@
 
                 EnvironmentSettings settings = EnvironmentSettings.Initialize(scheduleContext.Configuration);
                 KustoSettings kustoSettings = settings.KustoSettings.Get(Setting.AzureCM);
+                try
+                {
+                    DataTable response = await kustoManager.GetKustoResponseAsync(CacheKeys.ExperimentOFR + experimentNames, kustoSettings, resolvedQuery)
+                        .ConfigureDefaults();
 
-                DataTable response = await kustoManager.GetKustoResponseAsync(CacheKeys.ExperimentOFR + experimentNames, kustoSettings, resolvedQuery)
-                    .ConfigureDefaults();
+                    List<JunoOFRNode> junoOfrs = response.ParseOFRNodes();
+                    IEnumerable<string> tipList = junoOfrs.Select(ofr => ofr.TipSessionId);
+                    conditionSatisfied = junoOfrs.Count >= ofrThreshold;
 
-                List<JunoOFRNode> junoOfrs = response.ParseOFRNodes();
-                IEnumerable<string> tipList = junoOfrs.Select(ofr => ofr.TipSessionId);
-                conditionSatisfied = junoOfrs.Count >= ofrThreshold;
-
-                telemetryContext.AddContext(EventProperty.Count, junoOfrs.Count);
-                telemetryContext.AddContext(SchedulerEventProperty.Threshold, ofrThreshold);
-                telemetryContext.AddContext(SchedulerEventProperty.OffendingTipSessions, tipList);
-                telemetryContext.AddContext(SchedulerEventProperty.JunoOfrs, junoOfrs);
+                    telemetryContext.AddContext(EventProperty.Count, junoOfrs.Count);
+                    telemetryContext.AddContext(SchedulerEventProperty.Threshold, ofrThreshold);
+                    telemetryContext.AddContext(SchedulerEventProperty.OffendingTipSessions, tipList);
+                    telemetryContext.AddContext(SchedulerEventProperty.JunoOfrs, junoOfrs);
+                }
+                catch (KustoRequestThrottledException)
+                {
+                    // Do not let throttled exceptions prevent execution.
+                    this.Logger.LogTelemetry($"{nameof(JunoExperimentGoalOFRPreconditionProvider)}.ThrottledWarning", LogLevel.Warning, telemetryContext);
+                    return false;
+                }
             }
 
             return conditionSatisfied;
@@ -101,23 +112,10 @@
             string environment = EnvironmentSettings.Initialize(scheduleContext.Configuration).Environment;
             string resolvedQuery = string.Copy(this.Query);
             resolvedQuery = resolvedQuery.Replace(Constants.QueryStartTime, $"now({this.startDateExperimentGoalJunoOFR}d)", StringComparison.Ordinal);
-            resolvedQuery = resolvedQuery.Replace(Constants.ExperimentNameForQuery, $"{experimentNames}", StringComparison.Ordinal);
+            resolvedQuery = resolvedQuery.Replace(Constants.ExperimentNameForQuery, experimentNames, StringComparison.Ordinal);
             resolvedQuery = resolvedQuery.Replace(Constants.Environment, environment, StringComparison.Ordinal);
 
             return resolvedQuery;
-        }
-
-        private string GetExperimentNames(ScheduleContext scheduleContext)
-        {
-            string experimentNameKey = "experiment.name";
-            Goal targetGoal = scheduleContext.ExecutionGoal.GetGoal(scheduleContext.TargetGoalTrigger.TargetGoal);
-            HashSet<string> experimentNames = targetGoal.Actions
-                .SelectMany(action => action.Parameters)
-                .Where(param => param.Key.ToString().Equals(experimentNameKey, StringComparison.OrdinalIgnoreCase))
-                .Select(param => param.Value.ToString()).ToHashSet();
-            
-            experimentNames.Add(scheduleContext.ExecutionGoal.ExperimentName);
-            return string.Join(",", experimentNames.Select(name => name.DoubleQuote()));
         }
 
         private class Parameters

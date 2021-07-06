@@ -48,7 +48,7 @@
 
                     CommandLineBuilder commandBuilder = ExperimentExecutionCommand.CreateBuilder(args, tokenSource.Token)
                         .WithDefaults();
-
+                    
                     ParseResult parseResult = commandBuilder.Build().Parse(args);
                     parseResult.ThrowOnUsageError();
 

@@ -50,25 +50,25 @@
         /// <summary>
         /// Friendly Name of the Goal
         /// </summary>
-        [JsonProperty(PropertyName = "name", Required = Required.Always, Order = 1)]
+        [JsonProperty(PropertyName = "name", Required = Required.Always, Order = 10)]
         public string Name { get; }
 
         /// <summary>
         /// Distinct Goal Id
         /// </summary>
-        [JsonProperty(PropertyName = "id", Required = Required.Default, Order = 2)]
+        [JsonProperty(PropertyName = "id", Required = Required.Default, Order = 20)]
         public string Id { get; }
 
         /// <summary>
         /// Describes the list of preconditions to assign for this goal
         /// </summary>
-        [JsonProperty(PropertyName = "preconditions", Required = Required.Always, Order = 3)]
+        [JsonProperty(PropertyName = "preconditions", Required = Required.Always, Order = 30)]
         public List<Precondition> Preconditions { get; }
 
         /// <summary>
         /// Describes the list of Actions to assgin for this goal
         /// </summary>
-        [JsonProperty(PropertyName = "actions", Required = Required.Always, Order = 4)]
+        [JsonProperty(PropertyName = "actions", Required = Required.Always, Order = 40)]
         public List<ScheduleAction> Actions { get; }
 
         /// <inheritdoc/>

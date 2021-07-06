@@ -238,39 +238,43 @@
 
         private static void InitializeLogging(EnvironmentSettings settings)
         {
-            AppInsightsSettings appInsightsTelemetrySettings = settings.AppInsightsSettings.Get(Setting.Telemetry);
-            AppInsightsSettings appInsightsTracingSettings = settings.AppInsightsSettings.Get(Setting.Tracing);
+            try
+            {
+                AppInsightsSettings appInsightsTelemetrySettings = settings.AppInsightsSettings.Get(Setting.Telemetry);
+                Program.DiagnosticsLogger = HostDependencies.CreateLogger(Program.HostName, appInsightsTelemetrySettings);
 
-            AadPrincipalSettings schedulerPrincipal = settings.SchedulerSettings.AadPrincipals.Get(Setting.Scheduler);
-            IAzureKeyVault keyVaultClient = HostDependencies.CreateKeyVaultClient(schedulerPrincipal, settings.KeyVaultSettings.Get(Setting.Default));
-            EventHubSettings eventHubTelemetrySettings = settings.EventHubSettings.Get(Setting.SchedulingTelemetry);
+                AadPrincipalSettings schedulerPrincipal = settings.SchedulerSettings.AadPrincipals.Get(Setting.Scheduler);
+                IAzureKeyVault keyVaultClient = HostDependencies.CreateKeyVaultClient(schedulerPrincipal, settings.KeyVaultSettings.Get(Setting.Default));
 
-            Program.DiagnosticsLogger = HostDependencies.CreateLogger(Program.HostName, appInsightsTelemetrySettings);
-
-            Program.Logger = HostDependencies.CreateLogger(
-               Program.HostName.ToString(),
-               appInsightsTelemetrySettings,
-               appInsightsTracingSettings,
-               eventHubTelemetrySettings,
-               keyVaultClient: keyVaultClient,
-               enableDiagnostics: true,
-               eventHubChannelConfiguration: (channel) =>
-               {
-                   channel.EventsDropped += (sender, args) =>
+                EventHubSettings eventHubTelemetrySettings = settings.EventHubSettings.Get(Setting.SchedulingTelemetry);
+                Program.Logger = HostDependencies.CreateLogger(
+                   Program.HostName.ToString(),
+                   eventHubTelemetrySettings: eventHubTelemetrySettings,
+                   keyVaultClient: keyVaultClient,
+                   enableDiagnostics: true,
+                   eventHubChannelConfiguration: (channel) =>
                    {
-                       Program.DiagnosticsLogger.LogTelemetry(
-                           $"{Program.HostName}.TelemetryEventsDropped", LogLevel.Warning, new EventContext(Guid.NewGuid())
-                           .AddContext("count", args.Events?.Count()));
-                   };
+                       channel.EventsDropped += (sender, args) =>
+                       {
+                           Program.DiagnosticsLogger.LogTelemetry(
+                               $"{Program.HostName}.TelemetryEventsDropped", LogLevel.Warning, new EventContext(Guid.NewGuid())
+                               .AddContext("count", args.Events?.Count()));
+                       };
 
-                   channel.EventTransmissionError += (sender, args) =>
-                   {
-                       Program.DiagnosticsLogger.LogTelemetry(
-                           $"{Program.HostName}.TelemetryEventTransmissionError", LogLevel.Warning, new EventContext(Guid.NewGuid())
-                           .AddContext("count", args.Events?.Count())
-                           .AddError(args.Error));
-                   };
-               });
+                       channel.EventTransmissionError += (sender, args) =>
+                       {
+                           Program.DiagnosticsLogger.LogTelemetry(
+                               $"{Program.HostName}.TelemetryEventTransmissionError", LogLevel.Warning, new EventContext(Guid.NewGuid())
+                               .AddContext("count", args.Events?.Count())
+                               .AddError(args.Error));
+                       };
+                   });
+            }
+            catch (Exception ex)
+            {
+                EventContext errorContext = EventContext.Persisted().AddError(ex);
+                Program.DiagnosticsLogger?.LogTelemetry($"{Program.HostName}.LoggingInitializationError", LogLevel.Error, errorContext);
+            }
         }
 
         private static IConfiguration GetEnvironmentConfiguration(CommandOption environmentOption, CommandOption configurationPathOption)

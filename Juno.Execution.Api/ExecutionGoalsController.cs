@@ -108,10 +108,12 @@
             {
                 Item<GoalBasedSchedule> executionGoalTemplateItem = await this.ExecutionGoalDataManager.GetExecutionGoalTemplateAsync(templateId, teamName, token)
                     .ConfigureDefaults();
-
-                GoalBasedSchedule template = executionGoalTemplateItem.Definition;
-
-                Item<GoalBasedSchedule> executionGoal = new Item<GoalBasedSchedule>(executionGoalParameters.ExecutionGoalId, template.Inlined(executionGoalParameters));
+                GoalBasedSchedule inlinedGoal = executionGoalTemplateItem.Definition.Inlined(executionGoalParameters);
+                Item<GoalBasedSchedule> executionGoal = new Item<GoalBasedSchedule>(inlinedGoal.GenerateExecutionGoalId(), inlinedGoal);
+                if (executionGoal.Definition.Metadata.ContainsKey(ExecutionGoalMetadata.ExecutionGoalTemplateId))
+                {
+                    executionGoal.Definition.Metadata.Add(ExecutionGoalMetadata.ExecutionGoalTemplateId, executionGoalTemplateItem.Id);
+                }
 
                 return await this.CreateExecutionGoalAsync(teamName, executionGoal, token).ConfigureDefaults();
             }).ConfigureDefaults();
@@ -122,6 +124,7 @@
         /// </summary>
         /// <param name="executionGoalParameters"><see cref="ExecutionGoalParameter"/> necessary to inline with Execution Goal Template</param>
         /// <param name="templateId">The execution goal template that execution goal will be based on.</param>
+        /// <param name="executionGoalId">The id of the execution goal to update.</param>
         /// <param name="teamName">The name of the team that owns the execution goal template</param>
         /// <param name="token"><see cref="CancellationToken"/></param>
         /// <response code="200">OK. The Execution Goal was updated successfully.</response>
@@ -138,7 +141,7 @@
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> UpdateExecutionGoalFromTemplateAsync(string templateId, [FromQuery] string teamName, [FromBody] ExecutionGoalParameter executionGoalParameters, CancellationToken token)
+        public async Task<IActionResult> UpdateExecutionGoalFromTemplateAsync(string templateId, [FromQuery] string executionGoalId, [FromQuery] string teamName, [FromBody] ExecutionGoalParameter executionGoalParameters, CancellationToken token)
         {
             executionGoalParameters.ThrowIfNull(nameof(executionGoalParameters));
             templateId.ThrowIfNullOrWhiteSpace(nameof(templateId));
@@ -146,6 +149,7 @@
 
             EventContext telemetryContext = EventContext.Persist(Guid.NewGuid())
                 .AddContext(nameof(templateId), templateId)
+                .AddContext(nameof(executionGoalId), executionGoalId)
                 .AddContext(nameof(teamName), teamName)
                 .AddContext(nameof(executionGoalParameters), executionGoalParameters);
 
@@ -155,8 +159,11 @@
                     .ConfigureDefaults();
 
                 GoalBasedSchedule template = executionGoalTemplateItem.Definition;
-
-                Item<GoalBasedSchedule> executionGoal = new Item<GoalBasedSchedule>(executionGoalParameters.ExecutionGoalId, template.Inlined(executionGoalParameters));
+                Item<GoalBasedSchedule> executionGoal = new Item<GoalBasedSchedule>(executionGoalId, template.Inlined(executionGoalParameters));
+                if (executionGoal.Definition.Metadata.ContainsKey(ExecutionGoalMetadata.ExecutionGoalTemplateId))
+                {
+                    executionGoal.Definition.Metadata.Add(ExecutionGoalMetadata.ExecutionGoalTemplateId, executionGoalTemplateItem.Id);
+                }
 
                 return await this.UpdateExecutionGoalAsync(executionGoal, token).ConfigureDefaults();
             }).ConfigureDefaults();
@@ -278,7 +285,7 @@
 
                 try
                 {
-                    await this.TargetGoalDataManager.UpdateTargetGoalTriggersAsync(executionGoal.Definition, cancellationToken)
+                    await this.TargetGoalDataManager.UpdateTargetGoalTriggersAsync(executionGoal, cancellationToken)
                         .ConfigureDefaults();
                 }
                 catch (StorageException exc)
@@ -363,7 +370,7 @@
 
                 try
                 {
-                    await this.TargetGoalDataManager.CreateTargetGoalsAsync(executionGoal.Definition, cancellationToken)
+                    await this.TargetGoalDataManager.CreateTargetGoalsAsync(executionGoal, cancellationToken)
                         .ConfigureDefaults();
                 }
                 catch (StorageException exc)
@@ -422,7 +429,7 @@
 
                 telemetryContext.AddContext(nameof(executionGoal), executionGoal);
 
-                IList<TargetGoalTimeline> executionGoalsStatuses = await this.ExecutionGoalTelemetryDataManager.GetExecutionGoalTimelineAsync(executionGoal.Definition, cancellationToken)
+                IList<TargetGoalTimeline> executionGoalsStatuses = await this.ExecutionGoalTelemetryDataManager.GetExecutionGoalTimelineAsync(executionGoal, cancellationToken)
                     .ConfigureDefaults();
 
                 telemetryContext.AddContext(nameof(executionGoalsStatuses), executionGoalsStatuses);

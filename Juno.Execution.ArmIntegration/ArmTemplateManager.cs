@@ -630,10 +630,11 @@
                     new ParameterValue<string>(resourceGroup.SubnetName),
                     new ParameterValue<string>(resourceGroup.NetworkSecurityGroupName),
                     new ParameterValue<string>(resourceGroup.VirtualNetworkName),
+                    new ParameterValue<string>(vmDefinition.PrivateIPAddress),
                     new ParameterValue<string>(vmDefinition.AdminUserName),
                     adminCredentialKvReference,
-                    new ParameterValue<string>(resourceGroup.TipSessionId),
-                    new ParameterValue<string>(resourceGroup.ClusterId),
+                    new ParameterValue<string>(vmDefinition.TipSessionId),
+                    new ParameterValue<string>(vmDefinition.ClusterId),
                     new ParameterValue<IList<VmDisk>>(vmDefinition.VirtualDisks),
                     new ParameterValue<bool>(vmDefinition.EnableAcceleratedNetworking));
 
@@ -732,7 +733,7 @@
                 bootstrapCommand = $"{bootstrapCommand}" +
                     $" --environment \"{this.settings.Environment}\"" +
                     $" --experimentId \"{resourceGroup.ExperimentId}\"" +
-                    $" --agentId \"{AgentIdentification.CreateVirtualMachineId(resourceGroup.ClusterId, resourceGroup.NodeId, vmDefinition.Name, resourceGroup.TipSessionId)}\"" +
+                    $" --agentId \"{AgentIdentification.CreateVirtualMachineId(vmDefinition.ClusterId, vmDefinition.NodeId, vmDefinition.Name, vmDefinition.TipSessionId)}\"" +
                     $" --packageVersion \"{version}\"" +
                     $" --appInsightsInstrumentationKey \"{this.settings.AppInsightsSettings.Get(Setting.Telemetry).InstrumentationKey}\"" +
                     $" --keyVaultUri \"{this.settings.KeyVaultSettings.Get(Setting.Default).Uri.AbsoluteUri}\"" +

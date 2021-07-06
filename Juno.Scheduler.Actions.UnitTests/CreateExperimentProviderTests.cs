@@ -10,6 +10,7 @@
     using Juno.Contracts;
     using Juno.DataManagement;
     using Juno.Providers;
+    using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Azure.CRC.Repository;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
@@ -58,7 +59,7 @@
             this.gbScheduleTrigger = this.mockFixtureGBS.Create<TargetGoalTrigger>();
             this.gbsExperimentItem = this.mockFixtureGBS.Create<ExperimentItem>();
 
-            this.mockContext = new ScheduleContext(this.mockFixtureGBS.Create<GoalBasedSchedule>(), this.mockFixtureGBS.Create<TargetGoalTrigger>(), new Mock<IConfiguration>().Object);
+            this.mockContext = new ScheduleContext(new Item<GoalBasedSchedule>("id", this.mockFixtureGBS.Create<GoalBasedSchedule>()), this.mockFixtureGBS.Create<TargetGoalTrigger>(), new Mock<IConfiguration>().Object);
         }
 
         [Test]
@@ -76,10 +77,8 @@
                 .ReturnsAsync(this.GetHttpResponse(HttpStatusCode.OK))
                 .Callback<ExperimentTemplate, CancellationToken, string>((experimentTemplate, token, testWorkQueue) =>
                 {
-                    var overridePram = new TemplateOverride(component.Parameters).ToJson();
-                    this.mockContext.ExecutionGoal.Experiment.Metadata.Add("targetGoal", "TargetGoal");
-                    this.mockContext.ExecutionGoal.Experiment.Metadata.Add("executionGoal", "ExecutionGoal");
-                    Assert.AreEqual(experimentTemplate.Experiment, this.mockContext.ExecutionGoal.Experiment);
+                    var overridePram = JsonConvert.SerializeObject(new TemplateOverride(component.Parameters));
+                    Assert.AreEqual(experimentTemplate.Experiment, this.mockContext.ExecutionGoal.Definition.Experiment);
                     Assert.AreEqual(overridePram, experimentTemplate.Override);
                 });
 
@@ -107,7 +106,7 @@
             ExperimentTemplate template = new ExperimentTemplate()
             {
                 Experiment = this.gbsExperimentItem.Definition,
-                Override = new TemplateOverride(component.Parameters).ToJson()
+                Override = JsonConvert.SerializeObject(new TemplateOverride(component.Parameters))
             };
 
             this.experimentClient.Setup(x => x.CreateExperimentFromTemplateAsync(It.IsAny<ExperimentTemplate>(), this.cancellationToken, It.IsAny<string>()))

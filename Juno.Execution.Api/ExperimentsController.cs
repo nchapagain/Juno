@@ -109,6 +109,12 @@
                         $"{string.Join($"{Environment.NewLine} -", validationResult.ValidationErrors)}");
                 }
 
+                // Notes:
+                // We do not have a consensus on where the recommendation ID should be created or the format of it. We are
+                // leaving this here for reference as we come back to this so that we do not lose track of the work we did
+                // to integrate it and can simply refactor that to match the requisite semantics in the future.
+                // inlinedExperiment.AddRecommendationId();
+
                 ExperimentInstance instance = await this.DataManager.CreateExperimentAsync(inlinedExperiment, cancellationToken)
                     .ConfigureDefaults();
 
@@ -275,7 +281,7 @@
             // down the callstack.
             EventContext telemetryContext = EventContext.Persist(activityId: Guid.NewGuid())
                 .AddContext(definition)
-                .AddContext(parentStepId, nameof(parentStepId))
+                .AddContext(nameof(parentStepId), parentStepId)
                 .AddContext(nameof(agentId), agentId);
 
             return await this.ExecuteApiOperationAsync(EventNames.CreateExperimentAgentStep, telemetryContext, this.Logger, async () =>

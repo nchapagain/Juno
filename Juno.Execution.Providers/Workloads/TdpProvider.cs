@@ -427,7 +427,10 @@
                     component.Parameters.GetValue<int>(Parameters.DataDiskSizeInGB, TdpProvider.DefaultDataDiskSizeInGB),
                     dataDiskStorageAccountType,
                     component.Parameters.GetValue<bool>(Parameters.EnableAcceleratedNetworking, false),
-                    component.Parameters.GetValue<string>(Parameters.SigImageReference, string.Empty)));
+                    sigImageReference: component.Parameters.GetValue<string>(Parameters.SigImageReference, string.Empty),
+                    nodeId: tipSession?.NodeId,
+                    tipSessionId: tipSession?.TipSessionId,
+                    clusterId: clusterName));
 
             return new VmResourceGroupDefinition(
                 settings.Environment,
@@ -436,9 +439,6 @@
                 Guid.NewGuid().ToString(), // This is a special case we are using a new Guid as the step id, because this step will have multiple resource groups.
                 vmSpecifications,
                 targetRegion,
-                clusterName,
-                tipSession?.TipSessionId,
-                tipSession?.NodeId,
                 resourceGroupTags,
                 component.Parameters.GetValue<string>(Parameters.Platform, VmPlatform.WinX64));
         }

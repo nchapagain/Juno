@@ -32,7 +32,10 @@
                 osOffer: "AnyOffer",
                 osSku: "AnyOSSku",
                 osVersion: "1.2.3.4",
-                enableAcceleratedNetworking: true);
+                enableAcceleratedNetworking: true,
+                clusterId: "Cluster01",
+                tipSessionId: Guid.NewGuid().ToString(),
+                nodeId: Guid.NewGuid().ToString());
 
             // With data disks
             this.exampleVmSpecification2 = new AzureVmSpecification(
@@ -46,7 +49,10 @@
                 dataDiskSku: "AnyDiskSku",
                 dataDiskSizeInGB: 32,
                 dataDiskStorageAccountType: "AnyDiskStorageAccountType",
-                enableAcceleratedNetworking: true);
+                enableAcceleratedNetworking: true,
+                clusterId: "Cluster02",
+                tipSessionId: Guid.NewGuid().ToString(),
+                nodeId: Guid.NewGuid().ToString());
 
             this.exampleVmResourceGroupDefinition = new VmResourceGroupDefinition(
                 environment: "AnyEnvironment",
@@ -58,10 +64,7 @@
                     this.exampleVmSpecification1,
                     this.exampleVmSpecification2
                 },
-                region: "AnyRegion",
-                clusterId: "Cluster01",
-                tipSessionId: Guid.NewGuid().ToString(),
-                nodeId: Guid.NewGuid().ToString());
+                region: "AnyRegion");
         }
 
         [Test]
@@ -81,8 +84,8 @@
                     name = this.exampleVmResourceGroupDefinition.Name,
                     subscriptionId = this.exampleVmResourceGroupDefinition.SubscriptionId,
                     region = this.exampleVmResourceGroupDefinition.Region,
-                    cluster = this.exampleVmResourceGroupDefinition.ClusterId,
-                    tipSessionId = this.exampleVmResourceGroupDefinition.TipSessionId,
+                    cluster = $"{this.exampleVmSpecification1.ClusterId},{this.exampleVmSpecification2.ClusterId}",
+                    tipSessionId = $"{this.exampleVmSpecification1.TipSessionId},{this.exampleVmSpecification2.TipSessionId}",
                     deploymentName = this.exampleVmResourceGroupDefinition.DeploymentName,
                     subnetName = this.exampleVmResourceGroupDefinition.SubnetName,
                     vmNetworkName = this.exampleVmResourceGroupDefinition.VirtualNetworkName,
@@ -131,7 +134,10 @@
                     deploymentCorrelationId = expectedVmDefinition.CorrelationId,
                     deploymentId = expectedVmDefinition.DeploymentId,
                     deploymentName = expectedVmDefinition.DeploymentName,
-                    deploymentState = expectedVmDefinition.State
+                    deploymentState = expectedVmDefinition.State,
+                    role = expectedVmDefinition.Role,
+                    tipSessionId = expectedVmDefinition.TipSessionId,
+                    nodeId = expectedVmDefinition.NodeId
                 }.ToJson());
 
             // ...and where data disks are defined.
@@ -154,7 +160,10 @@
                     deploymentCorrelationId = expectedVmDefinition.CorrelationId,
                     deploymentId = expectedVmDefinition.DeploymentId,
                     deploymentName = expectedVmDefinition.DeploymentName,
-                    deploymentState = expectedVmDefinition.State
+                    deploymentState = expectedVmDefinition.State,
+                    role = expectedVmDefinition.Role,
+                    tipSessionId = expectedVmDefinition.TipSessionId,
+                    nodeId = expectedVmDefinition.NodeId
                 }.ToJson());
         }
 

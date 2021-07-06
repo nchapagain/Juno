@@ -47,7 +47,9 @@
             this.containerTwo = this.mockFixture.Create<EnvironmentQuery>();
             this.mockComponent = this.mockFixture.Create<ScheduleAction>();
             this.mockComponent.Parameters.Add("experimentTemplateFile", "file");
-            this.mockContext = new ScheduleContext(this.mockFixture.Create<GoalBasedSchedule>(), this.mockFixture.Create<TargetGoalTrigger>(), new Mock<IConfiguration>().Object);
+
+            Mock<IConfiguration> mockConfiguration = new Mock<IConfiguration>();
+            this.mockContext = new ScheduleContext(new Item<GoalBasedSchedule>("id", this.mockFixture.Create<GoalBasedSchedule>()), this.mockFixture.Create<TargetGoalTrigger>(), mockConfiguration.Object);
 
             this.mockClient.Setup(client => client.CreateExperimentFromTemplateAsync(It.IsAny<ExperimentTemplate>(), It.IsAny<CancellationToken>(), It.IsAny<string>()))
                 .ReturnsAsync(this.CreateResponseMessage(HttpStatusCode.OK, this.mockFixture.Create<ExperimentItem>()));

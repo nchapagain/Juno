@@ -33,6 +33,7 @@
         private const string KeyVaultAuthenticationResourceId = "https://vault.azure.net";
         private const int DefaultMaxInstallationAttempts = 3;
         private static readonly TimeSpan DefaultTimeout = TimeSpan.FromMinutes(30);
+        private static readonly TimeSpan ReevaluationExtension = TimeSpan.FromMinutes(1);
 
         private AadPrincipalSettings hostAgentAadSettings;
         private ITipClient tipClient;
@@ -54,7 +55,7 @@
             component.ThrowIfNull(nameof(component));
             telemetryContext.ThrowIfNull(nameof(telemetryContext));
 
-            ExecutionResult result = new ExecutionResult(ExecutionStatus.InProgress);
+            ExecutionResult result = new ExecutionResult(ExecutionStatus.InProgress, extensionTimeout: InstallHostAgentProvider.ReevaluationExtension);
 
             if (!cancellationToken.IsCancellationRequested)
             {

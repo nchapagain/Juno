@@ -11,6 +11,7 @@
     using Juno.Contracts;
     using Juno.Contracts.Configuration;
     using Juno.Extensions.Telemetry;
+    using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Azure.CRC.Extensions;
     using Microsoft.Azure.CRC.Kusto;
     using Microsoft.Azure.CRC.Repository;
@@ -85,24 +86,22 @@
             }).ConfigureDefaults();
         }
 
-        /// <see cref="IExperimentKustoTelemetryDataManager.GetExecutionGoalTimelineAsync(GoalBasedSchedule, CancellationToken)"/>
-        public Task<IList<TargetGoalTimeline>> GetExecutionGoalTimelineAsync(GoalBasedSchedule executionGoal, CancellationToken cancellationToken)
+        /// <see cref="IExperimentKustoTelemetryDataManager.GetExecutionGoalTimelineAsync"/>
+        public Task<IList<TargetGoalTimeline>> GetExecutionGoalTimelineAsync(Item<GoalBasedSchedule> executionGoal, CancellationToken cancellationToken)
         {
             executionGoal.ThrowIfNull(nameof(executionGoal));
 
-            EventContext telemetryContext = EventContext.Persisted()
-                .AddContext(nameof(executionGoal.ExecutionGoalId), executionGoal.ExecutionGoalId)
-                .AddContext(nameof(executionGoal.ExperimentName), executionGoal.ExperimentName);
+            EventContext telemetryContext = EventContext.Persisted();
 
             return this.Logger.LogTelemetryAsync($"{nameof(ExecutionGoalKustoTelemetryDataManager)}.GetExecutionGoalTimeline", telemetryContext, async () =>
             {
                 IList<TargetGoalTimeline> results = new List<TargetGoalTimeline>();
-                Dictionary<Goal, Task<DataTable>> dataTableTaskDictionary = new Dictionary<Goal, Task<DataTable>>();
+                Dictionary<TargetGoal, Task<DataTable>> dataTableTaskDictionary = new Dictionary<TargetGoal, Task<DataTable>>();
 
-                foreach (Goal targetGoal in executionGoal.TargetGoals)
+                foreach (TargetGoal targetGoal in executionGoal.Definition.TargetGoals)
                 {
                     string query = Kusto.Resources.TargetGoalStatus;
-                    string targetGoalFilter = string.Join("-", targetGoal.Name, executionGoal.TeamName);
+                    string targetGoalFilter = targetGoal.Name;
                     query = query.Replace(Constants.TargetGoalFilter, targetGoalFilter, StringComparison.Ordinal);
 
                     telemetryContext.AddContext(nameof(query), query);
@@ -112,10 +111,10 @@
 
                 // All kusto tasks will complete here.
                 await Task.WhenAll(dataTableTaskDictionary.Values).ConfigureAwait(false);
-                foreach (KeyValuePair<Goal, Task<DataTable>> pair in dataTableTaskDictionary)
+                foreach (KeyValuePair<TargetGoal, Task<DataTable>> pair in dataTableTaskDictionary)
                 {
                     DataTable kustoResponse = await pair.Value.ConfigureAwait(false);
-                    List<TargetGoalTimeline> targetGoalTimeLines = kustoResponse.ParseExecutionGoalTimeline(pair.Key, executionGoal.ExecutionGoalId, executionGoal.ExperimentName, executionGoal.TeamName, this.environment).ToList();
+                    List<TargetGoalTimeline> targetGoalTimeLines = kustoResponse.ParseExecutionGoalTimeline(pair.Key, executionGoal.Id, executionGoal.Definition.TeamName, this.environment, executionGoal.Definition.ExperimentName).ToList();
                     results = results.Concat(targetGoalTimeLines).ToList();
                 }
 

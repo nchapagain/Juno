@@ -305,8 +305,9 @@
 
             fixture.Register(() => FixtureExtensions.CreatePreConditionInstance());
             fixture.Register(() => FixtureExtensions.CreateScheduleActionInstance());
-            fixture.Register(() => FixtureExtensions.CreateGoalInstance(fixture.Create<Precondition>(), fixture.Create<ScheduleAction>()));            
-            fixture.Register(() => FixtureExtensions.CreateGoalBasedScheduleInstance(fixture.Create<Goal>(), fixture.Create<Goal>(), fixture.Create<Experiment>()));
+            fixture.Register(() => FixtureExtensions.CreateGoalInstance(fixture.Create<Precondition>(), fixture.Create<ScheduleAction>()));
+            fixture.Register(() => FixtureExtensions.CreateTargetGoal(Guid.NewGuid().ToString(), Guid.NewGuid().ToString()));
+            fixture.Register(() => FixtureExtensions.CreateGoalBasedScheduleInstance(fixture.Create<TargetGoal>(), fixture.Create<Goal>(), fixture.Create<Experiment>()));
             fixture.Register(() => FixtureExtensions.CreateTargetGoalTableEntity());
             fixture.Register(() => FixtureExtensions.CreateTargetGoalTrigger());
 
@@ -357,15 +358,20 @@
         /// <returns><see cref="ExecutionGoalParameter"/></returns>
         public static ExecutionGoalParameter CreateExecutionGoalParameter()
         {
-            string executionGoal = Guid.NewGuid().ToString();
-
             var targetGoalPram = new List<TargetGoalParameter>()
             {
-                new TargetGoalParameter("1", "WorkloadA", new Dictionary<string, IConvertible>() { ["targetGoal1"] = Guid.NewGuid().ToString() }),
-                new TargetGoalParameter("2", "WorkloadA", new Dictionary<string, IConvertible>() { ["targetGoal2"] = Guid.NewGuid().ToString() })
+                new TargetGoalParameter("1", true, new Dictionary<string, IConvertible>() { ["targetGoal1"] = Guid.NewGuid().ToString() }),
+                new TargetGoalParameter("2", false, new Dictionary<string, IConvertible>() { ["targetGoal2"] = Guid.NewGuid().ToString() })
             };
 
-            return new ExecutionGoalParameter(executionGoal, "ExperimentName", "TeamName", "joe@microsoft.com", true, targetGoalPram);
+            Dictionary<string, IConvertible> metadata = new Dictionary<string, IConvertible>()
+            { 
+                ["teamName"] = "CRC AIR",
+                ["owner"] = "owner@microsoft.com",
+                ["experiment.name"] = "my experiment name"
+            };
+
+            return new ExecutionGoalParameter(targetGoalPram, metadata);
         }
 
         /// <summary>
@@ -454,12 +460,11 @@
             return new TargetGoalTableEntity()
             {
                 PartitionKey = "Version",
-                RowKey = "TargetGoal",
-                Id = "TargetGoal",
-                ExperimentName = "ExperimentName",
-                TeamName = "TeamName",
+                Name = "target goal",
+                Id = Guid.NewGuid().ToString(),
                 ExecutionGoal = "ExecutionGoal",
                 CronExpression = "*/1 * * * * *",
+                TeamName = "team name",
                 Enabled = true
             };
         }
@@ -473,12 +478,11 @@
             return new TargetGoalTrigger(
                 executionGoal: "ExecutionGoal",
                 id: "TargetGoal",
-                experimentName: "ExperimentName",
-                teamName: "TeamName",
                 version: "Version",
                 cronExpression: "*/1 * * * * *",
-                targetGoal: "TargetGoal",
+                name: "TargetGoal",
                 enabled: true,
+                teamName: "teamName",
                 created: DateTime.UtcNow,
                 lastModified: DateTime.UtcNow);
         }
@@ -487,29 +491,19 @@
         /// Give the ability to construct a GoalBasedSchedule with 
         /// custom parameters while leaving the rest default
         /// </summary>
-        /// <param name="experimentName">name of experiment</param>
-        /// <param name="executionGoalId">Id of experiment goal</param>
         /// <param name="name">Execution Goal Name</param>
-        /// <param name="teamName">Name of team whom owns the execution goal</param>
         /// <param name="description">description of the execution goal</param>
         /// <param name="metadata">meta data of the execution goal</param>
-        /// <param name="enabled">wheter or not the execution goal is enabled</param>
-        /// <param name="version">version of execution goal</param>
         /// <param name="experiment">experiment item</param>
         /// <param name="targetGoals">list of target goals</param>
         /// <param name="controlGoals">list of control goals</param>
         /// <returns></returns>
         public static GoalBasedSchedule CreateExecutionGoalFromTemplate(
-            string experimentName = null,
-            string executionGoalId = null,
             string name = null,
-            string teamName = null,
             string description = null,
             Dictionary<string, IConvertible> metadata = null,
-            bool? enabled = null,
-            string version = null,
             Experiment experiment = null,
-            List<Goal> targetGoals = null,
+            List<TargetGoal> targetGoals = null,
             List<Goal> controlGoals = null)
         {
             ExperimentSetup experimentSetup = new ExperimentSetup()
@@ -526,21 +520,16 @@
                 FixtureExtensions.CreateExperiment(ExperimentType.AB, experimentSetup));
 
             return new GoalBasedSchedule(
-                experimentName: experimentName ?? template.ExperimentName,
-                executionGoalId: executionGoalId ?? template.ExecutionGoalId,
-                name: name ?? template.Name,
-                teamName: teamName ?? template.TeamName,
+                experimentName: name ?? template.ExperimentName,
                 description: description ?? template.Description,
-                metadata: metadata ?? template.ScheduleMetadata,
-                enabled: enabled ?? template.Enabled,
-                version: version ?? template.Version,
+                metadata: metadata ?? template.Metadata,
                 experiment: experiment ?? template.Experiment,
                 targetGoals: targetGoals ?? template.TargetGoals,
                 controlGoals: controlGoals ?? template.ControlGoals);
         }
 
         /// <summary>
-        /// 
+        /// Create an execution goal template.
         /// </summary>
         public static GoalBasedSchedule CreateExecutionGoalTemplate()
         {
@@ -551,22 +540,18 @@
             };
 
             return new GoalBasedSchedule(
-                experimentName: "ExperimentName",
-                executionGoalId: "$.parameters.executionGoalId",
-                name: "ExecutionGoalTemplate",
-                teamName: "teamName",
+                experimentName: "ExecutionGoalTemplate",
                 description: "description",
                 metadata: new Dictionary<string, IConvertible>() 
                 { 
-                    ["owner"] = "experiment_Owner@microsoft.com, experiment-Owner2@MICROSOFT.COM" 
+                    ["owner"] = "experiment_Owner@microsoft.com, experiment-Owner2@MICROSOFT.COM",
+                    ["teamName"] = "CRCAIR"
                 },
-                enabled: true,
-                version: "2021-01-01",
                 experiment: FixtureExtensions.CreateExperiment(ExperimentType.AB, experimentSetup),
-                targetGoals: new List<Goal>()
+                targetGoals: new List<TargetGoal>()
                 {
-                    FixtureExtensions.CreateTargetGoal("$.parameters.targetGoal1"),
-                    FixtureExtensions.CreateTargetGoal("$.parameters.targetGoal2")
+                    FixtureExtensions.CreateTargetGoal("name1"),
+                    FixtureExtensions.CreateTargetGoal("name2")
                 },
                 controlGoals: new List<Goal>()
                 {
@@ -587,21 +572,18 @@
         /// <param name="targetGoal"><see cref="Goal"/></param>
         /// <param name="cronExpression">Cron Expression to express frequency</param>
         /// <returns></returns>
-        public static TargetGoalTableEntity CreateTargetTableEntityFromTemplates(GoalBasedSchedule executionGoal, Goal targetGoal, string cronExpression = null)
+        public static TargetGoalTableEntity CreateTargetTableEntityFromTemplates(Item<GoalBasedSchedule> executionGoal, TargetGoal targetGoal, string cronExpression = null)
         {
             executionGoal.ThrowIfNull(nameof(executionGoal));
             targetGoal.ThrowIfNull(nameof(targetGoal));
 
             return new TargetGoalTableEntity
             {
-                Id = targetGoal.Name,
-                PartitionKey = executionGoal.Version,
-                RowKey = targetGoal.Name,
+                Id = targetGoal.Id,
+                PartitionKey = executionGoal.Definition.Version,
                 CronExpression = cronExpression ?? "* * * * *",
-                Enabled = executionGoal.Enabled,
-                ExperimentName = executionGoal.ExperimentName,
-                TeamName = executionGoal.TeamName,
-                ExecutionGoal = executionGoal.ExecutionGoalId,
+                Enabled = targetGoal.Enabled,
+                ExecutionGoal = executionGoal.Id,
                 Created = DateTime.UtcNow.AddSeconds(-10),
                 Timestamp = DateTime.UtcNow.AddSeconds(-10),
             };
@@ -611,10 +593,11 @@
         /// Creates a valid Target goal
         /// </summary>
         /// <returns></returns>
-        public static Goal CreateTargetGoal(string name = null, string id = null)
+        public static TargetGoal CreateTargetGoal(string name = null, string id = null, bool enabled = true)
         {
-            return new Goal(
+            return new TargetGoal(
                 name: name ?? "TargetGoal1",
+                enabled: enabled,
                 preconditions: new List<Precondition>()
                     {
                         new Precondition(
@@ -648,15 +631,12 @@
                 actions: actions);
         }
 
-        private static GoalBasedSchedule CreateGoalBasedScheduleInstance(Goal targetGoal, Goal controlGoal, Experiment experiment)
+        private static GoalBasedSchedule CreateGoalBasedScheduleInstance(TargetGoal targetGoal, Goal controlGoal, Experiment experiment)
         {
-            List<Goal> targetGoals = new List<Goal> { targetGoal };
+            List<TargetGoal> targetGoals = new List<TargetGoal> { targetGoal };
             List<Goal> controlGoals = new List<Goal> { controlGoal };
             return new GoalBasedSchedule(
-                experimentName: "MockExperiment",
-                executionGoalId: "MockExecutionGoal.json",
-                name: "Mock Schedule",
-                teamName: "TeamName",
+                experimentName: "Mock Schedule",
                 description: "A Schedule, but for testing",
                 metadata: new Dictionary<string, IConvertible>
                 {
@@ -664,10 +644,10 @@
                     ["Parameter1"] = "value1",
                     ["Parameter2"] = "value2",
                     ["Parameter3"] = "value3",
-                    ["Parameter4"] = false
+                    ["Parameter4"] = false,
+                    ["version"] = "2021-01-01",
+                    ["teamName"] = "CRCAIR"
                 },
-                enabled: true,
-                version: "2021-01-01",
                 experiment: experiment,
                 targetGoals: targetGoals,
                 controlGoals: controlGoals);
@@ -765,6 +745,8 @@
                     ["workload"] = "PERF-CPU-V1",
                     ["workloadType"] = "VirtualClient",
                     ["workloadVersion"] = "1.0.9876.11",
+                    ["revision"] = "MCU3030.1 Revision 1",
+                    ["tenantId"] = "CRC AIR",
                     ["impactType"] = "None"
                 },
                 new Dictionary<string, IConvertible>

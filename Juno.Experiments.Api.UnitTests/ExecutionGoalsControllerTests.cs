@@ -15,6 +15,7 @@
     using Microsoft.Azure.CRC.Contracts;
     using Microsoft.Extensions.Logging.Abstractions;
     using Moq;
+    using Newtonsoft.Json;
     using NUnit.Framework;
     using Polly;
 
@@ -27,7 +28,7 @@
         private FixtureDependencies mockDependencies;
         private ExecutionClient mockExecutionClient;
         private GoalBasedSchedule mockExecutionGoal;
-        private Goal mockTargetGoal;
+        private TargetGoal mockTargetGoal;
         private Item<GoalBasedSchedule> mockExecutionGoalItem;
         private IList<ExperimentInstanceStatus> mockExecutionGoalStatus;
 
@@ -46,8 +47,9 @@
 
             string cronExpression = "* * * * *";
 
-            this.mockTargetGoal = new Goal(
+            this.mockTargetGoal = new TargetGoal(
                 name: "TargetGoal",
+                true,
                 preconditions: new List<Precondition>()
                 {
                     new Precondition(
@@ -75,18 +77,13 @@
 
             this.mockExecutionGoal = new GoalBasedSchedule(
                 template.ExperimentName,
-                template.ExecutionGoalId,
-                template.Name,
-                template.TeamName,
                 template.Description,
-                template.ScheduleMetadata,
-                template.Enabled,
-                template.Version,
                 template.Experiment,
-                new List<Goal> { this.mockTargetGoal },
-                template.ControlGoals);
+                new List<TargetGoal> { this.mockTargetGoal },
+                template.ControlGoals,
+                template.Metadata);
 
-            this.mockExecutionGoalItem = new Item<GoalBasedSchedule>(this.mockExecutionGoal.ExecutionGoalId, this.mockExecutionGoal);
+            this.mockExecutionGoalItem = new Item<GoalBasedSchedule>(Guid.NewGuid().ToString(), this.mockExecutionGoal);
         }
 
         [Test]
@@ -128,15 +125,16 @@
         [Test]
         public async Task ControllerReturnsTheExpectedResponseWhenCreatingAnExecutionGoal()
         {
+            string id = Guid.NewGuid().ToString();
             this.mockDependencies.RestClient.SetUpPostExecutionGoal()
-                .Returns(Task.FromResult(new Item<GoalBasedSchedule>(this.mockExecutionGoal.ExecutionGoalId, this.mockExecutionGoal).ToHttpResponse()));
+                .Returns(Task.FromResult(new Item<GoalBasedSchedule>(id, this.mockExecutionGoal).ToHttpResponse()));
 
             CreatedAtActionResult result = await this.controller.CreateExecutionGoalAsync(this.mockExecutionGoalItem, CancellationToken.None)
                 as CreatedAtActionResult;
 
             Assert.IsNotNull(result);
             Assert.AreEqual(StatusCodes.Status201Created, result.StatusCode);
-            Assert.AreEqual(this.mockExecutionGoal.ExecutionGoalId, (result.Value as Item<GoalBasedSchedule>).Id);
+            Assert.AreEqual(id, (result.Value as Item<GoalBasedSchedule>).Id);
         }
 
         [Test]
@@ -149,11 +147,6 @@
             ExecutionGoalParameter templateExecutionGoalMetadata = this.mockFixture.Create<ExecutionGoalSummary>().ParameterNames;
 
             ExecutionGoalParameter executionGoalMetadata = new ExecutionGoalParameter(
-                this.mockExecutionGoal.ExecutionGoalId,
-                this.mockExecutionGoal.ExperimentName,
-                this.mockExecutionGoal.TeamName,
-                templateExecutionGoalMetadata.Owner,
-                this.mockExecutionGoal.Enabled,
                 templateExecutionGoalMetadata.TargetGoals,
                 this.mockExecutionGoal.Parameters);
 
@@ -162,7 +155,7 @@
 
             Assert.IsNotNull(result);
             Assert.AreEqual(StatusCodes.Status201Created, result.StatusCode);
-            Assert.AreEqual(this.mockExecutionGoal.ExecutionGoalId, (result.Value as Item<GoalBasedSchedule>).Definition.ExecutionGoalId);
+            Assert.AreEqual(this.mockExecutionGoalItem.Id, (result.Value as Item<GoalBasedSchedule>).Id);
         }
 
         [Test]
@@ -170,51 +163,57 @@
         {
             ExecutionGoalParameter executionGoalParameter = this.mockExecutionGoal.GetParametersFromTemplate();
 
-            this.mockDependencies.RestClient.SetupPutExecutionGoalFromTemplate(this.mockExecutionGoal.ExecutionGoalId, this.mockExecutionGoal.TeamName)
+            string executionGoalId = Guid.NewGuid().ToString();
+            string templateId = Guid.NewGuid().ToString();
+            this.mockDependencies.RestClient.SetupPutExecutionGoalFromTemplate(templateId, executionGoalId, Uri.EscapeUriString(this.mockExecutionGoal.TeamName))
                 .Returns(Task.FromResult(this.mockExecutionGoalItem.ToHttpResponse()));
 
-            ObjectResult result = await this.controller.UpdateExecutionGoalFromTemplateAsync(executionGoalParameter.ExecutionGoalId, this.mockExecutionGoal.TeamName, executionGoalParameter, CancellationToken.None)
+            ObjectResult result = await this.controller.UpdateExecutionGoalFromTemplateAsync(templateId, executionGoalId, this.mockExecutionGoal.TeamName, executionGoalParameter, CancellationToken.None)
                 as ObjectResult;
 
             Assert.IsNotNull(result);
             Assert.AreEqual(StatusCodes.Status200OK, result.StatusCode);
-            Assert.AreEqual(executionGoalParameter.ExecutionGoalId, (result.Value as Item<GoalBasedSchedule>).Definition.ExecutionGoalId);
         }
 
         [Test]
         public async Task ControllerReturnsTheExpectedResponseWhenGettingAnExecutionGoal()
         {
-            this.mockDependencies.RestClient.SetupGetExecutionGoal(this.mockExecutionGoal.ExecutionGoalId, this.mockExecutionGoal.TeamName)
-                .Returns(Task.FromResult(this.mockExecutionGoalItem.ToHttpResponse()));
+            Item<GoalBasedSchedule> expectedResult = this.mockExecutionGoalItem;
+            this.mockDependencies.RestClient.SetupGetExecutionGoal(expectedResult.Id, Uri.EscapeUriString(this.mockExecutionGoal.TeamName))
+               .Returns(Task.FromResult(expectedResult.ToHttpResponse()));
 
-            ObjectResult result = await this.controller.GetExecutionGoalAsync(this.mockExecutionGoal.ExecutionGoalId, this.mockExecutionGoal.TeamName, CancellationToken.None)
+            ObjectResult result = await this.controller.GetExecutionGoalsAsync(CancellationToken.None, this.mockExecutionGoal.TeamName, this.mockExecutionGoalItem.Id)
                 as ObjectResult;
 
-            Assert.IsNotNull(result);
+            Item<GoalBasedSchedule> actualResult = result.Value as Item<GoalBasedSchedule>;
+            Assert.IsNotNull(actualResult, "Could not read content as expected type");
             Assert.AreEqual(StatusCodes.Status200OK, result.StatusCode);
-            Assert.AreEqual(this.mockExecutionGoal.ExecutionGoalId, (result.Value as Item<GoalBasedSchedule>).Definition.ExecutionGoalId);
+            Assert.AreEqual(expectedResult, actualResult);
         }
 
         [Test]
         public async Task ControllerReturnsTheExpectedReponseWhenGettingExecutionGoals()
         {
-            this.mockDependencies.RestClient.SetupGetExecutionGoals(this.mockExecutionGoal.TeamName)
-               .Returns(Task.FromResult((new List<Item<GoalBasedSchedule>>() { this.mockExecutionGoalItem }).ToHttpResponse()));
+            List<Item<GoalBasedSchedule>> expectedResult = new List<Item<GoalBasedSchedule>>() { this.mockExecutionGoalItem };
+            this.mockDependencies.RestClient.SetupGetExecutionGoals(Uri.EscapeUriString(this.mockExecutionGoal.TeamName))
+               .Returns(Task.FromResult(expectedResult.ToHttpResponse()));
 
             ObjectResult result = await this.controller.GetExecutionGoalsAsync(CancellationToken.None, this.mockExecutionGoal.TeamName)
                 as ObjectResult;
 
-            Assert.IsNotNull(result);
+            List<Item<GoalBasedSchedule>> actualResult = result.Value as List<Item<GoalBasedSchedule>>;
+            Assert.IsNotNull(actualResult, "Could not read content as expected type");
             Assert.AreEqual(StatusCodes.Status200OK, result.StatusCode);
+            Assert.AreEqual(expectedResult, actualResult);
         }
 
         [Test]
         public async Task ControllerReturnsTheExpectedReponseWhenGettingExecutionGoalViewIsTypeEmpty()
         {
-            this.mockDependencies.RestClient.SetupGetExecutionGoal(this.mockExecutionGoal.ExecutionGoalId, this.mockExecutionGoal.TeamName, ExecutionGoalView.Full)
+            this.mockDependencies.RestClient.SetupGetExecutionGoal(this.mockExecutionGoalItem.Id, this.mockExecutionGoal.TeamName, ExecutionGoalView.Full)
                 .Returns(Task.FromResult(this.mockExecutionGoalItem.ToHttpResponse()));
 
-            ObjectResult result = await this.controller.GetExecutionGoalsAsync(CancellationToken.None, this.mockExecutionGoal.TeamName, this.mockExecutionGoal.ExecutionGoalId)
+            ObjectResult result = await this.controller.GetExecutionGoalsAsync(CancellationToken.None, this.mockExecutionGoal.TeamName, this.mockExecutionGoalItem.Id)
                 as ObjectResult;
 
             Assert.IsNotNull(result);
@@ -224,10 +223,10 @@
         [Test]
         public async Task ControllerReturnsTheExpectedReponseWhenGettingExecutionGoalViewTypeFull()
         {
-            this.mockDependencies.RestClient.SetupGetExecutionGoal(this.mockExecutionGoal.ExecutionGoalId, this.mockExecutionGoal.TeamName, ExecutionGoalView.Full)
+            this.mockDependencies.RestClient.SetupGetExecutionGoal(this.mockExecutionGoalItem.Id, this.mockExecutionGoal.TeamName, ExecutionGoalView.Full)
                 .Returns(Task.FromResult(this.mockExecutionGoalItem.ToHttpResponse()));
 
-            ObjectResult result = await this.controller.GetExecutionGoalAsync(this.mockExecutionGoal.ExecutionGoalId, this.mockExecutionGoal.TeamName, CancellationToken.None, ExecutionGoalView.Full)
+            ObjectResult result = await this.controller.GetExecutionGoalAsync(this.mockExecutionGoalItem.Id, this.mockExecutionGoal.TeamName, CancellationToken.None, ExecutionGoalView.Full)
                 as ObjectResult;
 
             Assert.IsNotNull(result);
@@ -237,10 +236,10 @@
         [Test]
         public async Task ControllerReturnsTheExpectedReponseWhenGettingExecutionGoalViewTypeStatus()
         {
-            this.mockDependencies.RestClient.SetupGetExecutionGoal(this.mockExecutionGoal.ExecutionGoalId, this.mockExecutionGoal.TeamName, ExecutionGoalView.Status)
+            this.mockDependencies.RestClient.SetupGetExecutionGoal(this.mockExecutionGoalItem.Id, this.mockExecutionGoal.TeamName, ExecutionGoalView.Status)
                 .Returns(Task.FromResult((this.mockExecutionGoalStatus as IEnumerable<ExperimentInstanceStatus>).ToHttpResponse()));
 
-            ObjectResult result = await this.controller.GetExecutionGoalAsync(this.mockExecutionGoal.ExecutionGoalId, this.mockExecutionGoal.TeamName, CancellationToken.None, ExecutionGoalView.Status)
+            ObjectResult result = await this.controller.GetExecutionGoalAsync(this.mockExecutionGoalItem.Id, this.mockExecutionGoal.TeamName, CancellationToken.None, ExecutionGoalView.Status)
                 as ObjectResult;
 
             Assert.IsNotNull(result);
@@ -250,10 +249,10 @@
         [Test]
         public async Task ControllerGetsTheExpectedResponseForExecutionGoalSummaryView()
         {
-            this.mockDependencies.RestClient.SetupGetExecutionGoal(this.mockExecutionGoal.ExecutionGoalId, this.mockExecutionGoal.TeamName, ExecutionGoalView.Summary)
+            this.mockDependencies.RestClient.SetupGetExecutionGoal(this.mockExecutionGoalItem.Id, this.mockExecutionGoal.TeamName, ExecutionGoalView.Summary)
                 .Returns(Task.FromResult(this.mockExecutionGoalItem.ToHttpResponse()));
 
-            ObjectResult result = await this.controller.GetExecutionGoalAsync(this.mockExecutionGoal.ExecutionGoalId, this.mockExecutionGoal.TeamName, CancellationToken.None, ExecutionGoalView.Summary)
+            ObjectResult result = await this.controller.GetExecutionGoalAsync(this.mockExecutionGoalItem.Id, this.mockExecutionGoal.TeamName, CancellationToken.None, ExecutionGoalView.Summary)
                 as ObjectResult;
 
             Assert.IsNotNull(result);
@@ -271,18 +270,18 @@
 
             Assert.IsNotNull(result);
             Assert.AreEqual(StatusCodes.Status200OK, result.StatusCode);
-            Assert.AreEqual(this.mockExecutionGoal.ExecutionGoalId, (result.Value as Item<GoalBasedSchedule>).Definition.ExecutionGoalId);
+            Assert.AreEqual(this.mockExecutionGoalItem.Id, (result.Value as Item<GoalBasedSchedule>).Id);
         }
 
         [Test]
         public async Task ControllerReturnsTheexpectedResponseWhenDeletingAnExecutionGoal()
         {
             this.mockDependencies.RestClient.Setup(client => client.DeleteAsync(
-                It.Is<Uri>(uri => uri.PathAndQuery == $"/api/executionGoals/{this.mockExecutionGoal.ExecutionGoalId}?teamName={this.mockExecutionGoal.TeamName}"),
+                It.Is<Uri>(uri => uri.PathAndQuery == $"/api/executionGoals/{this.mockExecutionGoalItem.Id}?teamName={this.mockExecutionGoal.TeamName}"),
                 It.IsAny<CancellationToken>()))
                 .Returns(Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)));
 
-            StatusCodeResult result = await this.controller.DeleteExecutionGoalAsync(this.mockExecutionGoal.ExecutionGoalId, this.mockExecutionGoal.TeamName, CancellationToken.None)
+            StatusCodeResult result = await this.controller.DeleteExecutionGoalAsync(this.mockExecutionGoalItem.Id, this.mockExecutionGoal.TeamName, CancellationToken.None)
                 as StatusCodeResult;
 
             Assert.IsNotNull(result);

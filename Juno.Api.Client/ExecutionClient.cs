@@ -21,13 +21,14 @@
     /// </summary>
     public class ExecutionClient
     {
-        private const string ExperimentsApiRoute = "/api/experiments";
-        private const string HeartbeatsApiRoute = "/api/heartbeats";
-        private const string NotificationApiRoute = "/api/notifications";
         private const string ExecutionGoalsApiRoute = "/api/executionGoals";
         private const string ExecutionGoalTemplateApiRoute = "/api/executionGoalTemplates";
+        private const string ExperimentsApiRoute = "/api/experiments";
         private const string ExperimentStatusApiRoute = "/api/experimentstatus";
+        private const string ExperimentSummaryApiRoute = "/api/experimentSummary";
         private const string ExperimentTemplatesApiRoute = "/api/experimentTemplates";
+        private const string HeartbeatsApiRoute = "/api/heartbeats";
+        private const string NotificationApiRoute = "/api/notifications";
 
         /// <summary>
         /// Defines the default retry policy for Api operations on timeout only
@@ -290,7 +291,7 @@
         /// <param name="cancellationToken"><see cref="CancellationToken"/></param>
         /// <returns>
         /// An <see cref="HttpResponseMessage"/> containing the <see cref="Item{GoalBasedSchedule}"/> created.
-        /// </returns>        
+        /// </returns>
         public async Task<HttpResponseMessage> CreateExecutionGoalAsync(Item<GoalBasedSchedule> executionGoal, CancellationToken cancellationToken)
         {
             executionGoal.ThrowIfNull(nameof(executionGoal));
@@ -316,7 +317,7 @@
         /// <param name="cancellationToken"><see cref="CancellationToken"/></param>
         /// <returns>
         /// An <see cref="HttpResponseMessage"/> containing the <see cref="GoalBasedSchedule"/> created.
-        /// </returns>        
+        /// </returns>
         public async Task<HttpResponseMessage> CreateExecutionGoalTemplateAsync(Item<GoalBasedSchedule> executionGoalTemplate, CancellationToken cancellationToken)
         {
             executionGoalTemplate.ThrowIfNull(nameof(executionGoalTemplate));
@@ -366,21 +367,23 @@
         /// <summary>
         /// Create an execution goal from template and post to system
         /// </summary>
-        /// <param name="parameters"></param>
-        /// <param name="templateId"></param>
+        /// <param name="parameters">The parameters to be used to inline the execution goal.</param>
+        /// <param name="templateId">The template to be used </param>
+        /// <param name="executionGoalId">The execution goal to update.</param>
         /// <param name="teamName">Team that owns the template</param>
         /// <param name="cancellationToken"><see cref="CancellationToken"/></param>
         /// <returns></returns>
-        public async Task<HttpResponseMessage> UpdateExecutionGoalFromTemplateAsync(ExecutionGoalParameter parameters, string templateId, string teamName, CancellationToken cancellationToken)
+        public async Task<HttpResponseMessage> UpdateExecutionGoalFromTemplateAsync(ExecutionGoalParameter parameters, string templateId, string executionGoalId, string teamName, CancellationToken cancellationToken)
         {
             parameters.ThrowIfNull(nameof(parameters));
             templateId.ThrowIfNullOrWhiteSpace(nameof(templateId));
+            executionGoalId.ThrowIfNullOrWhiteSpace(nameof(executionGoalId));
             teamName.ThrowIfNullOrWhiteSpace(nameof(teamName));
 
             using (StringContent requestBody = ExecutionClient.CreateJsonContent(parameters.ToJson()))
             {
                 // Format: /api/executionGoals/templateId/
-                string route = $"{ExecutionClient.ExecutionGoalsApiRoute}/{Uri.EscapeUriString(templateId)}?teamName={Uri.EscapeUriString(teamName)}";
+                string route = $"{ExecutionClient.ExecutionGoalsApiRoute}/{Uri.EscapeUriString(templateId)}?teamName={Uri.EscapeUriString(teamName)}&executionGoalId={Uri.EscapeUriString(executionGoalId)}";
                 Uri requestUri = new Uri(this.BaseUri, route);
 
                 return await this.RetryPolicy.ExecuteAsync(async () =>
@@ -565,7 +568,7 @@
         /// Makes an API request to delete an experiment definition instance.
         /// </summary>
         /// <param name="templateId">The ID of the experiment to delete.</param>
-        /// <param name="teamName">Team to which template belongs</param>        
+        /// <param name="teamName">Team to which template belongs</param>
         /// <param name="cancellationToken">A token that can be used bo cancel the operation.</param>
         /// <returns>
         /// An <see cref="HttpResponseMessage"/> containing the result.
@@ -583,6 +586,76 @@
             {
                 return await this.RestClient.DeleteAsync(requestUri, cancellationToken)
                     .ConfigureAwait(false);
+            }).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Retrieve execution goals from the system
+        /// </summary>
+        /// <param name="executionGoalId">The id of the execution goal</param>
+        /// <param name="teamName">Name of the team that owns the execution goal</param>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/></param>
+        /// <param name= "view">Resource Type of the execution goal (optional)</param>
+        /// <returns>
+        /// An <see cref="HttpResponseMessage"/> containing the <see cref="GoalBasedSchedule"/>.
+        /// </returns>
+        public async Task<HttpResponseMessage> GetExecutionGoalsAsync(CancellationToken cancellationToken, string teamName = null, string executionGoalId = null, ExecutionGoalView view = ExecutionGoalView.Full)
+        {
+            string route = $"{ExecutionClient.ExecutionGoalsApiRoute}";
+
+            if (teamName != null)
+            {
+                route = executionGoalId == null
+                ? $"{route}?teamName={Uri.EscapeUriString(teamName)}&view={view}"
+                : $"{route}?teamName={Uri.EscapeUriString(teamName)}&executionGoalId={WebUtility.UrlEncode(executionGoalId)}&view={view}";
+            }
+            else
+            {
+                route = executionGoalId == null
+                ? $"{route}?view={view}"
+                : $"{route}?executionGoalId={WebUtility.UrlEncode(executionGoalId)}&view={view}";
+            }
+
+            Uri requestUri = new Uri(this.BaseUri, route);
+
+            return await this.RetryPolicy.ExecuteAsync(async () =>
+            {
+                return await this.RestClient.GetAsync(requestUri, cancellationToken)
+                    .ConfigureAwait(false);
+            }).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Retrieves a list of execution goal template metadata
+        /// </summary>
+        /// <param name="teamName">Name of the team that owns the templates</param>
+        /// <param name="cancellationToken"><see cref="CancellationToken"/></param>
+        /// <param name="view"></param>
+        /// <param name="templateId"></param>
+        /// <returns></returns>
+        public async Task<HttpResponseMessage> GetExecutionGoalTemplatesAsync(CancellationToken cancellationToken, string teamName = null, string templateId = null, View view = View.Full)
+        {
+            string route = string.Empty;
+
+            if (teamName != null)
+            {
+                route = templateId == null
+                    ? $"{ExecutionClient.ExecutionGoalTemplateApiRoute}/?teamName={teamName}&view={view}"
+                    : $"{ExecutionClient.ExecutionGoalTemplateApiRoute}/?teamName={teamName}&templateId={templateId}&view={view}";
+            }
+            else
+            {
+                route = templateId == null
+                    ? $"{ExecutionClient.ExecutionGoalTemplateApiRoute}/?view={view}"
+                    : $"{ExecutionClient.ExecutionGoalTemplateApiRoute}/?templateId={templateId}&view={view}";
+            }
+
+            Uri requestUri = new Uri(this.BaseUri, route);
+
+            return await this.RetryPolicy.ExecuteAsync(async () =>
+            {
+                return await this.RestClient.GetAsync(requestUri, cancellationToken)
+                .ConfigureAwait(false);
             }).ConfigureAwait(false);
         }
 
@@ -683,6 +756,29 @@
         }
 
         /// <summary>
+        /// Makes an API request to get experiment instance statuses for end-to-end experiments.
+        /// </summary>
+        /// <param name="experimentName">The name of the experiment/experiment instances.</param>
+        /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
+        /// <returns>
+        /// An <see cref="HttpResponseMessage"/> containing the individual experiment status objects.
+        /// </returns>
+        public async Task<HttpResponseMessage> GetExperimentInstanceStatusesAsync(string experimentName, CancellationToken cancellationToken)
+        {
+            experimentName.ThrowIfNullOrWhiteSpace(nameof(experimentName));
+
+            // Format: /api/experimentstatus/{experimentName}
+            string route = $"{ExecutionClient.ExperimentStatusApiRoute}/{experimentName}";
+            Uri requestUri = new Uri(this.BaseUri, route);
+
+            return await this.RetryPolicy.ExecuteAsync(async () =>
+            {
+                return await this.RestClient.GetAsync(requestUri, cancellationToken)
+                    .ConfigureAwait(false);
+            }).ConfigureAwait(false);
+        }
+
+        /// <summary>
         /// Makes an API request to get the steps for an experiment.
         /// </summary>
         /// <param name="experimentId">The ID of the experiment.</param>
@@ -721,19 +817,79 @@
         }
 
         /// <summary>
-        /// Makes an API request to get experiment instance statuses for end-to-end experiments.
+        /// Makes an API request to get experiment summaries.
         /// </summary>
-        /// <param name="experimentName">The name of the experiment/experiment instances.</param>
         /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
         /// <returns>
-        /// An <see cref="HttpResponseMessage"/> containing the individual experiment status objects.
+        /// An <see cref="HttpResponseMessage"/> containing the <see cref="ExperimentSummary"/>.
         /// </returns>
-        public async Task<HttpResponseMessage> GetExperimentInstanceStatusesAsync(string experimentName, CancellationToken cancellationToken)
+        public async Task<HttpResponseMessage> GetExperimentSummaryAsync(CancellationToken cancellationToken)
         {
-            experimentName.ThrowIfNullOrWhiteSpace(nameof(experimentName));
+            // Format: /api/experimentSummary/
+            string route = $"{ExecutionClient.ExperimentSummaryApiRoute}/";
+            Uri requestUri = new Uri(this.BaseUri, route);
 
-            // Format: /api/experimentstatus/{experimentName}
-            string route = $"{ExecutionClient.ExperimentStatusApiRoute}/{experimentName}";
+            return await this.RetryPolicy.ExecuteAsync(async () =>
+            {
+                return await this.RestClient.GetAsync(requestUri, cancellationToken)
+                    .ConfigureAwait(false);
+            }).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Makes an API request to gets an experiment defintion instance.
+        /// </summary>
+        /// <param name="experimentTemplateId">The ID of the experiment.</param>
+        /// <param name="teamName">Name of the team to which the template belongs.</param>
+        /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
+        /// <returns>
+        /// An <see cref="HttpResponseMessage"/> containing the <see cref="ExperimentInstance"/>.
+        /// </returns>
+        public async Task<HttpResponseMessage> GetExperimentTemplateAsync(string teamName, string experimentTemplateId, CancellationToken cancellationToken)
+        {
+            teamName.ThrowIfNullOrWhiteSpace(nameof(teamName));
+
+            // Format: /api/experiments/{experimentId}
+            string route = $"{ExecutionClient.ExperimentTemplatesApiRoute}/{teamName}/{experimentTemplateId}";
+            Uri requestUri = new Uri(this.BaseUri, route);
+
+            return await this.RetryPolicy.ExecuteAsync(async () =>
+            {
+                return await this.RestClient.GetAsync(requestUri, cancellationToken)
+                    .ConfigureAwait(false);
+            }).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Makes an API request to gets a list of experiment defintion instances.
+        /// </summary>
+        /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
+        /// <returns>
+        /// An <see cref="HttpResponseMessage"/> containing the <see cref="ExperimentInstance"/>.
+        /// </returns>
+        public async Task<HttpResponseMessage> GetExperimentTemplatesListAsync(CancellationToken cancellationToken)
+        {
+            string route = $"{ExecutionClient.ExperimentTemplatesApiRoute}";
+            Uri requestUri = new Uri(this.BaseUri, route);
+
+            return await this.RetryPolicy.ExecuteAsync(async () =>
+            {
+                return await this.RestClient.GetAsync(requestUri, cancellationToken)
+                    .ConfigureAwait(false);
+            }).ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Makes an API request to gets a list of experiment defintion instances.
+        /// </summary>
+        /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
+        /// <param name="teamName">A token that can be used to cancel the operation.</param>
+        /// <returns>
+        /// An <see cref="HttpResponseMessage"/> containing the <see cref="ExperimentInstance"/>.
+        /// </returns>
+        public async Task<HttpResponseMessage> GetExperimentTemplatesListAsync(string teamName, CancellationToken cancellationToken)
+        {
+            string route = $"{ExecutionClient.ExperimentTemplatesApiRoute}/{teamName}";
             Uri requestUri = new Uri(this.BaseUri, route);
 
             return await this.RetryPolicy.ExecuteAsync(async () =>
@@ -780,139 +936,6 @@
 
             // Format: /api/notifications?queueName=experimentnotices
             string route = $"{ExecutionClient.NotificationApiRoute}?workQueue={workQueue}&visibilityDelay={visibilityDelaySeconds}";
-            Uri requestUri = new Uri(this.BaseUri, route);
-
-            return await this.RetryPolicy.ExecuteAsync(async () =>
-            {
-                return await this.RestClient.GetAsync(requestUri, cancellationToken)
-                    .ConfigureAwait(false);
-            }).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Retrieve execution goals from the system
-        /// </summary>
-        /// <param name="executionGoalId">The id of the execution goal</param>
-        /// <param name="teamName">Name of the team that owns the execution goal</param>
-        /// <param name="cancellationToken"><see cref="CancellationToken"/></param>
-        /// <param name= "view">Resource Type of the execution goal (optional)</param>
-        /// <returns>
-        /// An <see cref="HttpResponseMessage"/> containing the <see cref="GoalBasedSchedule"/>.
-        /// </returns>        
-        public async Task<HttpResponseMessage> GetExecutionGoalsAsync(CancellationToken cancellationToken, string teamName = null, string executionGoalId = null, ExecutionGoalView view = ExecutionGoalView.Full)
-        {
-            string route = $"{ExecutionClient.ExecutionGoalsApiRoute}";
-
-            if (teamName != null)
-            {
-                route = executionGoalId == null
-                ? $"{route}?teamName={Uri.EscapeUriString(teamName)}&view={view}"
-                : $"{route}?teamName={Uri.EscapeUriString(teamName)}&executionGoalId={WebUtility.UrlEncode(executionGoalId)}&view={view}";
-            }
-            else
-            {
-                route = executionGoalId == null
-                ? $"{route}?view={view}"
-                : $"{route}?executionGoalId={WebUtility.UrlEncode(executionGoalId)}&view={view}";
-            }
-
-            Uri requestUri = new Uri(this.BaseUri, route);
-
-            return await this.RetryPolicy.ExecuteAsync(async () =>
-            {
-                return await this.RestClient.GetAsync(requestUri, cancellationToken)
-                    .ConfigureAwait(false);
-            }).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Makes an API request to gets a list of experiment defintion instances.
-        /// </summary>
-        /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
-        /// <returns>
-        /// An <see cref="HttpResponseMessage"/> containing the <see cref="ExperimentInstance"/>.
-        /// </returns>
-        public async Task<HttpResponseMessage> GetExperimentTemplatesListAsync(CancellationToken cancellationToken)
-        {
-            string route = $"{ExecutionClient.ExperimentTemplatesApiRoute}";
-            Uri requestUri = new Uri(this.BaseUri, route);
-
-            return await this.RetryPolicy.ExecuteAsync(async () =>
-            {
-                return await this.RestClient.GetAsync(requestUri, cancellationToken)
-                    .ConfigureAwait(false);
-            }).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Retrieves a list of execution goal template metadata 
-        /// </summary>
-        /// <param name="teamName">Name of the team that owns the templates</param>
-        /// <param name="cancellationToken"><see cref="CancellationToken"/></param>
-        /// <param name="view"></param>
-        /// <param name="templateId"></param>
-        /// <returns></returns>
-        public async Task<HttpResponseMessage> GetExecutionGoalTemplatesAsync(CancellationToken cancellationToken, string teamName = null, string templateId = null, View view = View.Full)
-        {
-            string route = string.Empty;
-
-            if (teamName != null)
-            {
-                route = templateId == null
-                    ? $"{ExecutionClient.ExecutionGoalTemplateApiRoute}/?teamName={teamName}&view={view}"
-                    : $"{ExecutionClient.ExecutionGoalTemplateApiRoute}/?teamName={teamName}&templateId={templateId}&view={view}";
-            }
-            else
-            {
-                route = templateId == null
-                    ? $"{ExecutionClient.ExecutionGoalTemplateApiRoute}/?view={view}"
-                    : $"{ExecutionClient.ExecutionGoalTemplateApiRoute}/?templateId={templateId}&view={view}";
-            }
-
-            Uri requestUri = new Uri(this.BaseUri, route);
-
-            return await this.RetryPolicy.ExecuteAsync(async () =>
-            {
-                return await this.RestClient.GetAsync(requestUri, cancellationToken)
-                .ConfigureAwait(false);
-            }).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Makes an API request to gets an experiment defintion instance.
-        /// </summary>
-        /// <param name="experimentTemplateId">The ID of the experiment.</param>
-        /// <param name="teamName">Name of the team to which the template belongs.</param>
-        /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
-        /// <returns>
-        /// An <see cref="HttpResponseMessage"/> containing the <see cref="ExperimentInstance"/>.
-        /// </returns>
-        public async Task<HttpResponseMessage> GetExperimentTemplateAsync(string teamName, string experimentTemplateId, CancellationToken cancellationToken)
-        {
-            teamName.ThrowIfNullOrWhiteSpace(nameof(teamName));
-
-            // Format: /api/experiments/{experimentId}
-            string route = $"{ExecutionClient.ExperimentTemplatesApiRoute}/{teamName}/{experimentTemplateId}";
-            Uri requestUri = new Uri(this.BaseUri, route);
-
-            return await this.RetryPolicy.ExecuteAsync(async () =>
-            {
-                return await this.RestClient.GetAsync(requestUri, cancellationToken)
-                    .ConfigureAwait(false);
-            }).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Makes an API request to gets a list of experiment defintion instances.
-        /// </summary>
-        /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
-        /// <param name="teamName">A token that can be used to cancel the operation.</param>
-        /// <returns>
-        /// An <see cref="HttpResponseMessage"/> containing the <see cref="ExperimentInstance"/>.
-        /// </returns>
-        public async Task<HttpResponseMessage> GetExperimentTemplatesListAsync(string teamName, CancellationToken cancellationToken)
-        {
-            string route = $"{ExecutionClient.ExperimentTemplatesApiRoute}/{teamName}";
             Uri requestUri = new Uri(this.BaseUri, route);
 
             return await this.RetryPolicy.ExecuteAsync(async () =>

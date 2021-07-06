@@ -97,52 +97,24 @@
             }
         }
 
-        [Test]
-        public void ExperimentOwnerValidationDoesNotAccountForOlderVersionOfExecutionGoal()
-        {
-            var oldExecutionGoal = new GoalBasedSchedule(
-                this.validExecutionGoal.ExperimentName,
-                this.validExecutionGoal.ExecutionGoalId,
-                this.validExecutionGoal.Name,
-                this.validExecutionGoal.TeamName,
-                this.validExecutionGoal.Description,
-                this.validExecutionGoal.ScheduleMetadata,
-                this.validExecutionGoal.Enabled,
-                version: "2020-07-27",
-                experiment: null,
-                this.validExecutionGoal.TargetGoals,
-                this.validExecutionGoal.ControlGoals);
-
-            ValidationResult result = ExperimentOwnerEmailRules.Instance.Validate(oldExecutionGoal);
-
-            Assert.IsNotNull(result);
-            Assert.IsTrue(result.IsValid);
-            Assert.IsTrue(result.ValidationErrors?.Any() != true);
-        }
-
         private GoalBasedSchedule CreateExecutionGoalWithGivenExperimentOwnerDistributionList(string distributionList)
         {
             GoalBasedSchedule mockSchedule = this.mockFixture.Create<GoalBasedSchedule>();
 
-            if (mockSchedule.ScheduleMetadata.ContainsKey(ExecutionGoalMetadata.Owner))
+            if (mockSchedule.Metadata.ContainsKey(ExecutionGoalMetadata.Owner))
             {
-                mockSchedule.ScheduleMetadata.Remove(ExecutionGoalMetadata.Owner);
+                mockSchedule.Metadata.Remove(ExecutionGoalMetadata.Owner);
             }
 
-            mockSchedule.ScheduleMetadata.Add(ExecutionGoalMetadata.Owner, distributionList);
+            mockSchedule.Metadata.Add(ExecutionGoalMetadata.Owner, distributionList);
 
             return new GoalBasedSchedule(
                     mockSchedule.ExperimentName,
-                    mockSchedule.ExecutionGoalId,
-                    mockSchedule.Name,
-                    mockSchedule.TeamName,
                     mockSchedule.Description,
-                    mockSchedule.ScheduleMetadata,
-                    mockSchedule.Enabled,
-                    mockSchedule.Version,
                     mockSchedule.Experiment,
                     mockSchedule.TargetGoals,
-                    mockSchedule.ControlGoals);
+                    mockSchedule.ControlGoals,
+                    mockSchedule.Metadata);
         }
     }
 }
