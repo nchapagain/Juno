@@ -5,5 +5,6 @@ let startQuery = now(-60d);
 let endQuery = now();
 cluster('azurecrc.westus2.kusto.windows.net').database('JunoIngestion').getTipAttemptsWithExperimentName(startQuery, endQuery)
 | extend nodeId = ""
+| extend createdBy = ""
 | extend daysLeaked = toint(datetime_diff('day', now(), experimentCreatedTime))
-| project createdTime = experimentCreatedTime, tipNodeSessionId = tipSessionId, nodeId, daysLeaked, experimentId, experimentName, impactType;
+| project createdTime = experimentCreatedTime, tipNodeSessionId = tipSessionId, nodeId, daysLeaked, experimentId, experimentName, impactType, createdBy;

@@ -66,6 +66,7 @@
                         impactType: impactTypeFound ? impactType : ImpactType.Impactful, // if impactType is not found, mark as impactful
                         cluster: string.Empty,
                         subscriptionId: string.Empty,
+                        owner: (string)row[KustoColumns.CreatedBy],
                         source: LeakedResourceSource.AzureCM);
 
                         leakedNodes.Add(leakedSessions);
@@ -102,6 +103,7 @@
                             impactType: ImpactType.Impactful,
                             cluster: tipNode.Cluster,
                             subscriptionId: string.Empty,
+                            owner: tipNode.CreatedBy,
                             source: LeakedResourceSource.TipClient);
 
                         leakedNodes.Add(leakedSessions);
@@ -205,6 +207,7 @@
             internal const string ExperimentId = "experimentId";
             internal const string ExperimentName = "experimentName";
             internal const string ImpactType = "impactType";
+            internal const string CreatedBy = "createdBy";
         }
 
         private class AzureResourceTags

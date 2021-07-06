@@ -720,19 +720,14 @@ namespace Juno.Contracts
     public enum LeakedResourceSource
     {
         /// <summary>
-        /// Azure CM
-        /// </summary>
-        AzureCM,
-
-        /// <summary>
         /// TipClient
         /// </summary>
         TipClient,
 
         /// <summary>
-        /// AzureCM And TipClient
+        /// Azure CM
         /// </summary>
-        TipClientAndAzureCM,
+        AzureCM,
 
         /// <summary>
         /// AzureResourceGroupManagement

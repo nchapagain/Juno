@@ -6,5 +6,8 @@
 //
 let startQuery = now(-60d);
 let endQuery = now();
-cluster('azurecrc.westus2.kusto.windows.net').database('JunoIngestion').getLeakedTipSessionsForGarbageCollectorV2(startQuery, endQuery)
-| project createdTime, tipNodeSessionId, nodeId, daysLeaked, experimentId, experimentName, impactType;
+cluster('azurecrc.westus2.kusto.windows.net').database('JunoIngestion').getLeakedTipSessionsForGarbageCollectorV3(startQuery, endQuery)
+| extend experimentId = ""
+| extend experimentName = ""
+| extend impactType = ""
+| project createdTime, tipNodeSessionId, nodeId, daysLeaked, experimentId, experimentName, impactType, createdBy;

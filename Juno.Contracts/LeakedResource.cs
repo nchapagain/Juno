@@ -25,6 +25,7 @@
         /// <param name="impactType">Impact Type of the Juno Experiment</param>
         /// <param name="cluster">Cluster Name of the resource JunoExperiment Ran on i.e BNZ14PrdApp10</param>
         /// <param name="subscriptionId">Azure Subscription Id associated with the resource</param>
+        /// <param name="owner">Owner of the leaked resource</param>
         /// <param name="source">Source of how leaked resource was gathered</param>
         [JsonConstructor]
         public LeakedResource(
@@ -39,6 +40,7 @@
             ImpactType impactType,
             string cluster,
             string subscriptionId,
+            string owner,
             LeakedResourceSource source)
         {
             this.CreatedTime = createdTime;
@@ -52,6 +54,7 @@
             this.ImpactType = impactType;
             this.Cluster = cluster;
             this.SubscriptionId = subscriptionId;
+            this.Owner = owner;
             this.Source = source;
         }
 
@@ -123,9 +126,15 @@
         public string SubscriptionId { get; }
 
         /// <summary>
+        /// Azure Resource Owner
+        /// </summary>
+        [JsonProperty(PropertyName = "owner", Required = Required.AllowNull, Order = 12)]
+        public string Owner { get; }
+
+        /// <summary>
         /// Source of where leaked resource was found
         /// </summary>
-        [JsonProperty(PropertyName = "source", Required = Required.AllowNull, Order = 12)]
+        [JsonProperty(PropertyName = "source", Required = Required.AllowNull, Order = 13)]
         public LeakedResourceSource Source { get; set; }
 
         /// <summary>

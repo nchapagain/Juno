@@ -128,9 +128,10 @@
                 {
                     leakedResources.Add(item.Id, item);
                 }
-                else
+                else if (leakedResources[item.Id].Source != LeakedResourceSource.AzureCM)
                 {
-                    leakedResources[item.Id].Source = LeakedResourceSource.TipClientAndAzureCM;
+                    leakedResources.Remove(item.Id);
+                    leakedResources.Add(item.Id, item);
                 }
             }
 
@@ -155,6 +156,7 @@
                             impactType: item.ImpactType == ImpactType.None ? item.ImpactType : ImpactType.Impactful,
                             cluster: duplicateRecord.Cluster,
                             subscriptionId: item.SubscriptionId,
+                            owner: duplicateRecord.Owner,
                             source: duplicateRecord.Source));
                 }
             }
@@ -314,7 +316,7 @@
 
             }).ConfigureDefaults();
 
-            IList<TipNodeSession> validTipNodeSessions = new List<TipNodeSession>();
+            IList<TipNodeSession> validLeakedTipNodeSessions = new List<TipNodeSession>();
             if (tipNodeSessionStatus.Any())
             {
                 foreach (TipNodeSession tipNodeSession in tipNodeSessionsByAppId)
@@ -322,14 +324,14 @@
                     // filtering for tipsessions that are verified to have been created.
                     if (tipNodeSessionStatus.ContainsKey(tipNodeSession.Id) && tipNodeSessionStatus[tipNodeSession.Id])
                     {
-                        validTipNodeSessions.Add(tipNodeSession);
+                        validLeakedTipNodeSessions.Add(tipNodeSession);
                     }
                 }
             }
 
-            telemetryContext.AddContext("validTipNodeSessions", validTipNodeSessions.Count);
+            telemetryContext.AddContext("validLeakedTipNodeSessions", validLeakedTipNodeSessions.Count);
 
-            IList<LeakedResource> leakedResources = validTipNodeSessions.ParseTipResource();
+            IList<LeakedResource> leakedResources = validLeakedTipNodeSessions.ParseTipResource();
             await this.logger.LogTelemetryAsync($"{nameof(TipGarbageCollector)}.LeakedTipSessionFromTipClient", telemetryContext, leakedResources, this.loggingBatchSize).ConfigureDefaults();
             return leakedResources;
         }
